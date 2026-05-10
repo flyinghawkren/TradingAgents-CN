@@ -37,6 +37,11 @@
       <template #title>我的自选股</template>
     </el-menu-item>
 
+    <el-menu-item index="/portfolio">
+      <el-icon><Wallet /></el-icon>
+      <template #title>我的投资组合</template>
+    </el-menu-item>
+
     <el-menu-item index="/paper">
       <el-icon><CreditCard /></el-icon>
       <template #title>模拟交易</template>
@@ -111,7 +116,8 @@ import {
   /* Document 移除：不再使用顶级分析报告菜单图标 */
   Setting,
   InfoFilled,
-  CreditCard
+  CreditCard,
+  Wallet
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
