@@ -1964,7 +1964,7 @@ class SimpleAnalysisService:
             db = get_mongo_db()
             collection = db["analysis_tasks"]
 
-            query = {}
+            query = {"parent_task_id": {"$exists": false}}  # 过滤掉组合分析的子任务
             if task_status:
                 query["status"] = task_status.value
 
@@ -2088,7 +2088,7 @@ class SimpleAnalysisService:
                     {"user_id": base_condition},
                     {"user": base_condition}
                 ]
-                query = {"$or": or_conditions}
+                query = {"$and": [{"$or": or_conditions}, {"parent_task_id": {"$exists": false}}]}  # 过滤掉组合分析的子任务
 
                 if task_status:
                     # 使用映射后的状态值（TaskStatus枚举的value）
@@ -2307,8 +2307,12 @@ class SimpleAnalysisService:
                 if not task_id:
                     return {"symbol": symbol, "success": False, "error": "创建任务失败"}
 
-                # 记录子任务ID到组合任务
+                # 标记子任务，并记录到组合任务
                 try:
+                    await db.analysis_tasks.update_one(
+                        {"task_id": task_id},
+                        {"$set": {"parent_task_id": portfolio_task_id}}
+                    )
                     await db.analysis_tasks.update_one(
                         {"task_id": portfolio_task_id},
                         {"$push": {"sub_task_ids": task_id}}

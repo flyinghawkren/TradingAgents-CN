@@ -314,26 +314,189 @@
           </el-card>
         </el-col>
       </el-row>
+
+      <!-- 分析进度显示 -->
+      <div v-if="analysisStatus === 'running'" class="progress-section" style="margin-top: 24px;">
+        <el-card class="progress-card" shadow="hover">
+          <template #header>
+            <div class="progress-header">
+              <h4>
+                <el-icon class="rotating-icon"><Loading /></el-icon>
+                组合分析进行中...
+              </h4>
+              <el-tag type="warning">{{ progressInfo.currentStep }}</el-tag>
+            </div>
+          </template>
+
+          <div class="progress-content">
+            <div class="overall-progress-info">
+              <div class="progress-stats">
+                <div class="stat-item">
+                  <div class="stat-label">已用时间</div>
+                  <div class="stat-value">{{ formatDuration(progressInfo.elapsedTime) }}</div>
+                </div>
+                <div class="stat-item">
+                  <div class="stat-label">预计剩余</div>
+                  <div class="stat-value">{{ formatDuration(progressInfo.remainingTime) }}</div>
+                </div>
+                <div class="stat-item">
+                  <div class="stat-label">预计总时长</div>
+                  <div class="stat-value">{{ formatDuration(progressInfo.totalTime) }}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="progress-bar-section">
+              <el-progress
+                :percentage="Math.round(progressInfo.progress)"
+                :stroke-width="12"
+                :show-text="true"
+                status="success"
+                class="main-progress-bar"
+              />
+            </div>
+
+            <div class="current-task-info">
+              <div class="task-title">
+                <el-icon class="task-icon"><Loading /></el-icon>
+                {{ progressInfo.currentStep || '正在初始化分析引擎...' }}
+              </div>
+              <div class="task-description" style="white-space: pre-wrap; line-height: 1.6;">
+                {{ progressInfo.message || 'AI正在分析您的持仓组合...' }}
+              </div>
+            </div>
+          </div>
+        </el-card>
+      </div>
+
+      <!-- 分析结果显示 -->
+      <div v-if="showResults && analysisResults" class="results-section" style="margin-top: 24px;">
+        <el-row :gutter="24">
+          <el-col :span="24">
+            <el-card class="results-card" shadow="hover">
+              <template #header>
+                <div class="results-header">
+                  <h3>📊 组合分析报告</h3>
+                  <div class="result-meta">
+                    <el-tag type="success">{{ analysisForm.title }}</el-tag>
+                    <el-tag>{{ analysisResults.analysis_date || new Date().toISOString().slice(0, 10) }}</el-tag>
+                  </div>
+                </div>
+              </template>
+
+              <div class="results-content">
+                <!-- 风险提示 -->
+                <div class="risk-disclaimer">
+                  <el-alert type="warning" :closable="false" show-icon>
+                    <template #title>
+                      <span style="font-weight: bold;">⚠️ 报告依据真实交易数据使用AI分析生成，仅供参考，不构成任何投资建议。市场有风险，投资需谨慎。</span>
+                    </template>
+                  </el-alert>
+                </div>
+
+                <!-- 调仓分析结论 -->
+                <div v-if="analysisResults.comprehensive_report?.report_text" class="decision-section">
+                  <h4>🎯 调仓分析结论</h4>
+                  <div class="decision-card">
+                    <div class="comprehensive-report" v-html="renderMarkdown(analysisResults.comprehensive_report.report_text)"></div>
+                  </div>
+                </div>
+
+                <!-- 各成分股票分析结论 -->
+                <div v-if="analysisResults.stock_results" class="overview-section">
+                  <h4>📋 成分股票分析摘要</h4>
+                  <div class="stock-results-list">
+                    <el-collapse>
+                      <el-collapse-item
+                        v-for="(stockResult, symbol) in analysisResults.stock_results"
+                        :key="symbol"
+                        :title="`${symbol} - ${stockResult.stock_name}`"
+                      >
+                        <div class="stock-result-item">
+                          <div v-if="stockResult.summary" class="stock-summary">
+                            <h5>分析摘要</h5>
+                            <p>{{ stockResult.summary }}</p>
+                          </div>
+                          <div v-if="stockResult.recommendation" class="stock-recommendation">
+                            <h5>投资建议</h5>
+                            <p>{{ stockResult.recommendation }}</p>
+                          </div>
+                          <div v-if="stockResult.decision?.action" class="stock-decision">
+                            <h5>AI倾向</h5>
+                            <el-tag :type="getActionTagType(stockResult.decision.action)">
+                              {{ stockResult.decision.action }}
+                            </el-tag>
+                            <span v-if="stockResult.decision.confidence" style="margin-left: 8px; color: #666;">
+                              置信度: {{ (stockResult.decision.confidence * 100).toFixed(1) }}%
+                            </span>
+                          </div>
+                        </div>
+                      </el-collapse-item>
+                    </el-collapse>
+                  </div>
+                </div>
+
+                <!-- 组合持仓概览 -->
+                <div v-if="analysisResults.stocks" class="overview-section">
+                  <h4>📊 组合持仓概览</h4>
+                  <div class="overview-card">
+                    <el-table :data="analysisResults.stocks" style="width: 100%">
+                      <el-table-column prop="stock_code" label="股票代码" width="120" />
+                      <el-table-column prop="stock_name" label="股票名称" width="150" />
+                      <el-table-column prop="quantity" label="持有数量" width="120" />
+                      <el-table-column prop="avg_price" label="买进均价" width="120">
+                        <template #default="{ row }">
+                          ¥{{ row.avg_price?.toFixed(2) }}
+                        </template>
+                      </el-table-column>
+                      <el-table-column prop="market" label="市场" width="100" />
+                    </el-table>
+                  </div>
+                </div>
+              </div>
+            </el-card>
+          </el-col>
+        </el-row>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Grid, TrendCharts, Download, Delete, Plus } from '@element-plus/icons-vue'
+import { Grid, TrendCharts, Download, Delete, Plus, Loading, Check, Document } from '@element-plus/icons-vue'
 import { ANALYSTS, DEFAULT_ANALYSTS, convertAnalystNamesToIds } from '@/constants/analysts'
 import { configApi } from '@/api/config'
 import { portfolioApi } from '@/api/portfolio'
+import { analysisApi } from '@/api/analysis'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import ModelConfig from '@/components/ModelConfig.vue'
+import { marked } from 'marked'
+
+marked.setOptions({ breaks: true, gfm: true })
 
 const router = useRouter()
 
 const submitting = ref(false)
 const loading = ref(false)
 const importing = ref(false)
+
+// 分析进度和结果状态
+const currentTaskId = ref('')
+const analysisStatus = ref<'idle' | 'running' | 'completed' | 'failed'>('idle')
+const showResults = ref(false)
+const analysisResults = ref<any>(null)
+const progressInfo = ref({
+  progress: 0,
+  currentStep: '',
+  message: '',
+  elapsedTime: 0,
+  remainingTime: 0,
+  totalTime: 0
+})
+const pollingTimer = ref<any>(null)
 
 // 组合股票列表
 const portfolioStocks = ref<any[]>([])
@@ -508,6 +671,86 @@ const initializeModelSettings = async () => {
   }
 }
 
+// 格式化时间
+const formatDuration = (seconds: number) => {
+  if (!seconds || seconds < 0) return '-'
+  const m = Math.floor(seconds / 60)
+  const s = Math.floor(seconds % 60)
+  if (m > 0) return `${m}分${s}秒`
+  return `${s}秒`
+}
+
+// 轮询任务状态
+const startPolling = (taskId: string) => {
+  stopPolling()
+  currentTaskId.value = taskId
+  analysisStatus.value = 'running'
+  showResults.value = false
+
+  const poll = async () => {
+    try {
+      const res = await analysisApi.getTaskStatus(taskId)
+      const data = res?.data?.data || res?.data
+      if (!data) return
+
+      const status = data.status || 'pending'
+      const progress = data.progress || 0
+
+      progressInfo.value = {
+        progress,
+        currentStep: data.current_step || data.message || '分析中...',
+        message: data.message || '',
+        elapsedTime: data.elapsed_time || 0,
+        remainingTime: data.remaining_time || 0,
+        totalTime: data.estimated_total_time || 0
+      }
+
+      if (status === 'completed') {
+        analysisStatus.value = 'completed'
+        stopPolling()
+        // 获取结果
+        try {
+          const resultRes = await analysisApi.getTaskResult(taskId)
+          const resultData = resultRes?.data?.data || resultRes?.data
+          if (resultData) {
+            analysisResults.value = resultData
+            showResults.value = true
+            ElMessage.success('组合分析完成')
+          }
+        } catch (e) {
+          console.error('获取结果失败:', e)
+        }
+      } else if (status === 'failed') {
+        analysisStatus.value = 'failed'
+        stopPolling()
+        ElMessage.error(data.error_message || '组合分析失败')
+      }
+    } catch (e) {
+      console.error('轮询状态失败:', e)
+    }
+  }
+
+  poll()
+  pollingTimer.value = setInterval(poll, 5000)
+}
+
+const stopPolling = () => {
+  if (pollingTimer.value) {
+    clearInterval(pollingTimer.value)
+    pollingTimer.value = null
+  }
+}
+
+// Markdown 渲染
+const renderMarkdown = (content: string) => {
+  if (!content) return ''
+  try {
+    return marked.parse(content) as string
+  } catch {
+    return content
+  }
+}
+
 // 提交组合分析
 const submitPortfolioAnalysis = async () => {
   if (!analysisForm.title) {
@@ -539,6 +782,8 @@ const submitPortfolioAnalysis = async () => {
     )
 
     submitting.value = true
+    analysisStatus.value = 'running'
+    showResults.value = false
 
     // 准备组合分析请求参数
     const portfolioRequest = {
@@ -564,10 +809,7 @@ const submitPortfolioAnalysis = async () => {
       }
     }
 
-    console.log('组合分析请求:', portfolioRequest)
-
     // 调用真实的组合分析API
-    const { analysisApi } = await import('@/api/analysis')
     const response = await analysisApi.startPortfolioAnalysis(portfolioRequest)
 
     if (!response?.success) {
@@ -575,32 +817,36 @@ const submitPortfolioAnalysis = async () => {
     }
 
     const { task_id, total_stocks } = response.data
+    currentTaskId.value = task_id
 
-    ElMessageBox.confirm(
-      `✅ 组合分析任务已成功提交！\n\n📊 股票数量：${total_stocks}只\n📋 任务ID：${task_id}\n\n任务正在后台两阶段执行中：\n• 第一阶段：并发单股分析\n• 第二阶段：综合调仓建议\n\n是否前往任务中心查看进度？`,
-      '提交成功',
-      {
-        confirmButtonText: '前往任务中心',
-        cancelButtonText: '留在当前页面',
-        type: 'success',
-        distinguishCancelAndClose: true,
-        closeOnClickModal: false
-      }
-    ).then(() => {
-      router.push('/tasks')
-    }).catch((action) => {
-      if (action === 'cancel') {
-        ElMessage.info('任务正在后台执行，您可以随时前往任务中心查看进度')
-      }
-    })
+    ElMessage.success(`组合分析任务已提交，共${total_stocks}只股票，正在后台执行`)
+
+    // 开始轮询任务状态
+    startPolling(task_id)
     submitting.value = false
 
   } catch (error: any) {
     if (error !== 'cancel') {
       ElMessage.error(error.message || '组合分析提交失败')
     }
+    analysisStatus.value = 'idle'
     submitting.value = false
   }
+}
+
+// 页面卸载时停止轮询
+onUnmounted(() => {
+  stopPolling()
+})
+
+// AI倾向标签类型
+const getActionTagType = (action: string): 'success' | 'danger' | 'warning' | 'info' => {
+  if (!action) return 'info'
+  const a = action.toLowerCase()
+  if (a.includes('买入') || a.includes('增持') || a.includes('看多')) return 'success'
+  if (a.includes('卖出') || a.includes('减持') || a.includes('看空')) return 'danger'
+  if (a.includes('持有') || a.includes('观望') || a.includes('中性')) return 'warning'
+  return 'info'
 }
 
 // 页面初始化
@@ -875,6 +1121,229 @@ onMounted(async () => {
 
 .empty-state {
   padding: 24px 0;
+}
+
+// 进度卡片样式
+.progress-section {
+  .progress-card {
+    border-radius: 16px;
+    border: none;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+
+    :deep(.el-card__header) {
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      color: white;
+      border-radius: 16px 16px 0 0;
+      padding: 16px 24px;
+
+      .progress-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+
+        h4 {
+          margin: 0;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 16px;
+        }
+      }
+    }
+
+    :deep(.el-card__body) {
+      padding: 24px;
+    }
+
+    .progress-content {
+      .progress-stats {
+        display: flex;
+        justify-content: space-around;
+        margin-bottom: 20px;
+
+        .stat-item {
+          text-align: center;
+
+          .stat-label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 4px;
+          }
+
+          .stat-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a202c;
+          }
+        }
+      }
+
+      .progress-bar-section {
+        margin-bottom: 20px;
+      }
+
+      .current-task-info {
+        background: var(--el-fill-color-light);
+        border-radius: 12px;
+        padding: 16px;
+
+        .task-title {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-weight: 600;
+          color: #1a202c;
+          margin-bottom: 8px;
+
+          .task-icon {
+            color: #3b82f6;
+          }
+        }
+
+        .task-description {
+          font-size: 14px;
+          color: #4b5563;
+        }
+      }
+    }
+  }
+}
+
+// 结果卡片样式
+.results-section {
+  .results-card {
+    border-radius: 16px;
+    border: none;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+
+    :deep(.el-card__header) {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      border-radius: 16px 16px 0 0;
+      padding: 20px 24px;
+
+      .results-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+
+        h3 {
+          margin: 0;
+          font-size: 18px;
+          font-weight: 600;
+        }
+
+        .result-meta {
+          display: flex;
+          gap: 8px;
+        }
+      }
+    }
+
+    :deep(.el-card__body) {
+      padding: 24px;
+    }
+
+    .results-content {
+      .risk-disclaimer {
+        margin-bottom: 24px;
+      }
+
+      .decision-section,
+      .overview-section {
+        margin-bottom: 32px;
+
+        h4 {
+          font-size: 18px;
+          font-weight: 600;
+          color: #1a202c;
+          margin: 0 0 16px 0;
+          padding-bottom: 8px;
+          border-bottom: 2px solid #e2e8f0;
+        }
+      }
+
+      .decision-card {
+        background: var(--el-fill-color-light);
+        border-radius: 12px;
+        padding: 20px;
+
+        .comprehensive-report {
+          line-height: 1.8;
+          color: #374151;
+
+          :deep(h3) {
+            color: #1a202c;
+            margin-top: 16px;
+            margin-bottom: 8px;
+          }
+
+          :deep(p) {
+            margin-bottom: 12px;
+          }
+
+          :deep(ul) {
+            padding-left: 20px;
+            margin-bottom: 12px;
+          }
+
+          :deep(li) {
+            margin-bottom: 4px;
+          }
+
+          :deep(strong) {
+            color: #1a202c;
+          }
+        }
+      }
+
+      .stock-results-list {
+        .stock-result-item {
+          padding: 12px;
+
+          h5 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            margin: 12px 0 8px 0;
+          }
+
+          p {
+            font-size: 13px;
+            color: #4b5563;
+            line-height: 1.6;
+            margin: 0;
+          }
+
+          .stock-decision {
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+          }
+        }
+      }
+
+      .overview-card {
+        background: var(--el-fill-color-light);
+        border-radius: 12px;
+        padding: 16px;
+      }
+    }
+  }
+}
+
+// 旋转动画
+.rotating-icon {
+  animation: rotate 2s linear infinite;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>
 
