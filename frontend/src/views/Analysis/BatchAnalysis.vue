@@ -199,29 +199,29 @@
                 <h4 class="config-title">⚙️ 分析选项</h4>
                 <div class="analysis-options">
                   <div class="option-item">
+                    <div class="option-info">
+                      <span class="option-name">情绪分析</span>
+                      <span class="option-desc">分析市场情绪和投资者心理</span>
+                    </div>
                     <el-switch v-model="batchForm.includeSentiment" />
-                    <div class="option-content">
-                      <div class="option-name">情绪分析</div>
-                      <div class="option-desc">分析市场情绪和投资者心理</div>
-                    </div>
                   </div>
 
                   <div class="option-item">
+                    <div class="option-info">
+                      <span class="option-name">风险评估</span>
+                      <span class="option-desc">包含详细的风险因素分析</span>
+                    </div>
                     <el-switch v-model="batchForm.includeRisk" />
-                    <div class="option-content">
-                      <div class="option-name">风险评估</div>
-                      <div class="option-desc">包含详细的风险因素分析</div>
-                    </div>
                   </div>
 
                   <div class="option-item">
-                    <el-select v-model="batchForm.language" size="small" style="width: 100%">
+                    <div class="option-info">
+                      <span class="option-name">语言偏好</span>
+                    </div>
+                    <el-select v-model="batchForm.language" size="small" style="width: 100px">
                       <el-option label="中文" value="zh-CN" />
                       <el-option label="English" value="en-US" />
                     </el-select>
-                    <div class="option-content">
-                      <div class="option-name">语言偏好</div>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -694,8 +694,8 @@ const resetForm = () => {
           .analysis-options {
             .option-item {
               display: flex;
-              align-items: flex-start;
-              gap: 12px;
+              align-items: center;
+              justify-content: space-between;
               padding: 12px 0;
               border-bottom: 1px solid #f3f4f6;
 
@@ -704,13 +704,12 @@ const resetForm = () => {
                 padding-bottom: 0;
               }
 
-              .option-content {
-                flex: 1;
-
+              .option-info {
                 .option-name {
                   font-size: 14px;
                   font-weight: 500;
                   color: #374151;
+                  display: block;
                   margin-bottom: 2px;
                 }
 
