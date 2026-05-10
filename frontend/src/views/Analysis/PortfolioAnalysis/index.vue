@@ -693,8 +693,11 @@ const startPolling = (taskId: string) => {
       const data = res?.data?.data || res?.data
       if (!data) return
 
-      const status = data.status || 'pending'
+      const rawStatus = data.status || 'pending'
       const progress = data.progress || 0
+
+      // 统一状态：processing/running 都视为运行中
+      const status = rawStatus === 'processing' ? 'running' : rawStatus
 
       progressInfo.value = {
         progress,

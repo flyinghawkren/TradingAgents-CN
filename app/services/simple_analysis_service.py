@@ -2226,6 +2226,25 @@ class SimpleAnalysisService:
         portfolio_task_id = str(uuid.uuid4())
         logger.info(f"📝 创建组合分析任务: {portfolio_task_id} - {title}")
 
+        # 同时在内存管理器中创建任务状态（用于进度查询）
+        try:
+            await self.memory_manager.create_task(
+                task_id=portfolio_task_id,
+                user_id=user_id,
+                stock_code="PORTFOLIO",
+                parameters={
+                    "task_type": "portfolio",
+                    "title": title,
+                    "description": description,
+                    "stocks": stocks,
+                    **(parameters.model_dump() if parameters else {})
+                },
+                stock_name=title,
+            )
+            logger.info(f"✅ 组合分析任务已创建到内存: {portfolio_task_id}")
+        except Exception as e:
+            logger.warning(f"⚠️ 创建组合分析任务到内存失败(忽略): {e}")
+
         # 保存到 MongoDB
         try:
             db = get_mongo_db()
@@ -2254,6 +2273,58 @@ class SimpleAnalysisService:
             "message": "组合分析任务已创建"
         }
 
+    async def _update_portfolio_task_status(
+        self,
+        portfolio_task_id: str,
+        status: str,
+        progress: int,
+        message: str,
+        phase: Optional[str] = None,
+        result_data: Optional[Dict[str, Any]] = None
+    ):
+        """同步更新组合分析任务状态到 MongoDB 和内存
+
+        注意：MongoDB 使用 "processing" 保持与其他任务一致，内存使用 "running"
+        """
+        # 更新 MongoDB（使用 "processing" 保持与其他 analysis_tasks 一致）
+        try:
+            db = get_mongo_db()
+            mongo_status = "processing" if status == "running" else status
+            update_doc: Dict[str, Any] = {
+                "status": mongo_status,
+                "progress": progress,
+                "message": message,
+            }
+            if phase:
+                update_doc["phase"] = phase
+            if result_data:
+                update_doc["result"] = result_data
+            await db.analysis_tasks.update_one(
+                {"task_id": portfolio_task_id},
+                {"$set": update_doc}
+            )
+        except Exception as e:
+            logger.error(f"❌ 更新组合分析任务MongoDB状态失败: {e}")
+
+        # 更新内存（使用 TaskStatus 枚举值）
+        try:
+            memory_status_map = {
+                "pending": TaskStatus.PENDING,
+                "running": TaskStatus.RUNNING,
+                "completed": TaskStatus.COMPLETED,
+                "failed": TaskStatus.FAILED,
+            }
+            await self.memory_manager.update_task_status(
+                task_id=portfolio_task_id,
+                status=memory_status_map.get(status, TaskStatus.RUNNING),
+                progress=progress,
+                message=message,
+                current_step=phase or message,
+                result_data=result_data
+            )
+        except Exception as e:
+            logger.warning(f"⚠️ 更新组合分析任务内存状态失败(忽略): {e}")
+
     async def execute_portfolio_analysis(
         self,
         portfolio_task_id: str,
@@ -2276,19 +2347,13 @@ class SimpleAnalysisService:
         db = get_mongo_db()
 
         # 更新状态为运行中 - 第一阶段
-        try:
-            await db.analysis_tasks.update_one(
-                {"task_id": portfolio_task_id},
-                {"$set": {
-                    "status": "processing",
-                    "phase": "phase1",
-                    "progress": 5,
-                    "message": "第一阶段：并发单股分析中...",
-                    "started_at": datetime.utcnow(),
-                }}
-            )
-        except Exception as e:
-            logger.error(f"❌ 更新组合分析任务状态失败: {e}")
+        await self._update_portfolio_task_status(
+            portfolio_task_id,
+            status="running",
+            progress=5,
+            message="第一阶段：并发单股分析中...",
+            phase="phase1"
+        )
 
         # ========== 第一阶段：并发单股分析 ==========
         stock_symbols = [s["stock_code"] for s in stocks]
@@ -2367,46 +2432,35 @@ class SimpleAnalysisService:
 
             # 更新组合任务进度（第一阶段占50%）
             progress = 5 + int((completed / total) * 45)
-            try:
-                await db.analysis_tasks.update_one(
-                    {"task_id": portfolio_task_id},
-                    {"$set": {
-                        "progress": progress,
-                        "message": f"第一阶段：已完成 {completed}/{total} 只单股分析",
-                        "phase1_completed": completed,
-                        "phase1_total": total,
-                    }}
-                )
-            except Exception:
-                pass
+            await self._update_portfolio_task_status(
+                portfolio_task_id,
+                status="running",
+                progress=progress,
+                message=f"第一阶段：已完成 {completed}/{total} 只单股分析",
+                phase="phase1"
+            )
 
         # 检查是否有成功结果
         if not stock_results:
             logger.error(f"❌ 组合分析第一阶段全部失败: {portfolio_task_id}")
-            await db.analysis_tasks.update_one(
-                {"task_id": portfolio_task_id},
-                {"$set": {
-                    "status": "failed",
-                    "progress": 0,
-                    "message": "第一阶段单股分析全部失败",
-                    "completed_at": datetime.utcnow(),
-                }}
+            await self._update_portfolio_task_status(
+                portfolio_task_id,
+                status="failed",
+                progress=0,
+                message="第一阶段单股分析全部失败",
+                phase="failed"
             )
             return
 
         # ========== 第二阶段：综合分析 + 调仓建议 ==========
         logger.info(f"🔄 组合分析进入第二阶段: {portfolio_task_id}")
-        try:
-            await db.analysis_tasks.update_one(
-                {"task_id": portfolio_task_id},
-                {"$set": {
-                    "phase": "phase2",
-                    "progress": 55,
-                    "message": "第二阶段：整合分析报告并生成调仓建议...",
-                }}
-            )
-        except Exception:
-            pass
+        await self._update_portfolio_task_status(
+            portfolio_task_id,
+            status="running",
+            progress=55,
+            message="第二阶段：整合分析报告并生成调仓建议...",
+            phase="phase2"
+        )
 
         try:
             # 构建综合分析提示词
@@ -2436,16 +2490,13 @@ class SimpleAnalysisService:
                 "analysis_date": datetime.now().strftime("%Y-%m-%d"),
             }
 
-            await db.analysis_tasks.update_one(
-                {"task_id": portfolio_task_id},
-                {"$set": {
-                    "status": "completed",
-                    "progress": 100,
-                    "phase": "completed",
-                    "message": "组合分析完成",
-                    "result": final_result,
-                    "completed_at": datetime.utcnow(),
-                }}
+            await self._update_portfolio_task_status(
+                portfolio_task_id,
+                status="completed",
+                progress=100,
+                message="组合分析完成",
+                phase="completed",
+                result_data=final_result
             )
 
             # 同时保存到 analysis_reports 以便报告查询
@@ -2455,14 +2506,12 @@ class SimpleAnalysisService:
 
         except Exception as e:
             logger.error(f"❌ 组合分析第二阶段失败: {portfolio_task_id} - {e}")
-            await db.analysis_tasks.update_one(
-                {"task_id": portfolio_task_id},
-                {"$set": {
-                    "status": "failed",
-                    "progress": 55,
-                    "message": f"第二阶段综合分析失败: {str(e)}",
-                    "completed_at": datetime.utcnow(),
-                }}
+            await self._update_portfolio_task_status(
+                portfolio_task_id,
+                status="failed",
+                progress=55,
+                message=f"第二阶段综合分析失败: {str(e)}",
+                phase="failed"
             )
 
     def _build_portfolio_summary(
