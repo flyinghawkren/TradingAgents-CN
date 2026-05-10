@@ -2111,6 +2111,8 @@ class SimpleAnalysisService:
                         "stock_code": stock_code_value,  # 🔧 兼容字段
                         "stock_symbol": stock_code_value,  # 🔧 兼容字段
                         "stock_name": doc.get("stock_name"),
+                        "title": doc.get("title"),  # 🔧 组合分析任务名称
+                        "task_type": doc.get("task_type"),  # 🔧 任务类型（portfolio/batch/single）
                         "status": str(doc.get("status", "pending")),
                         "progress": int(doc.get("progress", 0) or 0),
                         "message": doc.get("message", ""),
