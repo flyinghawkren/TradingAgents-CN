@@ -2618,25 +2618,29 @@ class SimpleAnalysisService:
         api_key = provider_info["api_key"]
 
         # 构建综合分析配置
-        from tradingagents.llm_clients import get_llm_client
+        from tradingagents.llm_clients import create_llm_client
         from tradingagents.llm_clients.provider_keys import normalize_provider_key
+        from langchain_core.messages import SystemMessage, HumanMessage
 
         provider_key = normalize_provider_key(provider)
-        llm_client = get_llm_client(
+        llm_client = create_llm_client(
             provider=provider_key,
             model=deep_model,
+            base_url=backend_url,
             api_key=api_key,
-            backend_url=backend_url
+            temperature=0.3,
+            max_tokens=8000,
         )
 
         try:
-            response = llm_client.chat_completion(
-                system_prompt=system_prompt,
-                user_prompt=user_prompt,
-                temperature=0.3,
-                max_tokens=8000
-            )
-            report_text = response.get("content", "")
+            llm = llm_client.get_llm()
+            messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=user_prompt),
+            ]
+            # 在线程池中执行同步 LangChain 调用，避免阻塞事件循环
+            response = await asyncio.to_thread(llm.invoke, messages)
+            report_text = response.content if hasattr(response, "content") else str(response)
             logger.info(f"✅ 组合综合分析完成，报告长度: {len(report_text)}")
         except Exception as e:
             logger.error(f"❌ 组合综合分析LLM调用失败: {e}")
