@@ -274,13 +274,14 @@ import {
   Plus
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { portfolioApi, type PortfolioHolding } from '@/api/portfolio'
 
 const router = useRouter()
 
 // 响应式数据
 const loading = ref(false)
 const searchKeyword = ref('')
-const holdings = ref<any[]>([])
+const holdings = ref<PortfolioHolding[]>([])
 
 // 添加对话框
 const addDialogVisible = ref(false)
@@ -333,40 +334,20 @@ const filteredHoldings = computed(() => {
   return result
 })
 
-// Mock 数据（后端接口实现后替换为真实请求）
+// 加载持仓列表
 const loadHoldings = async () => {
   loading.value = true
   try {
-    // TODO: 替换为真实 API 调用
-    // const res = await portfolioApi.list()
-    // holdings.value = res.data || []
-
-    // 临时 mock 数据，用于页面展示
-    holdings.value = [
-      {
-        id: '1',
-        stock_code: '000001',
-        stock_name: '平安银行',
-        quantity: 1000,
-        avg_price: 10.500,
-        buy_date: '2024-03-15',
-        market: 'A股',
-        notes: '长期持有'
-      },
-      {
-        id: '2',
-        stock_code: '600519',
-        stock_name: '贵州茅台',
-        quantity: 50,
-        avg_price: 1680.000,
-        buy_date: '2024-01-20',
-        market: 'A股',
-        notes: ''
-      }
-    ]
+    const res = await portfolioApi.list()
+    if (res.success && res.data) {
+      holdings.value = res.data
+    } else {
+      holdings.value = []
+    }
   } catch (error) {
     console.error('加载持仓失败:', error)
     ElMessage.error('加载持仓数据失败')
+    holdings.value = []
   } finally {
     loading.value = false
   }
@@ -391,12 +372,12 @@ const showAddDialog = () => {
 }
 
 const fetchStockInfo = async () => {
-  // TODO: 根据股票代码自动获取股票名称
+  // TODO: 根据股票代码自动获取股票名称（可接入股票搜索API）
   if (addForm.value.stock_code && !addForm.value.stock_name) {
-    // 临时 mock：假设根据代码推断名称
     const code = addForm.value.stock_code
-    if (code === '000001') addForm.value.stock_name = '平安银行'
-    else if (code === '600519') addForm.value.stock_name = '贵州茅台'
+    // 这里可以接入股票基础信息API自动填充名称
+    // 暂时留空，等待用户手动输入或后续接入
+    console.log('股票代码变更:', code)
   }
 }
 
@@ -406,55 +387,72 @@ const handleAddHolding = async () => {
 
   addLoading.value = true
   try {
-    // TODO: 调用后端 API 添加持仓
-    // await portfolioApi.add(addForm.value)
-
-    // 临时：直接添加到本地列表
-    holdings.value.push({
-      id: String(Date.now()),
-      ...addForm.value
+    const res = await portfolioApi.add({
+      stock_code: addForm.value.stock_code,
+      stock_name: addForm.value.stock_name,
+      market: addForm.value.market,
+      quantity: addForm.value.quantity,
+      avg_price: addForm.value.avg_price || 0,
+      buy_date: addForm.value.buy_date,
+      notes: addForm.value.notes
     })
 
-    ElMessage.success('添加持仓成功')
-    addDialogVisible.value = false
-  } catch (error) {
+    if (res.success) {
+      ElMessage.success('添加持仓成功')
+      addDialogVisible.value = false
+      await loadHoldings()
+    } else {
+      ElMessage.error(res.message || '添加持仓失败')
+    }
+  } catch (error: any) {
     console.error('添加持仓失败:', error)
-    ElMessage.error('添加持仓失败')
+    ElMessage.error(error?.response?.data?.detail || '添加持仓失败')
   } finally {
     addLoading.value = false
   }
 }
 
 // 编辑持仓
-const editHolding = (row: any) => {
-  editForm.value = { ...row }
+const editHolding = (row: PortfolioHolding) => {
+  editForm.value = {
+    id: row.id,
+    stock_code: row.stock_code,
+    stock_name: row.stock_name,
+    quantity: row.quantity,
+    avg_price: row.avg_price,
+    buy_date: row.buy_date,
+    notes: row.notes
+  }
   editDialogVisible.value = true
 }
 
 const handleEditHolding = async () => {
   editLoading.value = true
   try {
-    // TODO: 调用后端 API 更新持仓
-    // await portfolioApi.update(editForm.value.id, editForm.value)
+    const res = await portfolioApi.update(editForm.value.id, {
+      quantity: editForm.value.quantity,
+      avg_price: editForm.value.avg_price,
+      buy_date: editForm.value.buy_date,
+      notes: editForm.value.notes
+    })
 
-    // 临时：更新本地列表
-    const idx = holdings.value.findIndex(h => h.id === editForm.value.id)
-    if (idx !== -1) {
-      holdings.value[idx] = { ...editForm.value }
+    if (res.success) {
+      ElMessage.success('更新持仓成功')
+      editDialogVisible.value = false
+      await loadHoldings()
+    } else {
+      ElMessage.error(res.message || '更新持仓失败')
     }
-
-    ElMessage.success('更新持仓成功')
-    editDialogVisible.value = false
-  } catch (error) {
+  } catch (error: any) {
     console.error('更新持仓失败:', error)
-    ElMessage.error('更新持仓失败')
+    ElMessage.error(error?.response?.data?.detail || '更新持仓失败')
   } finally {
     editLoading.value = false
   }
 }
 
 // 移除持仓
-const removeHolding = async (row: any) => {
+const removeHolding = async (row: PortfolioHolding) => {
   try {
     await ElMessageBox.confirm(
       `确定要移除 ${row.stock_name}(${row.stock_code}) 的持仓记录吗？`,
@@ -466,27 +464,28 @@ const removeHolding = async (row: any) => {
       }
     )
 
-    // TODO: 调用后端 API 删除持仓
-    // await portfolioApi.delete(row.id)
-
-    // 临时：从本地列表移除
-    holdings.value = holdings.value.filter(h => h.id !== row.id)
-    ElMessage.success('移除持仓成功')
+    const res = await portfolioApi.remove(row.id)
+    if (res.success) {
+      ElMessage.success('移除持仓成功')
+      await loadHoldings()
+    } else {
+      ElMessage.error(res.message || '移除持仓失败')
+    }
   } catch (error: any) {
     if (error !== 'cancel') {
       console.error('移除持仓失败:', error)
-      ElMessage.error('移除持仓失败')
+      ElMessage.error(error?.response?.data?.detail || '移除持仓失败')
     }
   }
 }
 
 // 分析持仓股票
-const analyzeHolding = (row: any) => {
+const analyzeHolding = (row: PortfolioHolding) => {
   router.push(`/analysis/single?stock_code=${row.stock_code}`)
 }
 
 // 查看股票详情
-const viewStockDetail = (row: any) => {
+const viewStockDetail = (row: PortfolioHolding) => {
   router.push(`/analysis/single?stock_code=${row.stock_code}`)
 }
 
