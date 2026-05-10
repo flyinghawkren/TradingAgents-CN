@@ -773,21 +773,11 @@ const submitPortfolioAnalysis = async () => {
     return
   }
 
+  submitting.value = true
+  analysisStatus.value = 'running'
+  showResults.value = false
+
   try {
-    await ElMessageBox.confirm(
-      `确定要提交组合分析任务吗？\n组合：${analysisForm.title}\n股票数量：${portfolioStocks.value.length}只`,
-      '确认提交',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'info'
-      }
-    )
-
-    submitting.value = true
-    analysisStatus.value = 'running'
-    showResults.value = false
-
     // 准备组合分析请求参数
     const portfolioRequest = {
       title: analysisForm.title,
@@ -822,6 +812,15 @@ const submitPortfolioAnalysis = async () => {
     const { task_id, total_stocks } = response.data
     currentTaskId.value = task_id
 
+    // 保存任务到缓存
+    savePortfolioTaskToCache(task_id, {
+      title: analysisForm.title,
+      description: analysisForm.description,
+      stocks: portfolioStocks.value,
+      parameters: { ...analysisForm },
+      modelSettings: { ...modelSettings.value }
+    })
+
     ElMessage.success(`组合分析任务已提交，共${total_stocks}只股票，正在后台执行`)
 
     // 开始轮询任务状态
@@ -829,9 +828,7 @@ const submitPortfolioAnalysis = async () => {
     submitting.value = false
 
   } catch (error: any) {
-    if (error !== 'cancel') {
-      ElMessage.error(error.message || '组合分析提交失败')
-    }
+    ElMessage.error(error.message || '组合分析提交失败')
     analysisStatus.value = 'idle'
     submitting.value = false
   }
@@ -841,6 +838,129 @@ const submitPortfolioAnalysis = async () => {
 onUnmounted(() => {
   stopPolling()
 })
+
+// ==================== 任务缓存与恢复 ====================
+const PORTFOLIO_TASK_CACHE_KEY = 'trading_portfolio_task'
+const PORTFOLIO_TASK_CACHE_DURATION = 30 * 60 * 1000 // 30分钟
+
+// 保存任务状态到缓存
+const savePortfolioTaskToCache = (taskId: string, taskData: any) => {
+  const cacheData = {
+    taskId,
+    taskData,
+    timestamp: Date.now()
+  }
+  localStorage.setItem(PORTFOLIO_TASK_CACHE_KEY, JSON.stringify(cacheData))
+}
+
+// 从缓存获取任务状态
+const getPortfolioTaskFromCache = () => {
+  try {
+    const cached = localStorage.getItem(PORTFOLIO_TASK_CACHE_KEY)
+    if (!cached) return null
+
+    const cacheData = JSON.parse(cached)
+    if (Date.now() - cacheData.timestamp > PORTFOLIO_TASK_CACHE_DURATION) {
+      localStorage.removeItem(PORTFOLIO_TASK_CACHE_KEY)
+      return null
+    }
+    return cacheData
+  } catch {
+    localStorage.removeItem(PORTFOLIO_TASK_CACHE_KEY)
+    return null
+  }
+}
+
+// 清除任务缓存
+const clearPortfolioTaskCache = () => {
+  localStorage.removeItem(PORTFOLIO_TASK_CACHE_KEY)
+}
+
+// 恢复任务状态
+const restorePortfolioTaskFromCache = async () => {
+  const cached = getPortfolioTaskFromCache()
+  if (!cached) return false
+
+  try {
+    // 查询任务当前状态
+    const response = await analysisApi.getTaskStatus(cached.taskId)
+    const data = response?.data?.data || response?.data
+    if (!data) return false
+
+    const rawStatus = data.status || 'pending'
+    const status = rawStatus === 'processing' ? 'running' : rawStatus
+
+    // 恢复分析配置
+    if (cached.taskData) {
+      if (cached.taskData.title) analysisForm.title = cached.taskData.title
+      if (cached.taskData.description) analysisForm.description = cached.taskData.description
+      if (cached.taskData.stocks) portfolioStocks.value = [...cached.taskData.stocks]
+      if (cached.taskData.parameters) {
+        const p = cached.taskData.parameters
+        analysisForm.depth = p.depth || analysisForm.depth
+        analysisForm.analysts = p.analysts || analysisForm.analysts
+        analysisForm.includeSentiment = p.includeSentiment !== undefined ? p.includeSentiment : analysisForm.includeSentiment
+        analysisForm.includeRisk = p.includeRisk !== undefined ? p.includeRisk : analysisForm.includeRisk
+        analysisForm.includeRebalance = p.includeRebalance !== undefined ? p.includeRebalance : analysisForm.includeRebalance
+        analysisForm.language = p.language || analysisForm.language
+      }
+      if (cached.taskData.modelSettings) {
+        modelSettings.value = { ...cached.taskData.modelSettings }
+      }
+    }
+
+    if (status === 'completed') {
+      currentTaskId.value = cached.taskId
+      analysisStatus.value = 'completed'
+      showResults.value = true
+      progressInfo.value.progress = 100
+      progressInfo.value.currentStep = '分析完成'
+      progressInfo.value.message = '组合分析已完成'
+
+      // 获取结果
+      try {
+        const resultRes = await analysisApi.getTaskResult(cached.taskId)
+        const resultData = resultRes?.data?.data || resultRes?.data
+        if (resultData) {
+          analysisResults.value = resultData
+        }
+      } catch (e) {
+        console.error('获取结果失败:', e)
+      }
+      return true
+
+    } else if (status === 'running') {
+      currentTaskId.value = cached.taskId
+      analysisStatus.value = 'running'
+      showResults.value = false
+      progressInfo.value = {
+        progress: data.progress || 0,
+        currentStep: data.current_step || data.message || '分析中...',
+        message: data.message || '',
+        elapsedTime: data.elapsed_time || 0,
+        remainingTime: data.remaining_time || 0,
+        totalTime: data.estimated_total_time || 0
+      }
+      startPolling(cached.taskId)
+      return true
+
+    } else if (status === 'failed') {
+      currentTaskId.value = cached.taskId
+      analysisStatus.value = 'failed'
+      progressInfo.value.currentStep = '分析失败'
+      progressInfo.value.message = data.error_message || '组合分析过程中发生错误'
+      return true
+    }
+
+    // 其他状态（pending等），清除缓存
+    clearPortfolioTaskCache()
+    return false
+  } catch (e) {
+    console.error('恢复任务状态失败:', e)
+    clearPortfolioTaskCache()
+    return false
+  }
+}
 
 // AI倾向标签类型
 const getActionTagType = (action: string): 'success' | 'danger' | 'warning' | 'info' => {
@@ -868,6 +988,9 @@ onMounted(async () => {
       analysisForm.analysts = [...userPrefs.default_analysts]
     }
   }
+
+  // 尝试恢复正在进行的或已完成的组合分析任务
+  await restorePortfolioTaskFromCache()
 })
 </script>
 
