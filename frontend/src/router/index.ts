@@ -351,13 +351,24 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/about',
     name: 'About',
-    component: () => import('@/views/About/index.vue'),
+    component: () => import('@/layouts/BasicLayout.vue'),
     meta: {
       title: '关于',
       icon: 'InfoFilled',
       requiresAuth: false, // 关于页面不需要认证
       transition: 'fade'
-    }
+    },
+    children: [
+      {
+        path: '',
+        name: 'AboutPage',
+        component: () => import('@/views/About/index.vue'),
+        meta: {
+          title: '关于',
+          requiresAuth: false
+        }
+      }
+    ]
   },
   {
     path: '/paper',
