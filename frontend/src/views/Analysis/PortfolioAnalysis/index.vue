@@ -23,15 +23,9 @@
             <template #header>
               <div class="card-header">
                 <h3>📋 组合配置</h3>
-                <div class="header-actions">
-                  <el-tag :type="portfolioStocks.length > 0 ? 'success' : 'info'" size="small" style="margin-right: 12px;">
-                    {{ portfolioStocks.length }} 只持仓
-                  </el-tag>
-                  <el-button type="primary" size="small" @click="importFromPortfolio" :loading="importing">
-                    <el-icon><Download /></el-icon>
-                    一键导入我的投资组合
-                  </el-button>
-                </div>
+                <el-tag :type="portfolioStocks.length > 0 ? 'success' : 'info'" size="small">
+                  {{ portfolioStocks.length }} 只持仓
+                </el-tag>
               </div>
             </template>
 
@@ -41,6 +35,7 @@
               v-loading="loading"
               style="width: 100%"
               class="portfolio-table"
+              :max-height="240"
             >
               <el-table-column prop="stock_code" label="股票代码" width="120">
                 <template #default="{ row, $index }">
@@ -118,7 +113,7 @@
             </el-table>
 
             <!-- 添加股票按钮 -->
-            <div class="add-stock-row" style="margin-top: 16px;">
+            <div class="add-stock-row" style="margin-top: 8px;">
               <el-button type="primary" plain @click="addStockRow">
                 <el-icon><Plus /></el-icon>
                 添加股票
@@ -126,7 +121,7 @@
             </div>
 
             <!-- 组合统计 -->
-            <div v-if="portfolioStocks.length > 0" class="portfolio-stats" style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+            <div v-if="portfolioStocks.length > 0" class="portfolio-stats" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e2e8f0;">
               <el-row :gutter="24">
                 <el-col :span="6">
                   <div class="stat-item">
@@ -694,6 +689,12 @@ onMounted(async () => {
       }
     }
 
+    .stock-list-card {
+      :deep(.el-card__body) {
+        padding: 16px 24px;
+      }
+    }
+
     .portfolio-table {
       :deep(.el-input__inner) {
         font-size: 13px;
@@ -703,7 +704,7 @@ onMounted(async () => {
     .portfolio-stats {
       .stat-item {
         text-align: center;
-        padding: 12px;
+        padding: 8px;
         background: var(--el-fill-color-light);
         border-radius: 8px;
 
@@ -866,7 +867,7 @@ onMounted(async () => {
 }
 
 .empty-state {
-  padding: 40px 0;
+  padding: 24px 0;
 }
 </style>
 
