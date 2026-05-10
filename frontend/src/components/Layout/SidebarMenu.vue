@@ -11,11 +11,6 @@
       <template #title>仪表板</template>
     </el-menu-item>
 
-    <el-menu-item index="/learning">
-      <el-icon><Reading /></el-icon>
-      <template #title>学习中心</template>
-    </el-menu-item>
-
     <el-sub-menu index="/analysis">
       <template #title>
         <el-icon><TrendCharts /></el-icon>
@@ -47,8 +42,12 @@
       <template #title>模拟交易</template>
     </el-menu-item>
 
+    <el-menu-item index="/learning">
+      <el-icon><Reading /></el-icon>
+      <template #title>学习中心</template>
+    </el-menu-item>
 
-    <!-- 分析报告已移至“股票分析”子菜单，保留注释便于追踪 -->
+    <!-- 分析报告已移至"股票分析"子菜单，保留注释便于追踪 -->
     <!--
     <el-menu-item index="/reports">
       <el-icon><Document /></el-icon>
