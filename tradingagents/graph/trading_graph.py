@@ -36,6 +36,15 @@ from .reflection import Reflector
 from .signal_processing import SignalProcessor
 
 
+def _mask_key(key: str) -> str:
+    """对 API Key 脱敏显示"""
+    if not key:
+        return "<未配置>"
+    if len(key) <= 8:
+        return "***"
+    return f"{key[:4]}...{key[-4:]}"
+
+
 def create_llm_by_provider(provider: str, model: str, backend_url: str, temperature: float, max_tokens: int, timeout: int, api_key: str = None, **extra_kwargs):
     """
     根据 provider 创建对应的 LLM 实例
@@ -52,25 +61,46 @@ def create_llm_by_provider(provider: str, model: str, backend_url: str, temperat
     Returns:
         LLM 实例
     """
-    logger.info(f"🔧 [创建LLM] provider={provider}, model={model}, url={backend_url}")
-    logger.info(f"🔑 [API Key] 来源: {'数据库配置' if api_key else '环境变量'}")
+    logger.info(f"\n{'='*60}")
+    logger.info(f"🔧 [create_llm_by_provider] 收到LLM创建请求")
+    logger.info(f"   原始provider : {provider}")
+    logger.info(f"   model        : {model}")
+    logger.info(f"   backend_url  : {backend_url}")
+    logger.info(f"   temperature  : {temperature}")
+    logger.info(f"   max_tokens   : {max_tokens}")
+    logger.info(f"   timeout      : {timeout}")
+    logger.info(f"   传入api_key  : {_mask_key(api_key)}")
 
     normalized_provider = normalize_provider_key(provider)
+    logger.info(f"   标准化provider: {normalized_provider}")
 
     if normalized_provider in {"openai", "siliconflow", "openrouter", "aihubmix", "ollama", "deepseek", "qwen", "glm", "custom_openai", "qianfan"}:
         if not api_key:
             if normalized_provider == "siliconflow":
                 api_key = os.getenv('SILICONFLOW_API_KEY')
+                logger.info(f"   从环境变量读取 SILICONFLOW_API_KEY: {_mask_key(api_key)}")
             elif normalized_provider == "openrouter":
                 api_key = os.getenv('OPENROUTER_API_KEY') or os.getenv('OPENAI_API_KEY')
+                src = "OPENROUTER_API_KEY" if os.getenv('OPENROUTER_API_KEY') else ("OPENAI_API_KEY" if os.getenv('OPENAI_API_KEY') else "无")
+                logger.info(f"   从环境变量读取 {src}: {_mask_key(api_key)}")
             elif normalized_provider == "openai":
                 api_key = os.getenv('OPENAI_API_KEY')
+                logger.info(f"   从环境变量读取 OPENAI_API_KEY: {_mask_key(api_key)}")
             else:
                 env_key = env_key_for_provider(normalized_provider)
                 if env_key:
                     api_key = os.getenv(env_key)
+                    logger.info(f"   从环境变量读取 {env_key}: {_mask_key(api_key)}")
+                else:
+                    logger.warning(f"   ⚠️ 未找到 {normalized_provider} 对应的环境变量名")
+        else:
+            logger.info(f"   使用传入的 API Key (已脱敏): {_mask_key(api_key)}")
+
+        if not api_key:
+            logger.error(f"   ❌ 错误: provider={normalized_provider} 未找到有效的 API Key，调用将会失败！")
 
         factory_provider = "openai" if normalized_provider == "siliconflow" else normalized_provider
+        logger.info(f"   调用 factory 创建客户端: provider={factory_provider}, model={model}")
         client = create_llm_client(
             provider=factory_provider,
             model=model,
@@ -81,6 +111,7 @@ def create_llm_by_provider(provider: str, model: str, backend_url: str, temperat
             timeout=timeout,
             **extra_kwargs,
         )
+        logger.info(f"{'='*60}\n")
         return client.get_llm()
 
     if normalized_provider == "google":

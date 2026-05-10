@@ -396,44 +396,84 @@ class ConfigService:
 
             return None
     
+    def _get_env_llm_configs(self) -> tuple[list[LLMConfig], str, str]:
+        """根据 .env 环境变量动态生成 LLM 配置和默认模型
+
+        Returns:
+            (llm_configs, default_quick_model, default_deep_model)
+        """
+        import os
+
+        llm_configs = []
+        default_quick = ""
+        default_deep = ""
+
+        # 定义供应商映射：(env_enabled_key, provider_enum, model_name, api_base_env, default_api_base, display_name)
+        provider_specs = [
+            ("DEEPSEEK_ENABLED", ModelProvider.DEEPSEEK, "deepseek-chat", "DEEPSEEK_BASE_URL", "https://api.deepseek.com", "DeepSeek Chat"),
+            ("DASHSCOPE_ENABLED", ModelProvider.QWEN, "qwen-turbo", "DASHSCOPE_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1", "阿里百炼 qwen-turbo"),
+            ("OPENAI_ENABLED", ModelProvider.OPENAI, "gpt-4o-mini", "OPENAI_BASE_URL", "https://api.openai.com/v1", "OpenAI GPT-4o-mini"),
+            ("GOOGLE_ENABLED", ModelProvider.GOOGLE, "gemini-2.0-flash", "GOOGLE_BASE_URL", "https://generativelanguage.googleapis.com/v1beta", "Google Gemini 2.0 Flash"),
+            ("ZHIPU_ENABLED", ModelProvider.ZHIPU, "glm-4", "ZHIPU_BASE_URL", "https://open.bigmodel.cn/api/paas/v4", "智谱AI GLM-4"),
+            ("QIANFAN_ENABLED", ModelProvider.QIANFAN, "ernie-bot", "QIANFAN_BASE_URL", "https://qianfan.baidubce.com/v2", "百度千帆 ERNIE Bot"),
+        ]
+
+        first_enabled_model = None
+
+        for env_key, provider_enum, model_name, base_url_env, default_base, display_name in provider_specs:
+            enabled = os.getenv(env_key, "").lower() == "true"
+            api_key_env = env_key.replace("_ENABLED", "_API_KEY")
+            api_key = os.getenv(api_key_env, "")
+            has_real_key = api_key and api_key.strip() and not api_key.strip().startswith("your-")
+
+            if enabled or has_real_key:
+                llm_configs.append(LLMConfig(
+                    provider=provider_enum,
+                    model_name=model_name,
+                    api_key="",
+                    api_base=os.getenv(base_url_env, default_base),
+                    max_tokens=8000 if "deepseek" in model_name else 4000,
+                    temperature=0.7,
+                    enabled=enabled and has_real_key,
+                    description=display_name
+                ))
+                if enabled and has_real_key and not first_enabled_model:
+                    first_enabled_model = model_name
+
+        # 如果 .env 中没有启用的模型，创建一套全部禁用的示例配置
+        if not llm_configs:
+            llm_configs = [
+                LLMConfig(provider=ModelProvider.DEEPSEEK, model_name="deepseek-chat", api_key="", api_base="https://api.deepseek.com", max_tokens=8000, temperature=0.7, enabled=False, description="DeepSeek Chat（需在.env中启用）"),
+                LLMConfig(provider=ModelProvider.QWEN, model_name="qwen-turbo", api_key="", api_base="https://dashscope.aliyuncs.com/compatible-mode/v1", max_tokens=4000, temperature=0.7, enabled=False, description="阿里百炼 qwen-turbo（需在.env中启用）"),
+                LLMConfig(provider=ModelProvider.OPENAI, model_name="gpt-4o-mini", api_key="", api_base="https://api.openai.com/v1", max_tokens=4000, temperature=0.7, enabled=False, description="OpenAI GPT-4o-mini（需在.env中启用）"),
+            ]
+
+        # 默认快速/深度模型都使用第一个启用的模型
+        default_quick = first_enabled_model or ""
+        default_deep = first_enabled_model or ""
+
+        return llm_configs, default_quick, default_deep
+
     async def _create_default_config(self) -> SystemConfig:
-        """创建默认系统配置"""
+        """创建默认系统配置——优先根据 .env 环境变量动态生成"""
+        llm_configs, default_quick, default_deep = self._get_env_llm_configs()
+
+        print(f"🔧 [默认配置] 根据.env生成 {len(llm_configs)} 个LLM配置")
+        print(f"   默认快速模型: {default_quick or '未配置'}")
+        print(f"   默认深度模型: {default_deep or '未配置'}")
+        for cfg in llm_configs:
+            print(f"   - {cfg.model_name} (provider={cfg.provider}, enabled={cfg.enabled})")
+
+        # 数据源也从 .env 读取
+        tushare_enabled = os.getenv("TUSHARE_ENABLED", "").lower() == "true"
+        tushare_token = os.getenv("TUSHARE_TOKEN", "")
+        tushare_has_key = tushare_token and tushare_token.strip() and not tushare_token.strip().startswith("your-")
+
         default_config = SystemConfig(
             config_name="默认配置",
             config_type="system",
-            llm_configs=[
-                LLMConfig(
-                    provider=ModelProvider.OPENAI,
-                    model_name="gpt-3.5-turbo",
-                    api_key="your-openai-api-key",
-                    api_base="https://api.openai.com/v1",
-                    max_tokens=4000,
-                    temperature=0.7,
-                    enabled=False,
-                    description="OpenAI GPT-3.5 Turbo模型"
-                ),
-                LLMConfig(
-                    provider=ModelProvider.ZHIPU,
-                    model_name="glm-4",
-                    api_key="your-zhipu-api-key",
-                    api_base="https://open.bigmodel.cn/api/paas/v4",
-                    max_tokens=4000,
-                    temperature=0.7,
-                    enabled=True,
-                    description="智谱AI GLM-4模型（推荐）"
-                ),
-                LLMConfig(
-                    provider=ModelProvider.QWEN,
-                    model_name="qwen-turbo",
-                    api_key="your-qwen-api-key",
-                    api_base="https://dashscope.aliyuncs.com/compatible-mode/v1",
-                    max_tokens=4000,
-                    temperature=0.7,
-                    enabled=False,
-                    description="阿里云通义千问模型"
-                )
-            ],
-            default_llm="glm-4",
+            llm_configs=llm_configs,
+            default_llm=default_quick or (llm_configs[0].model_name if llm_configs else ""),
             data_source_configs=[
                 DataSourceConfig(
                     name="AKShare",
@@ -448,11 +488,11 @@ class ConfigService:
                 DataSourceConfig(
                     name="Tushare",
                     type=DataSourceType.TUSHARE,
-                    api_key="your-tushare-token",
+                    api_key="",
                     endpoint="http://api.tushare.pro",
                     timeout=30,
                     rate_limit=200,
-                    enabled=False,
+                    enabled=tushare_enabled and tushare_has_key,
                     priority=2,
                     description="Tushare专业金融数据接口"
                 )
@@ -462,18 +502,18 @@ class ConfigService:
                 DatabaseConfig(
                     name="MongoDB主库",
                     type=DatabaseType.MONGODB,
-                    host="localhost",
-                    port=27017,
-                    database="tradingagentscn",
+                    host=os.getenv("MONGODB_HOST", "localhost"),
+                    port=int(os.getenv("MONGODB_PORT", "27017")),
+                    database=os.getenv("MONGODB_DATABASE", "tradingagentscn"),
                     enabled=True,
                     description="MongoDB主数据库"
                 ),
                 DatabaseConfig(
                     name="Redis缓存",
                     type=DatabaseType.REDIS,
-                    host="localhost",
-                    port=6379,
-                    database="0",
+                    host=os.getenv("REDIS_HOST", "localhost"),
+                    port=int(os.getenv("REDIS_PORT", "6379")),
+                    database=os.getenv("REDIS_DB", "0"),
                     enabled=True,
                     description="Redis缓存数据库"
                 )
@@ -483,8 +523,11 @@ class ConfigService:
                 "default_analysis_timeout": 300,
                 "enable_cache": True,
                 "cache_ttl": 3600,
-                "log_level": "INFO",
+                "log_level": os.getenv("TRADINGAGENTS_LOG_LEVEL", "INFO"),
                 "enable_monitoring": True,
+                # 默认模型配置（从.env动态生成）
+                "quick_analysis_model": default_quick,
+                "deep_analysis_model": default_deep,
                 # Worker/Queue intervals
                 "worker_heartbeat_interval_seconds": 30,
                 "queue_poll_interval_seconds": 1.0,
@@ -502,16 +545,15 @@ class ConfigService:
                 "ta_hk_rate_limit_wait_seconds": 60,
                 "ta_hk_cache_ttl_seconds": 86400,
                 # 新增：TradingAgents 数据来源策略
-                # 是否优先从 app 缓存(Mongo 集合 stock_basic_info / market_quotes) 读取
-                "ta_use_app_cache": False,
+                "ta_use_app_cache": os.getenv("TA_USE_APP_CACHE", "false").lower() == "true",
                 "ta_china_min_api_interval_seconds": 0.5,
                 "ta_us_min_api_interval_seconds": 1.0,
                 "ta_google_news_sleep_min_seconds": 2.0,
                 "ta_google_news_sleep_max_seconds": 6.0,
-                "app_timezone": "Asia/Shanghai"
+                "app_timezone": os.getenv("TZ", "Asia/Shanghai")
             }
         )
-        
+
         # 保存到数据库
         await self.save_system_config(default_config)
         return default_config

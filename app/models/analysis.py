@@ -48,9 +48,9 @@ class AnalysisParameters(BaseModel):
     include_sentiment: bool = True
     include_risk: bool = True
     language: str = "zh-CN"
-    # 模型配置
-    quick_analysis_model: Optional[str] = "qwen-turbo"
-    deep_analysis_model: Optional[str] = "qwen-max"
+    # 模型配置（后端会自动根据.env可用模型填充，不再硬编码）
+    quick_analysis_model: Optional[str] = None
+    deep_analysis_model: Optional[str] = None
 
 
 class AnalysisResult(BaseModel):

@@ -449,11 +449,11 @@ export const configApi = {
     return ApiClient.get('/api/config/settings')
   },
 
-  // 获取默认模型配置
-  getDefaultModels(): Promise<{ quick_analysis_model: string; deep_analysis_model: string }> {
+  // 获取默认模型配置（后端已保证返回可用模型，前端不再硬编码回退）
+  getDefaultModels(): Promise<{ quick_analysis_model: string | null; deep_analysis_model: string | null }> {
     return ApiClient.get('/api/config/settings').then(settings => ({
-      quick_analysis_model: settings.quick_analysis_model || 'qwen-turbo',
-      deep_analysis_model: settings.deep_analysis_model || 'qwen-max'
+      quick_analysis_model: settings.quick_analysis_model || null,
+      deep_analysis_model: settings.deep_analysis_model || null
     }))
   },
 

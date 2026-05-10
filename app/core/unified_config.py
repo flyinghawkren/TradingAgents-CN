@@ -94,15 +94,130 @@ class UnifiedConfigManager:
         """获取传统格式的模型配置"""
         return self._load_json_file(self.paths.models_json, "models")
     
+    def _infer_provider_from_model_name(self, model_name: str) -> str:
+        """根据模型名称推断供应商"""
+        model_name_lower = model_name.lower()
+        provider_map = {
+            "deepseek": "deepseek",
+            "qwen": "qwen",
+            "gpt": "openai",
+            "o1": "openai",
+            "o3": "openai",
+            "o4": "openai",
+            "gemini": "google",
+            "glm": "glm",
+            "claude": "anthropic",
+        }
+        for key, provider in provider_map.items():
+            if key in model_name_lower:
+                return provider
+        return ""
+
+    def _get_env_enabled_models(self) -> List[LLMConfig]:
+        """根据 .env 环境变量动态生成启用的模型配置"""
+        env_models = []
+
+        # DeepSeek
+        if os.getenv("DEEPSEEK_ENABLED", "").lower() == "true":
+            env_models.append(LLMConfig(
+                provider="deepseek",
+                model_name="deepseek-chat",
+                api_key="",
+                api_base=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
+                max_tokens=8000,
+                temperature=0.7,
+                enabled=True,
+                description="DeepSeek 对话模型"
+            ))
+
+        # 阿里百炼 (DashScope)
+        if os.getenv("DASHSCOPE_ENABLED", "").lower() == "true":
+            env_models.append(LLMConfig(
+                provider="qwen",
+                model_name="qwen-turbo",
+                api_key="",
+                api_base="https://dashscope.aliyuncs.com/compatible-mode/v1",
+                max_tokens=4000,
+                temperature=0.7,
+                enabled=True,
+                description="阿里百炼 qwen-turbo"
+            ))
+
+        # OpenAI
+        if os.getenv("OPENAI_ENABLED", "").lower() == "true":
+            env_models.append(LLMConfig(
+                provider="openai",
+                model_name="gpt-4o-mini",
+                api_key="",
+                api_base="https://api.openai.com/v1",
+                max_tokens=4000,
+                temperature=0.7,
+                enabled=True,
+                description="OpenAI GPT-4o-mini"
+            ))
+
+        # Google Gemini
+        if os.getenv("GOOGLE_ENABLED", "").lower() == "true":
+            env_models.append(LLMConfig(
+                provider="google",
+                model_name="gemini-2.0-flash",
+                api_key="",
+                api_base="https://generativelanguage.googleapis.com/v1beta",
+                max_tokens=4000,
+                temperature=0.7,
+                enabled=True,
+                description="Google Gemini 2.0 Flash"
+            ))
+
+        # 智谱AI
+        if os.getenv("ZHIPU_ENABLED", "").lower() == "true" or os.getenv("GLM_ENABLED", "").lower() == "true":
+            env_models.append(LLMConfig(
+                provider="glm",
+                model_name="glm-4",
+                api_key="",
+                api_base="https://open.bigmodel.cn/api/paas/v4/",
+                max_tokens=4000,
+                temperature=0.7,
+                enabled=True,
+                description="智谱AI GLM-4"
+            ))
+
+        # 百度千帆
+        if os.getenv("QIANFAN_ENABLED", "").lower() == "true":
+            env_models.append(LLMConfig(
+                provider="qianfan",
+                model_name="ernie-bot",
+                api_key="",
+                api_base="https://qianfan.baidubce.com/v2",
+                max_tokens=4000,
+                temperature=0.7,
+                enabled=True,
+                description="百度千帆 ERNIE Bot"
+            ))
+
+        return env_models
+
     def get_llm_configs(self) -> List[LLMConfig]:
-        """获取标准化的LLM配置"""
+        """获取标准化的LLM配置
+
+        优先级：
+        1. 读取 config/models.json 中的配置
+        2. 如果 models.json 为空/不存在，根据 .env 环境变量动态生成
+        """
         legacy_models = self.get_legacy_models()
         llm_configs = []
 
         for model in legacy_models:
             try:
-                # 直接使用 provider 字符串，不再映射到枚举
-                provider = model.get("provider", "openai")
+                # 优先从 model_name 推断 provider，避免默认硬编码为 openai
+                provider = model.get("provider", "")
+                if not provider:
+                    provider = self._infer_provider_from_model_name(
+                        model.get("model_name", "")
+                    )
+                if not provider:
+                    print(f"⚠️ [unified_config] 无法推断模型 {model.get('model_name')} 的供应商，跳过")
+                    continue
 
                 # 方案A：敏感密钥不从文件加载，统一走环境变量/厂家目录
                 llm_config = LLMConfig(
@@ -113,12 +228,43 @@ class UnifiedConfigManager:
                     max_tokens=model.get("max_tokens", 4000),
                     temperature=model.get("temperature", 0.7),
                     enabled=model.get("enabled", True),
-                    description=f"{model.get('provider', '')} {model.get('model_name', '')}"
+                    description=f"{provider} {model.get('model_name', '')}"
                 )
                 llm_configs.append(llm_config)
             except Exception as e:
                 print(f"转换模型配置失败: {model}, 错误: {e}")
                 continue
+
+        # 🔧 如果 models.json 为空/不存在，根据 .env 动态生成模型配置
+        if not llm_configs:
+            print("⚠️ [unified_config] models.json 为空或不存在，尝试从 .env 环境变量生成模型配置")
+            llm_configs = self._get_env_enabled_models()
+            if llm_configs:
+                print(f"✅ [unified_config] 从 .env 生成 {len(llm_configs)} 个模型配置")
+            else:
+                print("⚠️ [unified_config] .env 中未启用任何模型，使用系统默认配置")
+
+        # 🔍 打印所有启用的模型及 API Key 状态
+        print(f"\n{'='*60}")
+        print(f"📋 [unified_config] 当前启用的模型列表 (共 {len(llm_configs)} 个)")
+        for idx, cfg in enumerate(llm_configs, 1):
+            enabled_flag = "✅ 启用" if getattr(cfg, 'enabled', True) else "❌ 禁用"
+            # 从环境变量查找对应 API Key
+            from tradingagents.llm_clients.provider_keys import env_key_for_provider
+            env_key = env_key_for_provider(cfg.provider)
+            api_key_val = os.getenv(env_key, "") if env_key else ""
+            has_key = bool(api_key_val and api_key_val.strip() and api_key_val.strip() not in (
+                "", "your-api-key", "your_deepseek_api_key_here", "your_dashscope_api_key_here",
+                "your_openai_api_key_here", "your_google_api_key_here", "your_qianfan_api_key_here",
+                "your_anthropic_api_key_here", "your_openrouter_api_key_here", "your_aihubmix_api_key_here",
+                "your_zhipu_api_key_here", "your_siliconflow_api_key_here", "your_oneapi_api_key_here",
+                "your-custom-openai-api-key"
+            ))
+            key_status = f"🟢 Key已配置 ({env_key})" if has_key else f"🔴 Key未配置 ({env_key})"
+            print(f"   {idx}. {cfg.model_name:20s} | provider={cfg.provider:10s} | {enabled_flag} | {key_status}")
+            if cfg.api_base:
+                print(f"      api_base={cfg.api_base}")
+        print(f"{'='*60}\n")
 
         return llm_configs
     
@@ -235,17 +381,37 @@ class UnifiedConfigManager:
         settings["quick_analysis_model"] = model_name
         return self.save_system_settings(settings)
 
+    def _get_first_enabled_model(self) -> str:
+        """获取第一个启用的模型名称（从.env或配置文件）"""
+        env_configs = self.get_llm_configs()
+        enabled = [m for m in env_configs if getattr(m, 'enabled', True)]
+        if enabled:
+            return enabled[0].model_name
+        return ""
+
     def get_quick_analysis_model(self) -> str:
-        """获取快速分析模型"""
+        """获取快速分析模型——优先从配置读取，空时自动选择第一个可用模型"""
         settings = self.get_system_settings()
-        # 优先读取新字段名，如果不存在则读取旧字段名（向后兼容）
-        return settings.get("quick_analysis_model") or settings.get("quick_think_llm", "qwen-turbo")
+        model = settings.get("quick_analysis_model") or settings.get("quick_think_llm", "")
+        if model:
+            return model
+        # 自动选择第一个可用模型
+        first = self._get_first_enabled_model()
+        if first:
+            print(f"⚠️ [unified_config] quick_analysis_model 未配置，自动选择第一个可用模型: {first}")
+        return first
 
     def get_deep_analysis_model(self) -> str:
-        """获取深度分析模型"""
+        """获取深度分析模型——优先从配置读取，空时自动选择第一个可用模型"""
         settings = self.get_system_settings()
-        # 优先读取新字段名，如果不存在则读取旧字段名（向后兼容）
-        return settings.get("deep_analysis_model") or settings.get("deep_think_llm", "qwen-max")
+        model = settings.get("deep_analysis_model") or settings.get("deep_think_llm", "")
+        if model:
+            return model
+        # 自动选择第一个可用模型
+        first = self._get_first_enabled_model()
+        if first:
+            print(f"⚠️ [unified_config] deep_analysis_model 未配置，自动选择第一个可用模型: {first}")
+        return first
 
     def set_analysis_models(self, quick_model: str, deep_model: str) -> bool:
         """设置分析模型"""

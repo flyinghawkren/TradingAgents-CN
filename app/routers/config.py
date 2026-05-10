@@ -987,22 +987,24 @@ async def test_saved_database_config(
 async def get_llm_configs(
     current_user: User = Depends(get_current_user)
 ):
-    """获取所有大模型配置"""
+    """获取所有大模型配置——优先从数据库读取，为空时从.env动态生成"""
     try:
         logger.info("🔄 开始获取大模型配置...")
         config = await config_service.get_system_config()
 
-        if not config:
-            logger.warning("⚠️ 系统配置为空，返回空列表")
-            return []
-
-        logger.info(f"📊 系统配置存在，大模型配置数量: {len(config.llm_configs)}")
-
-        # 如果没有大模型配置，创建一些示例配置
-        if not config.llm_configs:
-            logger.info("🔧 没有大模型配置，创建示例配置...")
-            # 这里可以根据已有的厂家创建示例配置
-            # 暂时返回空列表，让前端显示"暂无配置"
+        llm_configs = []
+        if config and config.llm_configs:
+            logger.info(f"📊 系统配置存在，大模型配置数量: {len(config.llm_configs)}")
+            llm_configs = list(config.llm_configs)
+        else:
+            logger.warning("⚠️ 数据库中无LLM配置，尝试从.env环境变量动态生成...")
+            # 从 unified_config 动态生成（已根据 .env 实现）
+            env_configs = unified_config.get_llm_configs()
+            if env_configs:
+                llm_configs = env_configs
+                logger.info(f"✅ 从.env动态生成 {len(llm_configs)} 个LLM配置")
+            else:
+                logger.warning("⚠️ .env中未启用任何模型")
 
         # 获取所有供应商信息，用于过滤被禁用供应商的模型
         providers = await config_service.get_llm_providers()
@@ -1010,13 +1012,15 @@ async def get_llm_configs(
 
         # 过滤：只返回启用的模型 且 供应商也启用的模型
         filtered_configs = [
-            llm_config for llm_config in config.llm_configs
+            llm_config for llm_config in llm_configs
             if llm_config.enabled and llm_config.provider in active_provider_names
         ]
 
         sorted_configs = _sort_llm_configs_by_newest(filtered_configs)
 
-        logger.info(f"✅ 过滤后的大模型配置数量: {len(sorted_configs)} (原始: {len(config.llm_configs)})")
+        logger.info(f"✅ 过滤后的大模型配置数量: {len(sorted_configs)} (原始: {len(llm_configs)})")
+        for cfg in sorted_configs:
+            logger.info(f"   📋 可用模型: {cfg.model_name} (provider={cfg.provider}, enabled={cfg.enabled})")
 
         return _sanitize_llm_configs(sorted_configs)
     except Exception as e:

@@ -557,6 +557,9 @@ def create_analysis_config(
     logger.info(f"   🤖 LLM供应商: {llm_provider}")
     logger.info(f"   ⚡ 快速模型: {config['quick_think_llm']}")
     logger.info(f"   🧠 深度模型: {config['deep_think_llm']}")
+    logger.info(f"   🔗 backend_url: {config.get('backend_url', '未设置')}")
+    logger.info(f"   🔑 quick_api_key: {'已配置' if config.get('quick_api_key') else '未配置'}")
+    logger.info(f"   🔑 deep_api_key : {'已配置' if config.get('deep_api_key') else '未配置'}")
     logger.info(f"📋 ========================================")
 
     return config
@@ -1139,6 +1142,20 @@ class SimpleAnalysisService:
             capability_service = get_model_capability_service()
 
             research_depth = request.parameters.research_depth if request.parameters else "标准"
+
+            # 🔍 打印前端传入的完整参数（用于排查模型选择问题）
+            logger.info(f"\n{'='*60}")
+            logger.info(f"📥 [分析服务] 收到分析请求参数")
+            if request.parameters:
+                logger.info(f"   stock_code           : {request.stock_code}")
+                logger.info(f"   research_depth       : {research_depth}")
+                logger.info(f"   quick_analysis_model : {getattr(request.parameters, 'quick_analysis_model', 'None')}")
+                logger.info(f"   deep_analysis_model  : {getattr(request.parameters, 'deep_analysis_model', 'None')}")
+                logger.info(f"   selected_analysts    : {request.parameters.selected_analysts}")
+                logger.info(f"   market_type          : {request.parameters.market_type}")
+            else:
+                logger.info(f"   request.parameters 为 None，使用全部默认配置")
+            logger.info(f"{'='*60}\n")
 
             # 1. 检查前端是否指定了模型
             if (request.parameters and
