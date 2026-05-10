@@ -566,27 +566,34 @@ const submitPortfolioAnalysis = async () => {
 
     console.log('组合分析请求:', portfolioRequest)
 
-    // TODO: 调用真实的组合分析API
-    // const { analysisApi } = await import('@/api/analysis')
-    // const response = await analysisApi.startPortfolioAnalysis(portfolioRequest)
+    // 调用真实的组合分析API
+    const { analysisApi } = await import('@/api/analysis')
+    const response = await analysisApi.startPortfolioAnalysis(portfolioRequest)
 
-    // 临时模拟成功
-    setTimeout(() => {
-      ElMessageBox.confirm(
-        `✅ 组合分析任务已成功提交！\n\n📊 股票数量：${portfolioStocks.value.length}只\n\n任务正在后台执行中。\n\n是否前往任务中心查看进度？`,
-        '提交成功',
-        {
-          confirmButtonText: '前往任务中心',
-          cancelButtonText: '留在当前页面',
-          type: 'success'
-        }
-      ).then(() => {
-        router.push('/tasks')
-      }).catch(() => {
-        ElMessage.info('任务正在后台执行')
-      })
-      submitting.value = false
-    }, 1000)
+    if (!response?.success) {
+      throw new Error(response?.message || '组合分析提交失败')
+    }
+
+    const { task_id, total_stocks } = response.data
+
+    ElMessageBox.confirm(
+      `✅ 组合分析任务已成功提交！\n\n📊 股票数量：${total_stocks}只\n📋 任务ID：${task_id}\n\n任务正在后台两阶段执行中：\n• 第一阶段：并发单股分析\n• 第二阶段：综合调仓建议\n\n是否前往任务中心查看进度？`,
+      '提交成功',
+      {
+        confirmButtonText: '前往任务中心',
+        cancelButtonText: '留在当前页面',
+        type: 'success',
+        distinguishCancelAndClose: true,
+        closeOnClickModal: false
+      }
+    ).then(() => {
+      router.push('/tasks')
+    }).catch((action) => {
+      if (action === 'cancel') {
+        ElMessage.info('任务正在后台执行，您可以随时前往任务中心查看进度')
+      }
+    })
+    submitting.value = false
 
   } catch (error: any) {
     if (error !== 'cancel') {

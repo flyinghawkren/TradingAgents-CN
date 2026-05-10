@@ -175,6 +175,24 @@ class BatchAnalysisRequest(BaseModel):
         return self.symbols or self.stock_codes or []
 
 
+class PortfolioStockInfo(BaseModel):
+    """组合持仓信息"""
+    stock_code: str = Field(..., description="股票代码")
+    stock_name: Optional[str] = None
+    quantity: int = Field(default=100, ge=1, description="持有数量")
+    avg_price: float = Field(default=0.0, ge=0, description="买进均价")
+    market: str = Field(default="A股", description="市场类型")
+    weight: Optional[float] = Field(default=None, description="权重(%)")
+
+
+class PortfolioAnalysisRequest(BaseModel):
+    """组合分析请求"""
+    title: str = Field(..., description="组合名称")
+    description: Optional[str] = None
+    stocks: List[PortfolioStockInfo] = Field(..., min_items=1, max_items=20, description="持仓股票列表")
+    parameters: Optional[AnalysisParameters] = None
+
+
 class AnalysisTaskResponse(BaseModel):
     """分析任务响应"""
     task_id: str

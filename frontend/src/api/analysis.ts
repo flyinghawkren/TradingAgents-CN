@@ -185,6 +185,23 @@ export const analysisApi = {
     return request.post('/api/analysis/batch', batchRequest)
   },
 
+  // 组合分析（两阶段：并发单股分析 + 综合调仓建议）
+  startPortfolioAnalysis(portfolioRequest: {
+    title: string
+    description?: string
+    stocks: Array<{
+      stock_code: string
+      stock_name?: string
+      quantity: number
+      avg_price: number
+      market?: string
+      weight?: number
+    }>
+    parameters?: SingleAnalysisRequest['parameters']
+  }): Promise<ApiResponse<{ task_id: string; title: string; total_stocks: number; status: string }>>{
+    return request.post('/api/analysis/portfolio', portfolioRequest)
+  },
+
   // 获取批次详情（兼容原有队列接口，若后续需要）
   getBatch(batchId: string): Promise<any> {
     return request.get(`/api/analysis/batches/${batchId}`)

@@ -18,7 +18,7 @@ from app.services.analysis_service import get_analysis_service
 from app.services.simple_analysis_service import get_simple_analysis_service
 from app.services.websocket_manager import get_websocket_manager
 from app.models.analysis import (
-    SingleAnalysisRequest, BatchAnalysisRequest, AnalysisParameters,
+    SingleAnalysisRequest, BatchAnalysisRequest, PortfolioAnalysisRequest, AnalysisParameters,
     AnalysisTaskResponse, AnalysisBatchResponse, AnalysisHistoryQuery
 )
 
@@ -869,6 +869,84 @@ async def submit_batch_analysis(
         }
     except Exception as e:
         logger.error(f"❌ [批量分析] 提交失败: {e}", exc_info=True)
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/portfolio", response_model=Dict[str, Any])
+async def submit_portfolio_analysis(
+    request: PortfolioAnalysisRequest,
+    user: dict = Depends(get_current_user)
+):
+    """提交组合分析任务（两阶段执行）
+
+    第一阶段：并发发起组合中每只股票的单股分析
+    第二阶段：整合各股票分析报告，进行综合分析，给出调仓建议
+    """
+    try:
+        logger.info(f"🎯 [组合分析] 收到组合分析请求: title={request.title}")
+        logger.info(f"📊 [组合分析] 股票数量: {len(request.stocks)}")
+
+        # 验证股票数量
+        MAX_PORTFOLIO_SIZE = 20
+        if len(request.stocks) > MAX_PORTFOLIO_SIZE:
+            raise ValueError(f"组合分析最多支持 {MAX_PORTFOLIO_SIZE} 只股票，当前提交了 {len(request.stocks)} 只")
+
+        simple_service = get_simple_analysis_service()
+
+        # 创建组合分析主任务
+        stocks_data = [s.model_dump() for s in request.stocks]
+        create_res = await simple_service.create_portfolio_analysis_task(
+            user_id=user["id"],
+            title=request.title,
+            description=request.description,
+            stocks=stocks_data,
+            parameters=request.parameters
+        )
+        portfolio_task_id = create_res["task_id"]
+
+        # 在后台启动组合分析（两阶段）
+        async def run_portfolio_analysis():
+            try:
+                await simple_service.execute_portfolio_analysis(
+                    portfolio_task_id=portfolio_task_id,
+                    user_id=user["id"],
+                    title=request.title,
+                    description=request.description,
+                    stocks=stocks_data,
+                    parameters=request.parameters
+                )
+            except Exception as e:
+                logger.error(f"❌ [组合分析] 后台执行失败: {portfolio_task_id} - {e}", exc_info=True)
+                # 更新任务为失败状态
+                try:
+                    from app.core.database import get_mongo_db
+                    db = get_mongo_db()
+                    await db.analysis_tasks.update_one(
+                        {"task_id": portfolio_task_id},
+                        {"$set": {
+                            "status": "failed",
+                            "message": f"执行失败: {str(e)}",
+                            "completed_at": datetime.utcnow(),
+                        }}
+                    )
+                except Exception:
+                    pass
+
+        # 启动后台任务（不等待完成）
+        asyncio.create_task(run_portfolio_analysis())
+
+        return {
+            "success": True,
+            "data": {
+                "task_id": portfolio_task_id,
+                "title": request.title,
+                "total_stocks": len(request.stocks),
+                "status": "submitted"
+            },
+            "message": f"组合分析任务已提交，共{len(request.stocks)}只股票，正在两阶段执行中"
+        }
+
+    except Exception as e:
+        logger.error(f"❌ [组合分析] 提交失败: {e}", exc_info=True)
         raise HTTPException(status_code=400, detail=str(e))
 
 # 兼容性：保留原有端点
