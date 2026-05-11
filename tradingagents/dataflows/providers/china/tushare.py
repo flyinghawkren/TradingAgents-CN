@@ -1758,7 +1758,7 @@ class TushareProvider(BaseStockDataProvider):
 
         try:
             if not end_date:
-                end_date = datetime.now().strftime('%Y%mMDD')
+                end_date = datetime.now().strftime('%Y%m%d')
             if not start_date:
                 start_date = (datetime.now() - timedelta(days=365)).strftime('%Y%m%d')
 

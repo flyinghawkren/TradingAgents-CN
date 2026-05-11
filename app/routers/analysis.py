@@ -1055,6 +1055,121 @@ async def search_funds(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/fund/detail", response_model=Dict[str, Any])
+async def get_fund_detail(
+    ts_code: str = Query(..., description="基金代码"),
+    user: dict = Depends(get_current_user)
+):
+    """获取基金详情（基础信息+最新净值+规模+基金经理）"""
+    try:
+        from tradingagents.dataflows.providers.china.tushare import get_tushare_provider
+        tushare = get_tushare_provider()
+
+        result = {
+            "ts_code": ts_code,
+            "basic": {},
+            "latest_nav": None,
+            "latest_share": None,
+            "managers": [],
+        }
+
+        # 1. 基础信息
+        try:
+            basic_df = await asyncio.to_thread(tushare.get_fund_basic)
+            if not basic_df.empty:
+                fund_row = basic_df[basic_df['ts_code'] == ts_code]
+                if not fund_row.empty:
+                    row = fund_row.iloc[0]
+                    result["basic"] = {
+                        "ts_code": row.get("ts_code"),
+                        "name": row.get("name"),
+                        "short_name": row.get("short_name"),
+                        "fund_type": row.get("fund_type"),
+                        "market": row.get("market"),
+                        "status": row.get("status"),
+                        "found_date": row.get("found_date"),
+                        "list_date": row.get("list_date"),
+                        "invest_type": row.get("invest_type"),
+                        "type": row.get("type"),
+                        "management": row.get("management"),
+                        "custodian": row.get("custodian"),
+                        "benchmark": row.get("benchmark"),
+                        "m_fee": row.get("m_fee"),
+                        "c_fee": row.get("c_fee"),
+                        "s_fee": row.get("s_fee"),
+                        "p_fee": row.get("p_fee"),
+                        "r_fee": row.get("r_fee"),
+                    }
+        except Exception as e:
+            logger.warning(f"⚠️ [基金详情] 获取基础信息失败: {ts_code} - {e}")
+
+        # 2. 最新净值
+        try:
+            end_date = datetime.now().strftime('%Y%m%d')
+            start_date = (datetime.now() - timedelta(days=30)).strftime('%Y%m%d')
+            nav_df = await asyncio.to_thread(tushare.get_fund_nav, ts_code, start_date, end_date)
+            if nav_df is not None and not nav_df.empty:
+                latest = nav_df.iloc[0]
+                prev = nav_df.iloc[1] if len(nav_df) > 1 else None
+                nav_val = latest.get("unit_nav") or latest.get("nav")
+                prev_nav = prev.get("unit_nav") or prev.get("nav") if prev is not None else None
+                daily_return = None
+                if nav_val is not None and prev_nav is not None and prev_nav != 0:
+                    daily_return = (nav_val - prev_nav) / prev_nav
+                result["latest_nav"] = {
+                    "nav_date": latest.get("nav_date") or latest.get("end_date"),
+                    "nav": nav_val,
+                    "acc_nav": latest.get("accum_nav") or latest.get("acc_nav"),
+                    "daily_return": daily_return,
+                }
+        except Exception as e:
+            logger.warning(f"⚠️ [基金详情] 获取净值失败: {ts_code} - {e}")
+
+        # 3. 最新规模
+        try:
+            end_date = datetime.now().strftime('%Y%m%d')
+            start_date = (datetime.now() - timedelta(days=90)).strftime('%Y%m%d')
+            share_df = await asyncio.to_thread(tushare.get_fund_share, ts_code, start_date, end_date)
+            if share_df is not None and not share_df.empty:
+                latest_share = share_df.iloc[0]
+                result["latest_share"] = {
+                    "trade_date": latest_share.get("trade_date") or latest_share.get("ann_date"),
+                    "fd_share": latest_share.get("fd_share") or latest_share.get("share"),
+                    "fd_amount": latest_share.get("fd_amount") or latest_share.get("amount"),
+                }
+        except Exception as e:
+            logger.warning(f"⚠️ [基金详情] 获取份额失败: {ts_code} - {e}")
+
+        # 4. 基金经理
+        try:
+            manager_df = await asyncio.to_thread(tushare.get_fund_manager, ts_code=ts_code)
+            if manager_df is not None and not manager_df.empty:
+                managers = []
+                for _, row in manager_df.iterrows():
+                    managers.append({
+                        "name": row.get("name"),
+                        "gender": row.get("gender"),
+                        "birth_year": row.get("birth_year"),
+                        "edu": row.get("edu") or row.get("education"),
+                        "resume": row.get("resume") or row.get("intro"),
+                        "begin_date": row.get("begin_date"),
+                        "end_date": row.get("end_date"),
+                    })
+                result["managers"] = managers
+        except Exception as e:
+            logger.warning(f"⚠️ [基金详情] 获取基金经理失败: {ts_code} - {e}")
+
+        return {
+            "success": True,
+            "data": result,
+            "message": "获取基金详情成功"
+        }
+
+    except Exception as e:
+        logger.error(f"❌ [基金详情] 失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # 兼容性：保留原有端点
 @router.post("/analyze")
 async def analyze_single(

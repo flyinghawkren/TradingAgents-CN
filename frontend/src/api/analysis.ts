@@ -244,6 +244,55 @@ export const analysisApi = {
     })
   },
 
+  // 获取基金详情
+  getFundDetail(ts_code: string): Promise<ApiResponse<{
+    ts_code: string
+    basic: {
+      ts_code?: string
+      name?: string
+      short_name?: string
+      fund_type?: string
+      market?: string
+      status?: string
+      found_date?: string
+      list_date?: string
+      invest_type?: string
+      type?: string
+      management?: string
+      custodian?: string
+      benchmark?: string
+      m_fee?: number
+      c_fee?: number
+      s_fee?: number
+      p_fee?: number
+      r_fee?: number
+    }
+    latest_nav: {
+      nav_date?: string
+      nav?: number
+      acc_nav?: number
+      daily_return?: number
+    } | null
+    latest_share: {
+      trade_date?: string
+      fd_share?: number
+      fd_amount?: number
+    } | null
+    managers: Array<{
+      name?: string
+      gender?: string
+      birth_year?: string
+      edu?: string
+      resume?: string
+      begin_date?: string
+      end_date?: string
+    }>
+  }>> {
+    return request.get('/api/analysis/fund/detail', {
+      params: { ts_code }
+    })
+  },
+
   // 获取任务列表（新版 simple service）
   getTaskList(params?: { status?: string; limit?: number; offset?: number }): Promise<any>{
     return request.get('/api/analysis/tasks', { params })

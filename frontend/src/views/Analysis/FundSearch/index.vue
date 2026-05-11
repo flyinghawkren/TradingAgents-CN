@@ -286,15 +286,46 @@ const searchFunds = async () => {
   }
 }
 
-// 选择基金
+// 选择基金并获取详情
 const selectFund = async (row: any) => {
   selectedFund.value = row
   navData.value = null
   managerData.value = []
-  ElMessage.success(`已选择：${row.name}`)
+  ElMessage.success(`已选择：${row.name}，正在获取详情...`)
 
-  // 尝试获取净值和经理数据（这里使用模拟数据，后续可接入真实API）
-  // TODO: 接入 /api/analysis/fund/nav 和 /api/analysis/fund/manager 等接口
+  try {
+    const response = await analysisApi.getFundDetail(row.ts_code)
+    if (response?.success && response.data) {
+      const detail = response.data
+
+      // 合并基础信息到 selectedFund
+      if (detail.basic) {
+        selectedFund.value = {
+          ...row,
+          ...detail.basic,
+          // 确保规模字段兼容性
+          latest_share: detail.latest_share?.fd_share || detail.latest_share?.fd_amount,
+        }
+      }
+
+      // 最新净值
+      if (detail.latest_nav) {
+        navData.value = detail.latest_nav
+      }
+
+      // 基金经理
+      if (detail.managers && detail.managers.length > 0) {
+        managerData.value = detail.managers
+      }
+
+      ElMessage.success('基金详情获取成功')
+    } else {
+      ElMessage.warning(response?.message || '获取基金详情失败')
+    }
+  } catch (error: any) {
+    console.error('获取基金详情失败:', error)
+    ElMessage.error(error.message || '获取基金详情失败')
+  }
 }
 
 // 行样式
@@ -337,7 +368,10 @@ const goToAnalysis = () => {
     path: '/analysis/fund',
     query: {
       ts_code: selectedFund.value.ts_code,
-      name: selectedFund.value.name
+      name: selectedFund.value.name,
+      fund_type: selectedFund.value.fund_type || '',
+      market: selectedFund.value.market || '',
+      management: selectedFund.value.management || ''
     }
   })
 }
