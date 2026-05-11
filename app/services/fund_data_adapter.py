@@ -1,7 +1,7 @@
 """
 基金数据适配器
 - 搜索：优先 AKShare（免费、无需Token）
-- 详情：优先 Tushare（字段完整：费率、规模、经理等），Tushare失败时降级到AKShare
+- 详情：优先 AKShare（字段有限但免费），AKShare 查不到的字段再降级 Tushare
 """
 import asyncio
 import logging
@@ -42,11 +42,7 @@ class FundDataAdapter:
     # ==================== 搜索基金 ====================
 
     async def search_funds(self, keyword: str, market: Optional[str] = None, limit: int = 20) -> List[Dict[str, Any]]:
-        """
-        搜索基金
-        1. 优先尝试 AKShare（免费、快速）
-        2. AKShare 失败时降级到 Tushare
-        """
+        """搜索基金：优先 AKShare，降级 Tushare"""
         if self._akshare_available:
             try:
                 logger.info(f"🔄 [FundDataAdapter] 尝试使用 AKShare 搜索基金: {keyword}")
@@ -74,11 +70,7 @@ class FundDataAdapter:
                 if df.empty:
                     return []
 
-                # AKShare fund_name_em 列名是中文
-                # 典型列：基金代码、基金简称、基金类型、日期、单位净值、累计净值、日增长率...
                 keyword_lower = keyword.lower()
-
-                # 动态查找列
                 code_col = self._find_col(df, ['基金代码', 'code', '代码'])
                 name_col = self._find_col(df, ['基金简称', 'name', '简称', '名称'])
                 type_col = self._find_col(df, ['基金类型', '类型', 'fund_type'])
@@ -139,8 +131,8 @@ class FundDataAdapter:
     async def get_fund_detail(self, ts_code: str) -> Dict[str, Any]:
         """
         获取基金详情
-        1. 优先尝试 Tushare（字段完整：费率、规模、经理等）
-        2. Tushare 失败时降级到 AKShare（基础信息+净值）
+        1. 优先 AKShare（免费、无频率限制）
+        2. AKShare 查不到的字段，再用 Tushare 补充（有频率限制，尽量少调用）
         """
         result = {
             "ts_code": ts_code,
@@ -150,174 +142,60 @@ class FundDataAdapter:
             "managers": [],
         }
 
-        tushare_success = False
-        try:
-            logger.info(f"🔄 [FundDataAdapter] 尝试使用 Tushare 获取基金详情: {ts_code}")
-            tushare_ok = await self._fill_detail_with_tushare(ts_code, result)
-            if tushare_ok:
-                tushare_success = True
-                logger.info(f"✅ [FundDataAdapter] Tushare 获取详情成功: {ts_code}")
-            else:
-                logger.warning(f"⚠️ [FundDataAdapter] Tushare 未返回有效数据，尝试 AKShare")
-        except Exception as e:
-            logger.warning(f"⚠️ [FundDataAdapter] Tushare 获取详情失败: {e}，尝试 AKShare")
-
-        if not tushare_success and self._akshare_available:
+        # 第1步：AKShare 获取尽可能多的数据
+        akshare_has_basic = False
+        if self._akshare_available:
             try:
                 logger.info(f"🔄 [FundDataAdapter] 使用 AKShare 获取基金详情: {ts_code}")
-                await self._fill_detail_with_akshare(ts_code, result)
-                logger.info(f"✅ [FundDataAdapter] AKShare 获取详情成功: {ts_code}")
+                akshare_has_basic = await self._fill_detail_with_akshare(ts_code, result)
+                if akshare_has_basic:
+                    logger.info(f"✅ [FundDataAdapter] AKShare 获取详情成功: {ts_code}")
             except Exception as e:
-                logger.error(f"❌ [FundDataAdapter] AKShare 获取详情也失败: {e}")
+                logger.warning(f"⚠️ [FundDataAdapter] AKShare 获取详情失败: {e}")
+
+        # 第2步：检查缺失字段，用 Tushare 补充
+        missing_fields = self._check_missing_fields(result)
+        if missing_fields:
+            logger.info(f"🔄 [FundDataAdapter] AKShare 缺失字段 {missing_fields}，尝试用 Tushare 补充: {ts_code}")
+            try:
+                await self._fill_missing_with_tushare(ts_code, result, missing_fields)
+                logger.info(f"✅ [FundDataAdapter] Tushare 补充完成: {ts_code}")
+            except Exception as e:
+                logger.warning(f"⚠️ [FundDataAdapter] Tushare 补充失败: {e}")
 
         return result
 
-    async def _fill_detail_with_tushare(self, ts_code: str, result: Dict[str, Any]) -> bool:
-        """使用 Tushare 填充基金详情，返回是否成功获取到有效数据"""
-        tushare = self._get_tushare()
-        has_data = False
+    def _check_missing_fields(self, result: Dict[str, Any]) -> List[str]:
+        """检查哪些关键字段缺失"""
+        missing = []
+        basic = result.get("basic") or {}
+        if not basic.get("management"):
+            missing.append("management")
+        if not basic.get("custodian"):
+            missing.append("custodian")
+        if not basic.get("found_date"):
+            missing.append("found_date")
+        if not basic.get("benchmark"):
+            missing.append("benchmark")
+        if not basic.get("m_fee"):
+            missing.append("m_fee")
+        if not basic.get("c_fee"):
+            missing.append("c_fee")
+        if result.get("latest_share") is None:
+            missing.append("latest_share")
+        if not result.get("managers"):
+            missing.append("managers")
+        return missing
 
-        # Tushare 的 ts_code 格式为 "501050.SH"，但传入的可能是 "501050"
-        # 构建候选代码列表
-        candidates = [ts_code]
-        if '.' not in ts_code:
-            # 尝试加后缀
-            candidates.extend([f"{ts_code}.SH", f"{ts_code}.SZ", f"{ts_code}.OF"])
+    async def _fill_detail_with_akshare(self, ts_code: str, result: Dict[str, Any]) -> bool:
+        """使用 AKShare 填充基金详情，返回是否获取到基础信息"""
+        has_basic = False
+        pure_code = ts_code.split('.')[0] if '.' in ts_code else ts_code
 
-        # 1. 基础信息（尝试多个候选代码）
-        try:
-            basic_df = await asyncio.to_thread(tushare.get_fund_basic)
-            if not basic_df.empty:
-                fund_row = None
-                for cand in candidates:
-                    matched = basic_df[basic_df['ts_code'] == cand]
-                    if not matched.empty:
-                        fund_row = matched
-                        break
-
-                # 如果没精确匹配，尝试前缀匹配
-                if fund_row is None:
-                    for cand in candidates:
-                        matched = basic_df[basic_df['ts_code'].str.startswith(cand, na=False)]
-                        if not matched.empty:
-                            fund_row = matched
-                            break
-
-                if fund_row is not None and not fund_row.empty:
-                    has_data = True
-                    row = fund_row.iloc[0]
-                    result["basic"] = {
-                        "ts_code": row.get("ts_code"),
-                        "name": row.get("name"),
-                        "short_name": row.get("short_name"),
-                        "fund_type": row.get("fund_type"),
-                        "market": row.get("market"),
-                        "status": row.get("status"),
-                        "found_date": row.get("found_date"),
-                        "list_date": row.get("list_date"),
-                        "invest_type": row.get("invest_type"),
-                        "type": row.get("type"),
-                        "management": row.get("management"),
-                        "custodian": row.get("custodian"),
-                        "benchmark": row.get("benchmark"),
-                        "m_fee": row.get("m_fee"),
-                        "c_fee": row.get("c_fee"),
-                        "s_fee": row.get("s_fee"),
-                        "p_fee": row.get("p_fee"),
-                        "r_fee": row.get("r_fee"),
-                    }
-        except Exception as e:
-            logger.warning(f"⚠️ [Tushare] 基础信息获取失败: {e}")
-
-        # 2. 最新净值（同样尝试多个候选代码）
-        try:
-            end_date = datetime.now().strftime('%Y%m%d')
-            start_date = (datetime.now() - timedelta(days=30)).strftime('%Y%m%d')
-            nav_df = None
-            for cand in candidates:
-                try:
-                    nav_df = await asyncio.to_thread(tushare.get_fund_nav, cand, start_date, end_date)
-                    if nav_df is not None and not nav_df.empty:
-                        break
-                except Exception:
-                    continue
-
-            if nav_df is not None and not nav_df.empty:
-                has_data = True
-                latest = nav_df.iloc[0]
-                prev = nav_df.iloc[1] if len(nav_df) > 1 else None
-                nav_val = latest.get("unit_nav") or latest.get("nav")
-                prev_nav = prev.get("unit_nav") or prev.get("nav") if prev is not None else None
-                daily_return = None
-                if nav_val is not None and prev_nav is not None and prev_nav != 0:
-                    daily_return = (nav_val - prev_nav) / prev_nav
-                result["latest_nav"] = {
-                    "nav_date": latest.get("nav_date") or latest.get("end_date"),
-                    "nav": nav_val,
-                    "acc_nav": latest.get("accum_nav") or latest.get("acc_nav"),
-                    "daily_return": daily_return,
-                }
-        except Exception as e:
-            logger.warning(f"⚠️ [Tushare] 净值获取失败: {e}")
-
-        # 3. 最新规模
-        try:
-            end_date = datetime.now().strftime('%Y%m%d')
-            start_date = (datetime.now() - timedelta(days=90)).strftime('%Y%m%d')
-            share_df = None
-            for cand in candidates:
-                try:
-                    share_df = await asyncio.to_thread(tushare.get_fund_share, cand, start_date, end_date)
-                    if share_df is not None and not share_df.empty:
-                        break
-                except Exception:
-                    continue
-
-            if share_df is not None and not share_df.empty:
-                has_data = True
-                latest_share = share_df.iloc[0]
-                result["latest_share"] = {
-                    "trade_date": latest_share.get("trade_date") or latest_share.get("ann_date"),
-                    "fd_share": latest_share.get("fd_share") or latest_share.get("share"),
-                    "fd_amount": latest_share.get("fd_amount") or latest_share.get("amount"),
-                }
-        except Exception as e:
-            logger.warning(f"⚠️ [Tushare] 份额获取失败: {e}")
-
-        # 4. 基金经理
-        try:
-            manager_df = None
-            for cand in candidates:
-                try:
-                    manager_df = await asyncio.to_thread(tushare.get_fund_manager, ts_code=cand)
-                    if manager_df is not None and not manager_df.empty:
-                        break
-                except Exception:
-                    continue
-
-            if manager_df is not None and not manager_df.empty:
-                has_data = True
-                managers = []
-                for _, row in manager_df.iterrows():
-                    managers.append({
-                        "name": row.get("name"),
-                        "gender": row.get("gender"),
-                        "birth_year": row.get("birth_year"),
-                        "edu": row.get("edu") or row.get("education"),
-                        "resume": row.get("resume") or row.get("intro"),
-                        "begin_date": row.get("begin_date"),
-                        "end_date": row.get("end_date"),
-                    })
-                result["managers"] = managers
-        except Exception as e:
-            logger.warning(f"⚠️ [Tushare] 基金经理获取失败: {e}")
-
-        return has_data
-
-    async def _fill_detail_with_akshare(self, ts_code: str, result: Dict[str, Any]):
-        """使用 AKShare 填充基金详情（有限数据）"""
         def _do_fill():
-            # 1. 基础信息 + 最新净值（fund_name_em 一张表就包含）
+            nonlocal has_basic
+
+            # 1. fund_name_em：基础信息 + 最新净值
             try:
                 df = self._ak.fund_name_em()
                 if not df.empty:
@@ -330,13 +208,7 @@ class FundDataAdapter:
                     daily_return_col = self._find_col(df, ['日增长率', '日涨幅', 'daily_return'])
 
                     if code_col:
-                        # AKShare 的代码是纯数字，不带后缀
-                        matched = df[df[code_col].astype(str).str.strip() == ts_code.strip()]
-                        if matched.empty and '.' in ts_code:
-                            # 如果传入的是带后缀的，尝试去掉后缀
-                            pure_code = ts_code.split('.')[0]
-                            matched = df[df[code_col].astype(str).str.strip() == pure_code]
-
+                        matched = df[df[code_col].astype(str).str.strip() == pure_code]
                         if not matched.empty:
                             row = matched.iloc[0]
                             result["basic"] = {
@@ -346,35 +218,201 @@ class FundDataAdapter:
                                 "market": "O",
                                 "status": "L",
                             }
+                            has_basic = True
+
                             # 净值
                             if nav_col:
                                 nav_val = row.get(nav_col)
+                                daily_ret = row.get(daily_return_col) if daily_return_col else None
                                 result["latest_nav"] = {
                                     "nav_date": str(row.get(date_col, '')).strip() if date_col else None,
                                     "nav": float(nav_val) if pd.notna(nav_val) else None,
                                     "acc_nav": float(row.get(acc_nav_col)) if acc_nav_col and pd.notna(row.get(acc_nav_col)) else None,
-                                    "daily_return": float(row.get(daily_return_col)) / 100 if daily_return_col and pd.notna(row.get(daily_return_col)) else None,
+                                    "daily_return": float(daily_ret) / 100 if daily_ret is not None and pd.notna(daily_ret) else None,
                                 }
             except Exception as e:
-                logger.warning(f"⚠️ [AKShare] 基础信息+净值获取失败: {e}")
+                logger.warning(f"⚠️ [AKShare] fund_name_em 获取失败: {e}")
 
-            # 2. 尝试获取更详细的信息（如 fund_individual_basic_info_xq）
+            # 2. fund_individual_basic_info_xq：雪球基金详情（管理人、托管人、成立日期、业绩基准、费率）
             try:
-                # 雪球基金详情
-                detail_df = self._ak.fund_individual_basic_info_xq(symbol=ts_code)
+                detail_df = self._ak.fund_individual_basic_info_xq(symbol=pure_code)
                 if detail_df is not None and not detail_df.empty:
                     row = detail_df.iloc[0]
-                    # 合并到 basic
                     if not result.get("basic"):
                         result["basic"] = {"ts_code": ts_code}
-                    result["basic"]["management"] = result["basic"].get("management") or str(row.get("管理人", row.get("management", ""))).strip() or None
-                    result["basic"]["custodian"] = result["basic"].get("custodian") or str(row.get("托管人", row.get("custodian", ""))).strip() or None
-                    result["basic"]["found_date"] = result["basic"].get("found_date") or str(row.get("成立日期", row.get("found_date", ""))).strip() or None
-                    result["basic"]["benchmark"] = result["basic"].get("benchmark") or str(row.get("业绩基准", row.get("benchmark", ""))).strip() or None
+                        has_basic = True
+
+                    b = result["basic"]
+                    # 管理人
+                    val = row.get("管理人") or row.get("management") or row.get("基金公司")
+                    if val and pd.notna(val):
+                        b["management"] = str(val).strip()
+
+                    # 托管人
+                    val = row.get("托管人") or row.get("custodian") or row.get("托管银行")
+                    if val and pd.notna(val):
+                        b["custodian"] = str(val).strip()
+
+                    # 成立日期
+                    val = row.get("成立日期") or row.get("found_date") or row.get("成立日")
+                    if val and pd.notna(val):
+                        b["found_date"] = str(val).strip()
+
+                    # 业绩基准
+                    val = row.get("业绩基准") or row.get("benchmark") or row.get("业绩比较基准")
+                    if val and pd.notna(val):
+                        b["benchmark"] = str(val).strip()
+
+                    # 费率（尝试解析各种可能的字段名）
+                    for fee_key, target_key in [
+                        ("管理费", "m_fee"), ("管理费率", "m_fee"),
+                        ("托管费", "c_fee"), ("托管费率", "c_fee"),
+                        ("销售服务费", "s_fee"), ("销售服务费率", "s_fee"),
+                        ("申购费", "p_fee"), ("申购费率", "p_fee"),
+                        ("赎回费", "r_fee"), ("赎回费率", "r_fee"),
+                    ]:
+                        val = row.get(fee_key)
+                        if val is not None and pd.notna(val) and target_key not in b:
+                            try:
+                                b[target_key] = float(val)
+                            except (ValueError, TypeError):
+                                pass
             except Exception as e:
-                logger.debug(f"[AKShare] 雪球详情获取失败（非关键）: {e}")
+                logger.debug(f"[AKShare] fund_individual_basic_info_xq 获取失败（非关键）: {e}")
+
+            # 3. fund_individual_achievement_xq：雪球基金业绩（规模信息）
+            try:
+                achieve_df = self._ak.fund_individual_achievement_xq(symbol=pure_code)
+                if achieve_df is not None and not achieve_df.empty:
+                    row = achieve_df.iloc[0]
+                    # 规模
+                    scale_val = row.get("基金规模") or row.get("规模") or row.get("asset") or row.get("fund_size")
+                    if scale_val is not None and pd.notna(scale_val):
+                        try:
+                            result["latest_share"] = {
+                                "trade_date": str(row.get("日期", row.get("date", ""))).strip() or None,
+                                "fd_share": None,
+                                "fd_amount": float(scale_val),
+                            }
+                        except (ValueError, TypeError):
+                            pass
+            except Exception as e:
+                logger.debug(f"[AKShare] fund_individual_achievement_xq 获取失败（非关键）: {e}")
+
+            # 4. fund_manager_em：东方财富基金经理
+            try:
+                manager_df = self._ak.fund_manager_em()
+                if manager_df is not None and not manager_df.empty:
+                    code_col = self._find_col(manager_df, ['基金代码', '代码'])
+                    if code_col:
+                        matched = manager_df[manager_df[code_col].astype(str).str.strip() == pure_code]
+                        if not matched.empty:
+                            managers = []
+                            for _, row in matched.iterrows():
+                                mgr = {
+                                    "name": str(row.get("姓名", row.get("name", ""))).strip() or None,
+                                    "gender": str(row.get("性别", row.get("gender", ""))).strip() or None,
+                                    "begin_date": str(row.get("任职日期", row.get("begin_date", ""))).strip() or None,
+                                    "resume": str(row.get("基金经理简介", row.get("resume", ""))).strip() or None,
+                                }
+                                if mgr["name"]:
+                                    managers.append(mgr)
+                            if managers:
+                                result["managers"] = managers
+            except Exception as e:
+                logger.debug(f"[AKShare] fund_manager_em 获取失败（非关键）: {e}")
 
         await asyncio.to_thread(_do_fill)
+        return has_basic
+
+    async def _fill_missing_with_tushare(self, ts_code: str, result: Dict[str, Any], missing_fields: List[str]):
+        """使用 Tushare 补充缺失字段（尽量少调用，避免频率限制）"""
+        tushare = self._get_tushare()
+        candidates = [ts_code]
+        if '.' not in ts_code:
+            candidates.extend([f"{ts_code}.SH", f"{ts_code}.SZ", f"{ts_code}.OF"])
+
+        # 1. 基础信息（管理人、托管人、费率等）
+        if any(f in missing_fields for f in ["management", "custodian", "found_date", "benchmark", "m_fee", "c_fee", "s_fee", "p_fee", "r_fee"]):
+            try:
+                basic_df = await asyncio.to_thread(tushare.get_fund_basic)
+                if not basic_df.empty:
+                    fund_row = None
+                    for cand in candidates:
+                        matched = basic_df[basic_df['ts_code'] == cand]
+                        if not matched.empty:
+                            fund_row = matched
+                            break
+                    if fund_row is None:
+                        for cand in candidates:
+                            matched = basic_df[basic_df['ts_code'].str.startswith(cand, na=False)]
+                            if not matched.empty:
+                                fund_row = matched
+                                break
+
+                    if fund_row is not None and not fund_row.empty:
+                        row = fund_row.iloc[0]
+                        b = result.setdefault("basic", {})
+                        for key in ["management", "custodian", "found_date", "benchmark", "m_fee", "c_fee", "s_fee", "p_fee", "r_fee"]:
+                            if key in missing_fields and not b.get(key):
+                                b[key] = row.get(key)
+                        # 补充名称等信息
+                        if not b.get("name"):
+                            b["name"] = row.get("name")
+                        if not b.get("fund_type"):
+                            b["fund_type"] = row.get("fund_type")
+            except Exception as e:
+                logger.warning(f"⚠️ [Tushare] 补充基础信息失败: {e}")
+
+        # 2. 最新规模
+        if "latest_share" in missing_fields:
+            try:
+                end_date = datetime.now().strftime('%Y%m%d')
+                start_date = (datetime.now() - timedelta(days=90)).strftime('%Y%m%d')
+                share_df = None
+                for cand in candidates:
+                    try:
+                        share_df = await asyncio.to_thread(tushare.get_fund_share, cand, start_date, end_date)
+                        if share_df is not None and not share_df.empty:
+                            break
+                    except Exception:
+                        continue
+                if share_df is not None and not share_df.empty:
+                    latest_share = share_df.iloc[0]
+                    result["latest_share"] = {
+                        "trade_date": latest_share.get("trade_date") or latest_share.get("ann_date"),
+                        "fd_share": latest_share.get("fd_share") or latest_share.get("share"),
+                        "fd_amount": latest_share.get("fd_amount") or latest_share.get("amount"),
+                    }
+            except Exception as e:
+                logger.warning(f"⚠️ [Tushare] 补充份额失败: {e}")
+
+        # 3. 基金经理
+        if "managers" in missing_fields:
+            try:
+                manager_df = None
+                for cand in candidates:
+                    try:
+                        manager_df = await asyncio.to_thread(tushare.get_fund_manager, ts_code=cand)
+                        if manager_df is not None and not manager_df.empty:
+                            break
+                    except Exception:
+                        continue
+                if manager_df is not None and not manager_df.empty:
+                    managers = []
+                    for _, row in manager_df.iterrows():
+                        managers.append({
+                            "name": row.get("name"),
+                            "gender": row.get("gender"),
+                            "birth_year": row.get("birth_year"),
+                            "edu": row.get("edu") or row.get("education"),
+                            "resume": row.get("resume") or row.get("intro"),
+                            "begin_date": row.get("begin_date"),
+                            "end_date": row.get("end_date"),
+                        })
+                    result["managers"] = managers
+            except Exception as e:
+                logger.warning(f"⚠️ [Tushare] 补充基金经理失败: {e}")
 
     @staticmethod
     def _find_col(df: pd.DataFrame, candidates: List[str]) -> Optional[str]:
