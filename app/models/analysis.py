@@ -252,3 +252,72 @@ class AnalysisHistoryQuery(BaseModel):
     def get_symbol(self) -> Optional[str]:
         """获取股票代码(兼容旧字段)"""
         return self.symbol or self.stock_code
+
+
+# ==================== 基金分析数据模型 ====================
+
+class FundType(str, Enum):
+    """基金类型枚举"""
+    ETF = "ETF"
+    LOF = "LOF"
+    INDEX = "指数型"
+    STOCK = "股票型"
+    BOND = "债券型"
+    HYBRID = "混合型"
+    MONEY = "货币型"
+    QDII = "QDII"
+    FOF = "FOF"
+    OTHER = "其他"
+
+
+class FundInfo(BaseModel):
+    """基金基础信息"""
+    ts_code: str = Field(..., description="基金代码，如 510050.SH")
+    name: str = Field(..., description="基金名称")
+    short_name: Optional[str] = None
+    fund_type: Optional[str] = None
+    market: Optional[str] = None  # E-场内, O-场外
+    status: Optional[str] = None  # L-上市, D-退市
+    found_date: Optional[str] = None
+    list_date: Optional[str] = None
+    invest_type: Optional[str] = None
+    type: Optional[str] = None
+    management: Optional[str] = None  # 管理人
+    custodian: Optional[str] = None  # 托管人
+    benchmark: Optional[str] = None  # 业绩基准
+
+
+class FundHolding(BaseModel):
+    """基金持仓明细"""
+    symbol: str = Field(..., description="股票代码")
+    name: Optional[str] = None
+    weight: Optional[float] = None  # 持仓占比
+    quantity: Optional[int] = None  # 持股数量
+    market_value: Optional[float] = None  # 持仓市值
+
+
+class FundAnalysisRequest(BaseModel):
+    """基金分析请求"""
+    ts_code: str = Field(..., description="基金代码，如 510050.SH")
+    fund_name: Optional[str] = None
+    parameters: Optional[AnalysisParameters] = None
+
+
+class FundAnalysisResult(BaseModel):
+    """基金分析结果"""
+    analysis_id: Optional[str] = None
+    ts_code: str
+    fund_name: Optional[str] = None
+    fund_type: Optional[str] = None
+    summary: Optional[str] = None
+    recommendation: Optional[str] = None
+    nav_trend: Optional[str] = None  # 净值走势分析
+    risk_assessment: Optional[str] = None  # 风险评估
+    key_points: List[str] = Field(default_factory=list)
+    holdings_analysis: Optional[str] = None  # 持仓分析
+    manager_assessment: Optional[str] = None  # 基金经理评价
+    comprehensive_report: Optional[str] = None  # 综合报告
+    tokens_used: int = 0
+    execution_time: float = 0.0
+    model_info: Optional[str] = None
+    error_message: Optional[str] = None

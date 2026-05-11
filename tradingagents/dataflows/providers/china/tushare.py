@@ -1588,6 +1588,279 @@ class TushareProvider(BaseStockDataProvider):
             return None
         return str(value) if value else None
 
+    # ==================== 基金数据接口 ====================
+
+    def get_fund_basic(self, market: Optional[str] = None, status: str = 'L') -> pd.DataFrame:
+        """
+        获取公募基金基础信息
+
+        Args:
+            market: 交易市场，E-场内(ETF/LOF)，O-场外，空-全部
+            status: 状态，L-上市，D-退市，空-全部
+
+        Returns:
+            DataFrame: 基金基础信息
+        """
+        if not self.connected or not self.api:
+            self.logger.error("❌ Tushare未连接，无法获取基金基础信息")
+            return pd.DataFrame()
+
+        try:
+            self.logger.info(f"🔄 获取基金基础信息: market={market}, status={status}")
+            params = {'status': status}
+            if market:
+                params['market'] = market
+
+            df = self.api.fund_basic(**params)
+            self.logger.info(f"✅ 获取到 {len(df)} 只基金基础信息")
+            return df
+        except Exception as e:
+            self.logger.error(f"❌ 获取基金基础信息失败: {e}")
+            return pd.DataFrame()
+
+    def get_fund_nav(self, ts_code: str, start_date: Optional[str] = None,
+                     end_date: Optional[str] = None) -> pd.DataFrame:
+        """
+        获取基金净值数据
+
+        Args:
+            ts_code: 基金代码，如 '510050.SH'
+            start_date: 开始日期，格式 YYYYMMDD
+            end_date: 结束日期，格式 YYYYMMDD
+
+        Returns:
+            DataFrame: 基金净值历史
+        """
+        if not self.connected or not self.api:
+            self.logger.error("❌ Tushare未连接，无法获取基金净值")
+            return pd.DataFrame()
+
+        try:
+            if not end_date:
+                end_date = datetime.now().strftime('%Y%m%d')
+            if not start_date:
+                start_date = (datetime.now() - timedelta(days=365)).strftime('%Y%m%d')
+
+            self.logger.info(f"🔄 获取基金净值: {ts_code}, {start_date} ~ {end_date}")
+            df = self.api.fund_nav(ts_code=ts_code, start_date=start_date, end_date=end_date)
+            self.logger.info(f"✅ 获取到 {len(df)} 条净值记录")
+            return df
+        except Exception as e:
+            self.logger.error(f"❌ 获取基金净值失败: {e}")
+            return pd.DataFrame()
+
+    def get_fund_daily(self, ts_code: str, start_date: Optional[str] = None,
+                       end_date: Optional[str] = None) -> pd.DataFrame:
+        """
+        获取基金日线行情（场内基金：ETF/LOF）
+
+        Args:
+            ts_code: 基金代码，如 '510050.SH'
+            start_date: 开始日期，格式 YYYYMMDD
+            end_date: 结束日期，格式 YYYYMMDD
+
+        Returns:
+            DataFrame: 基金日线行情
+        """
+        if not self.connected or not self.api:
+            self.logger.error("❌ Tushare未连接，无法获取基金行情")
+            return pd.DataFrame()
+
+        try:
+            if not end_date:
+                end_date = datetime.now().strftime('%Y%m%d')
+            if not start_date:
+                start_date = (datetime.now() - timedelta(days=365)).strftime('%Y%m%d')
+
+            self.logger.info(f"🔄 获取基金日线行情: {ts_code}, {start_date} ~ {end_date}")
+            df = self.api.fund_daily(ts_code=ts_code, start_date=start_date, end_date=end_date)
+            self.logger.info(f"✅ 获取到 {len(df)} 条行情记录")
+            return df
+        except Exception as e:
+            self.logger.error(f"❌ 获取基金日线行情失败: {e}")
+            return pd.DataFrame()
+
+    def get_fund_portfolio(self, ts_code: str, ann_date: Optional[str] = None) -> pd.DataFrame:
+        """
+        获取基金季度持仓明细
+
+        Args:
+            ts_code: 基金代码
+            ann_date: 公告日期（季报披露日期），格式 YYYYMMDD
+
+        Returns:
+            DataFrame: 基金持仓明细（股票代码、名称、占比等）
+        """
+        if not self.connected or not self.api:
+            self.logger.error("❌ Tushare未连接，无法获取基金持仓")
+            return pd.DataFrame()
+
+        try:
+            self.logger.info(f"🔄 获取基金持仓: {ts_code}, ann_date={ann_date}")
+            params = {'ts_code': ts_code}
+            if ann_date:
+                params['ann_date'] = ann_date
+
+            df = self.api.fund_portfolio(**params)
+            self.logger.info(f"✅ 获取到 {len(df)} 条持仓记录")
+            return df
+        except Exception as e:
+            self.logger.error(f"❌ 获取基金持仓失败: {e}")
+            return pd.DataFrame()
+
+    def get_fund_manager(self, ts_code: Optional[str] = None,
+                         name: Optional[str] = None) -> pd.DataFrame:
+        """
+        获取公募基金经理信息
+
+        Args:
+            ts_code: 基金代码
+            name: 基金经理姓名
+
+        Returns:
+            DataFrame: 基金经理信息（履历、任职期间、回报等）
+        """
+        if not self.connected or not self.api:
+            self.logger.error("❌ Tushare未连接，无法获取基金经理信息")
+            return pd.DataFrame()
+
+        try:
+            self.logger.info(f"🔄 获取基金经理信息: ts_code={ts_code}, name={name}")
+            params = {}
+            if ts_code:
+                params['ts_code'] = ts_code
+            if name:
+                params['name'] = name
+
+            df = self.api.fund_manager(**params)
+            self.logger.info(f"✅ 获取到 {len(df)} 条基金经理记录")
+            return df
+        except Exception as e:
+            self.logger.error(f"❌ 获取基金经理信息失败: {e}")
+            return pd.DataFrame()
+
+    def get_fund_share(self, ts_code: str, start_date: Optional[str] = None,
+                       end_date: Optional[str] = None) -> pd.DataFrame:
+        """
+        获取基金份额规模变动
+
+        Args:
+            ts_code: 基金代码
+            start_date: 开始日期，格式 YYYYMMDD
+            end_date: 结束日期，格式 YYYYMMDD
+
+        Returns:
+            DataFrame: 基金份额规模数据
+        """
+        if not self.connected or not self.api:
+            self.logger.error("❌ Tushare未连接，无法获取基金份额")
+            return pd.DataFrame()
+
+        try:
+            if not end_date:
+                end_date = datetime.now().strftime('%Y%mMDD')
+            if not start_date:
+                start_date = (datetime.now() - timedelta(days=365)).strftime('%Y%m%d')
+
+            self.logger.info(f"🔄 获取基金份额: {ts_code}, {start_date} ~ {end_date}")
+            df = self.api.fund_share(ts_code=ts_code, start_date=start_date, end_date=end_date)
+            self.logger.info(f"✅ 获取到 {len(df)} 条份额记录")
+            return df
+        except Exception as e:
+            self.logger.error(f"❌ 获取基金份额失败: {e}")
+            return pd.DataFrame()
+
+    def get_fund_dividend(self, ts_code: Optional[str] = None,
+                          ann_date: Optional[str] = None) -> pd.DataFrame:
+        """
+        获取基金分红数据
+
+        Args:
+            ts_code: 基金代码
+            ann_date: 公告日期，格式 YYYYMMDD
+
+        Returns:
+            DataFrame: 基金分红记录
+        """
+        if not self.connected or not self.api:
+            self.logger.error("❌ Tushare未连接，无法获取基金分红")
+            return pd.DataFrame()
+
+        try:
+            self.logger.info(f"🔄 获取基金分红: ts_code={ts_code}")
+            params = {}
+            if ts_code:
+                params['ts_code'] = ts_code
+            if ann_date:
+                params['ann_date'] = ann_date
+
+            df = self.api.fund_div(**params)
+            self.logger.info(f"✅ 获取到 {len(df)} 条分红记录")
+            return df
+        except Exception as e:
+            self.logger.error(f"❌ 获取基金分红失败: {e}")
+            return pd.DataFrame()
+
+    def get_fund_comprehensive(self, ts_code: str) -> Dict[str, Any]:
+        """
+        获取基金综合数据（一键获取基础信息+净值+持仓+经理）
+
+        Args:
+            ts_code: 基金代码
+
+        Returns:
+            Dict: 包含基础信息、净值、持仓、基金经理的综合数据
+        """
+        self.logger.info(f"🔄 获取基金综合数据: {ts_code}")
+
+        result = {
+            'ts_code': ts_code,
+            'basic': None,
+            'nav_history': None,
+            'portfolio': None,
+            'manager': None,
+            'dividend': None,
+        }
+
+        # 基础信息
+        try:
+            basic_df = self.get_fund_basic()
+            if not basic_df.empty:
+                fund_info = basic_df[basic_df['ts_code'] == ts_code]
+                if not fund_info.empty:
+                    result['basic'] = fund_info.iloc[0].to_dict()
+        except Exception as e:
+            self.logger.warning(f"⚠️ 获取基金基础信息失败: {e}")
+
+        # 净值历史（最近90天）
+        try:
+            end_date = datetime.now().strftime('%Y%m%d')
+            start_date = (datetime.now() - timedelta(days=90)).strftime('%Y%m%d')
+            result['nav_history'] = self.get_fund_nav(ts_code, start_date, end_date)
+        except Exception as e:
+            self.logger.warning(f"⚠️ 获取基金净值失败: {e}")
+
+        # 持仓
+        try:
+            result['portfolio'] = self.get_fund_portfolio(ts_code)
+        except Exception as e:
+            self.logger.warning(f"⚠️ 获取基金持仓失败: {e}")
+
+        # 基金经理
+        try:
+            result['manager'] = self.get_fund_manager(ts_code=ts_code)
+        except Exception as e:
+            self.logger.warning(f"⚠️ 获取基金经理信息失败: {e}")
+
+        # 分红
+        try:
+            result['dividend'] = self.get_fund_dividend(ts_code=ts_code)
+        except Exception as e:
+            self.logger.warning(f"⚠️ 获取基金分红失败: {e}")
+
+        self.logger.info(f"✅ 基金综合数据获取完成: {ts_code}")
+        return result
+
 
 # 全局提供器实例
 _tushare_provider = None

@@ -212,6 +212,38 @@ export const analysisApi = {
     return request.get(`/api/analysis/tasks/${taskId}/details`)
   },
 
+  // ==================== 基金分析 ====================
+  // 基金分析（同步执行，直接返回结果）
+  analyzeFund(fundRequest: {
+    ts_code: string
+    fund_name?: string
+    parameters?: SingleAnalysisRequest['parameters']
+  }): Promise<ApiResponse<{
+    ts_code: string
+    fund_name?: string
+    fund_type?: string
+    summary?: string
+    recommendation?: string
+    comprehensive_report?: string
+    error_message?: string
+  }>> {
+    return request.post('/api/analysis/fund', fundRequest)
+  },
+
+  // 搜索基金
+  searchFunds(keyword: string, market?: string): Promise<ApiResponse<Array<{
+    ts_code: string
+    name: string
+    fund_type?: string
+    market?: string
+    status?: string
+    management?: string
+  }>>> {
+    return request.get('/api/analysis/fund/search', {
+      params: { keyword, market }
+    })
+  },
+
   // 获取任务列表（新版 simple service）
   getTaskList(params?: { status?: string; limit?: number; offset?: number }): Promise<any>{
     return request.get('/api/analysis/tasks', { params })

@@ -18,7 +18,7 @@ from app.services.analysis_service import get_analysis_service
 from app.services.simple_analysis_service import get_simple_analysis_service
 from app.services.websocket_manager import get_websocket_manager
 from app.models.analysis import (
-    SingleAnalysisRequest, BatchAnalysisRequest, PortfolioAnalysisRequest, AnalysisParameters,
+    SingleAnalysisRequest, BatchAnalysisRequest, PortfolioAnalysisRequest, FundAnalysisRequest, AnalysisParameters,
     AnalysisTaskResponse, AnalysisBatchResponse, AnalysisHistoryQuery
 )
 
@@ -966,6 +966,94 @@ async def submit_portfolio_analysis(
     except Exception as e:
         logger.error(f"❌ [组合分析] 提交失败: {e}", exc_info=True)
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/fund", response_model=Dict[str, Any])
+async def analyze_fund(
+    request: FundAnalysisRequest,
+    user: dict = Depends(get_current_user)
+):
+    """基金分析（同步执行，直接返回结果）
+
+    基于Tushare基金数据，提供基金综合分析：
+    - 净值走势与业绩表现
+    - 持仓结构与集中度
+    - 基金经理能力评估
+    - 风险收益特征
+    - 综合投资建议
+    """
+    try:
+        logger.info(f"🎯 [基金分析] 收到请求: ts_code={request.ts_code}")
+
+        from app.services.fund_analysis_service import get_fund_analysis_service
+        service = get_fund_analysis_service()
+
+        # 执行基金分析
+        result = await service.analyze_fund(request)
+
+        if result.error_message:
+            logger.warning(f"⚠️ [基金分析] 分析完成但有错误: {result.error_message}")
+            return {
+                "success": False,
+                "data": result.model_dump(),
+                "message": result.error_message
+            }
+
+        logger.info(f"✅ [基金分析] 完成: {request.ts_code}")
+        return {
+            "success": True,
+            "data": result.model_dump(),
+            "message": "基金分析完成"
+        }
+
+    except Exception as e:
+        logger.error(f"❌ [基金分析] 失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/fund/search", response_model=Dict[str, Any])
+async def search_funds(
+    keyword: str = Query(..., description="搜索关键词：基金代码或名称"),
+    market: Optional[str] = Query(None, description="市场: E-场内, O-场外"),
+    user: dict = Depends(get_current_user)
+):
+    """搜索基金（支持代码或名称模糊搜索）"""
+    try:
+        from tradingagents.dataflows.providers.china.tushare import get_tushare_provider
+        tushare = get_tushare_provider()
+
+        df = await asyncio.to_thread(tushare.get_fund_basic, market=market)
+        if df.empty:
+            return {"success": True, "data": [], "message": "未找到基金数据"}
+
+        # 模糊搜索
+        keyword_lower = keyword.lower()
+        matched = df[
+            df['ts_code'].str.lower().str.contains(keyword_lower, na=False) |
+            df['name'].str.lower().str.contains(keyword_lower, na=False)
+        ]
+
+        # 转换为列表
+        funds = []
+        for _, row in matched.head(20).iterrows():
+            funds.append({
+                "ts_code": row.get("ts_code"),
+                "name": row.get("name"),
+                "fund_type": row.get("fund_type"),
+                "market": row.get("market"),
+                "status": row.get("status"),
+                "management": row.get("management"),
+            })
+
+        return {
+            "success": True,
+            "data": funds,
+            "message": f"找到 {len(funds)} 只基金"
+        }
+
+    except Exception as e:
+        logger.error(f"❌ [基金搜索] 失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 # 兼容性：保留原有端点
 @router.post("/analyze")
