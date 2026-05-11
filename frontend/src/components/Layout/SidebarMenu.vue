@@ -27,8 +27,9 @@
         <el-icon><Money /></el-icon>
         <span>基金分析</span>
       </template>
-      <el-menu-item index="/analysis/fund">基金组合分析</el-menu-item>
-      <el-menu-item index="/analysis/fund-compare">基金对比分析</el-menu-item>
+      <el-menu-item index="/analysis/fund">基金分析</el-menu-item>
+      <el-menu-item index="/analysis/fund-portfolio">组合分析</el-menu-item>
+      <el-menu-item index="/analysis/fund-compare">对比分析</el-menu-item>
     </el-sub-menu>
 
     <el-menu-item index="/reports">
