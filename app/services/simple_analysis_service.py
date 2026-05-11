@@ -2678,6 +2678,10 @@ class SimpleAnalysisService:
                 "reports": {
                     "comprehensive_report": final_result.get("comprehensive_report", {}).get("report_text", ""),
                 },
+                # 🔧 组合分析特有字段：直接存到顶层，便于 get_task_result 查询
+                "stock_results": final_result.get("stock_results"),
+                "comprehensive_report": final_result.get("comprehensive_report"),
+                "stocks": final_result.get("stocks"),
                 "result": final_result,
                 "status": "completed",
                 "created_at": datetime.utcnow(),

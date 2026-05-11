@@ -291,7 +291,12 @@ async def get_task_result(
                     "updated_at": mongo_result.get("updated_at"),
                     "status": mongo_result.get("status", "completed"),
                     "decision": mongo_result.get("decision", {}),
-                    "source": "mongodb"  # 标记数据来源
+                    "source": "mongodb",  # 标记数据来源
+                    # 🔧 组合分析特有字段
+                    "portfolio_name": mongo_result.get("portfolio_name"),
+                    "stock_results": mongo_result.get("stock_results"),
+                    "comprehensive_report": mongo_result.get("comprehensive_report"),
+                    "stocks": mongo_result.get("stocks"),
                 }
 
                 # 添加调试信息
@@ -335,7 +340,12 @@ async def get_task_result(
                         "updated_at": tasks_doc.get("completed_at"),
                         "status": r.get("status", "completed"),
                         "decision": r.get("decision", {}),
-                        "source": "analysis_tasks"  # 数据来源标记
+                        "source": "analysis_tasks",  # 数据来源标记
+                        # 🔧 组合分析特有字段
+                        "portfolio_name": r.get("portfolio_name"),
+                        "stock_results": r.get("stock_results"),
+                        "comprehensive_report": r.get("comprehensive_report"),
+                        "stocks": r.get("stocks"),
                     }
 
         if not result_data:
@@ -681,6 +691,14 @@ async def get_task_result(
             validated_reports[safe_key] = validated_content
 
         final_result_data["reports"] = validated_reports
+
+        # 🔧 组合分析特有字段：如果存在则透传，确保前端能正确展示组合报告
+        if result_data.get("stock_results") or result_data.get("comprehensive_report"):
+            final_result_data["portfolio_name"] = result_data.get("portfolio_name")
+            final_result_data["stock_results"] = result_data.get("stock_results")
+            final_result_data["comprehensive_report"] = result_data.get("comprehensive_report")
+            final_result_data["stocks"] = result_data.get("stocks")
+            logger.info(f"📊 [RESULT] 识别为组合分析结果，已透传组合特有字段")
 
         logger.info(f"✅ [RESULT] 成功获取任务结果: {task_id}")
         logger.info(f"📊 [RESULT] 最终返回 {len(final_result_data.get('reports', {}))} 个报告")
