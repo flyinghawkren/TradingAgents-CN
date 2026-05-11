@@ -15,88 +15,53 @@
       </div>
     </div>
 
+    <!-- 未选择基金时的提示 -->
+    <div v-if="!selectedFund" class="empty-state">
+      <el-card class="empty-card" shadow="hover">
+        <el-empty :image-size="160" description="">
+          <template #description>
+            <div class="empty-content">
+              <h3>暂未选择基金</h3>
+              <p>请先前往基金搜索页面，选择一只基金后再进行分析</p>
+              <el-button type="primary" size="large" @click="goToSearch" class="search-btn">
+                <el-icon><Search /></el-icon>
+                前往基金搜索
+              </el-button>
+            </div>
+          </template>
+        </el-empty>
+      </el-card>
+    </div>
+
     <!-- 主要分析区域 -->
-    <div class="analysis-container">
-      <el-row :gutter="24">
-        <!-- 左侧：基金数据 + 分析配置 -->
+    <div v-else class="analysis-container">
+      <!-- 已选基金信息条 -->
+      <el-card class="fund-bar-card" shadow="hover">
+        <div class="fund-bar">
+          <div class="fund-info">
+            <span class="fund-name">{{ selectedFund.name }}</span>
+            <el-tag type="success" size="small">{{ selectedFund.ts_code }}</el-tag>
+            <el-tag v-if="selectedFund.fund_type" size="small" type="info">{{ selectedFund.fund_type }}</el-tag>
+          </div>
+          <el-button type="primary" size="small" @click="goToSearch">
+            <el-icon><Refresh /></el-icon>
+            更换基金
+          </el-button>
+        </div>
+      </el-card>
+
+      <el-row :gutter="24" style="margin-top: 24px;">
+        <!-- 左侧：分析配置 -->
         <el-col :span="18">
           <el-card class="main-form-card" shadow="hover">
             <template #header>
               <div class="card-header">
                 <h3>分析配置</h3>
-                <el-tag type="info" size="small">必填信息</el-tag>
+                <el-tag type="info" size="small">选填信息</el-tag>
               </div>
             </template>
 
             <el-form label-position="top" class="analysis-form">
-              <!-- 基金搜索 -->
-              <div class="form-section">
-                <h4 class="section-title">🔍 基金搜索</h4>
-                <el-form-item label="基金代码/名称" required>
-                  <el-input
-                    v-model="searchKeyword"
-                    placeholder="输入基金代码或名称，如：510050 或 华夏上证50"
-                    clearable
-                    size="large"
-                    class="search-input"
-                    @keyup.enter="searchFunds"
-                  >
-                    <template #prefix>
-                      <el-icon><Search /></el-icon>
-                    </template>
-                    <template #append>
-                      <el-button type="primary" @click="searchFunds" :loading="searching">
-                        搜索
-                      </el-button>
-                    </template>
-                  </el-input>
-                </el-form-item>
-
-                <!-- 搜索结果 -->
-                <div v-if="searchResults.length > 0" class="search-results">
-                  <el-table :data="searchResults" style="width: 100%" @row-click="selectFund" highlight-current-row>
-                    <el-table-column prop="ts_code" label="基金代码" width="120" />
-                    <el-table-column prop="name" label="基金名称" />
-                    <el-table-column prop="fund_type" label="类型" width="120" />
-                    <el-table-column prop="market" label="市场" width="100">
-                      <template #default="{ row }">
-                        <el-tag size="small" :type="row.market === 'E' ? 'success' : 'info'">
-                          {{ row.market === 'E' ? '场内' : '场外' }}
-                        </el-tag>
-                      </template>
-                    </el-table-column>
-                    <el-table-column label="操作" width="100">
-                      <template #default="{ row }">
-                        <el-button type="primary" size="small" @click.stop="selectFund(row)">
-                          选择
-                        </el-button>
-                      </template>
-                    </el-table-column>
-                  </el-table>
-                </div>
-
-                <!-- 空状态 -->
-                <div v-else-if="searched && !searching && !selectedFund" class="empty-results">
-                  <el-empty description="未找到相关基金" />
-                </div>
-              </div>
-
-              <!-- 选中基金信息 -->
-              <div v-if="selectedFund" class="form-section">
-                <h4 class="section-title">📋 已选基金</h4>
-                <el-descriptions :column="3" border>
-                  <el-descriptions-item label="基金名称">{{ selectedFund.name }}</el-descriptions-item>
-                  <el-descriptions-item label="基金代码">{{ selectedFund.ts_code }}</el-descriptions-item>
-                  <el-descriptions-item label="基金类型">{{ selectedFund.fund_type || '-' }}</el-descriptions-item>
-                  <el-descriptions-item label="管理人">{{ selectedFund.management || '-' }}</el-descriptions-item>
-                  <el-descriptions-item label="市场">{{ selectedFund.market === 'E' ? '场内(ETF/LOF)' : '场外' }}</el-descriptions-item>
-                  <el-descriptions-item label="状态">
-                    <el-tag v-if="selectedFund.status === 'L'" type="success" size="small">存续</el-tag>
-                    <el-tag v-else type="info" size="small">{{ selectedFund.status || '-' }}</el-tag>
-                  </el-descriptions-item>
-                </el-descriptions>
-              </div>
-
               <!-- 分析时间范围 -->
               <div class="form-section">
                 <h4 class="section-title">📅 分析时间范围</h4>
@@ -117,16 +82,14 @@
               <!-- 业绩对比基准 -->
               <div class="form-section">
                 <h4 class="section-title">📊 业绩对比基准</h4>
-                <div class="benchmark-selector">
-                  <el-select v-model="analysisConfig.benchmark" size="large" style="width: 280px">
-                    <el-option label="业绩比较基准（默认）" value="default" />
-                    <el-option label="沪深300指数" value="hs300" />
-                    <el-option label="中证500指数" value="zz500" />
-                    <el-option label="中证全债指数" value="bond" />
-                    <el-option label="同类基金平均" value="peer_avg" />
-                    <el-option label="货币基金平均" value="mmf_avg" />
-                  </el-select>
-                </div>
+                <el-select v-model="analysisConfig.benchmark" size="large" style="width: 280px">
+                  <el-option label="业绩比较基准（默认）" value="default" />
+                  <el-option label="沪深300指数" value="hs300" />
+                  <el-option label="中证500指数" value="zz500" />
+                  <el-option label="中证全债指数" value="bond" />
+                  <el-option label="同类基金平均" value="peer_avg" />
+                  <el-option label="货币基金平均" value="mmf_avg" />
+                </el-select>
               </div>
 
               <!-- 分析深度 -->
@@ -184,7 +147,6 @@
                     size="large"
                     @click="submitAnalysis"
                     :loading="analyzing"
-                    :disabled="!selectedFund"
                     class="submit-btn large-analysis-btn"
                   >
                     <el-icon><TrendCharts /></el-icon>
@@ -416,6 +378,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   Money,
@@ -429,10 +392,7 @@ import {
   Wallet,
   User,
   WarningFilled,
-  InfoFilled,
-  Coin,
-  Histogram,
-  OfficeBuilding
+  Coin
 } from '@element-plus/icons-vue'
 import { analysisApi } from '@/api/analysis'
 import { configApi } from '@/api/config'
@@ -440,12 +400,25 @@ import { marked } from 'marked'
 
 marked.setOptions({ breaks: true, gfm: true })
 
-// ==================== 搜索相关 ====================
-const searchKeyword = ref('')
-const searching = ref(false)
-const searched = ref(false)
-const searchResults = ref<any[]>([])
+const route = useRoute()
+const router = useRouter()
+
+// ==================== 基金信息（从URL参数获取） ====================
 const selectedFund = ref<any>(null)
+
+const initFundFromQuery = () => {
+  const tsCode = route.query.ts_code as string
+  const name = route.query.name as string
+  if (tsCode && name) {
+    selectedFund.value = {
+      ts_code: tsCode,
+      name: name,
+      fund_type: route.query.fund_type as string || undefined,
+      market: route.query.market as string || undefined,
+      management: route.query.management as string || undefined
+    }
+  }
+}
 
 // ==================== 分析状态 ====================
 const analyzing = ref(false)
@@ -496,49 +469,8 @@ const availableModels = ref<any[]>([])
 
 // ==================== 方法 ====================
 
-// 搜索基金
-const searchFunds = async () => {
-  if (!searchKeyword.value.trim()) {
-    ElMessage.warning('请输入基金代码或名称')
-    return
-  }
-
-  searching.value = true
-  searched.value = true
-  searchResults.value = []
-  selectedFund.value = null
-  analysisResult.value = null
-  analysisStatus.value = 'idle'
-  showResults.value = false
-
-  try {
-    const response = await analysisApi.searchFunds(searchKeyword.value.trim())
-    if (response?.success && response.data) {
-      searchResults.value = response.data
-      if (searchResults.value.length === 0) {
-        ElMessage.info('未找到相关基金')
-      } else {
-        ElMessage.success(`找到 ${searchResults.value.length} 只基金`)
-      }
-    } else {
-      ElMessage.warning(response?.message || '搜索失败')
-    }
-  } catch (error: any) {
-    ElMessage.error(error.message || '搜索失败')
-  } finally {
-    searching.value = false
-  }
-}
-
-// 选择基金
-const selectFund = (row: any) => {
-  selectedFund.value = row
-  analysisResult.value = null
-  analysisStatus.value = 'idle'
-  showResults.value = false
-  // 清空搜索结果，避免占用空间
-  searchResults.value = []
-  ElMessage.success(`已选择基金：${row.name}`)
+const goToSearch = () => {
+  router.push('/analysis/fund-search')
 }
 
 // 切换分析师
@@ -653,6 +585,7 @@ const fetchAvailableModels = async () => {
 
 // 页面加载
 onMounted(() => {
+  initFundFromQuery()
   fetchAvailableModels()
 })
 </script>
@@ -664,11 +597,11 @@ onMounted(() => {
   padding: 24px;
 
   .page-header {
-    margin-bottom: 32px;
+    margin-bottom: 24px;
 
     .header-content {
       background: var(--el-bg-color);
-      padding: 32px;
+      padding: 28px 32px;
       border-radius: 16px;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     }
@@ -677,7 +610,7 @@ onMounted(() => {
       .page-title {
         display: flex;
         align-items: center;
-        font-size: 32px;
+        font-size: 28px;
         font-weight: 700;
         color: #1a202c;
         margin: 0 0 8px 0;
@@ -689,9 +622,76 @@ onMounted(() => {
       }
 
       .page-description {
-        font-size: 16px;
+        font-size: 15px;
         color: #64748b;
         margin: 0;
+      }
+    }
+  }
+
+  // 空状态
+  .empty-state {
+    .empty-card {
+      border-radius: 16px;
+      border: none;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+
+      :deep(.el-card__body) {
+        padding: 48px 24px;
+      }
+
+      .empty-content {
+        text-align: center;
+
+        h3 {
+          font-size: 20px;
+          font-weight: 600;
+          color: #1a202c;
+          margin: 0 0 8px 0;
+        }
+
+        p {
+          font-size: 14px;
+          color: #64748b;
+          margin: 0 0 24px 0;
+        }
+
+        .search-btn {
+          min-width: 200px;
+          height: 48px;
+          font-size: 16px;
+          font-weight: 600;
+          border-radius: 12px;
+        }
+      }
+    }
+  }
+
+  // 已选基金信息条
+  .fund-bar-card {
+    border-radius: 12px;
+    border: none;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+
+    :deep(.el-card__body) {
+      padding: 16px 24px;
+    }
+
+    .fund-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+
+      .fund-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+
+        .fund-name {
+          font-size: 18px;
+          font-weight: 600;
+          color: #1a202c;
+        }
       }
     }
   }
@@ -745,35 +745,6 @@ onMounted(() => {
         }
       }
 
-      :deep(.el-form-item__label) {
-        font-weight: 500;
-        color: #374151;
-      }
-
-      .search-input {
-        :deep(.el-input__inner) {
-          border-radius: 8px 0 0 8px;
-        }
-        :deep(.el-input-group__append) {
-          border-radius: 0 8px 8px 0;
-          background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-          color: white;
-          border: none;
-          .el-button {
-            color: white;
-            font-weight: 500;
-          }
-        }
-      }
-
-      .search-results {
-        margin-top: 16px;
-      }
-
-      .empty-results {
-        margin-top: 40px;
-      }
-
       .time-range-selector {
         :deep(.el-radio-group) {
           display: flex;
@@ -784,14 +755,6 @@ onMounted(() => {
           border-radius: 8px !important;
           border: 1px solid #e2e8f0;
           box-shadow: none !important;
-        }
-      }
-
-      .benchmark-selector {
-        :deep(.el-select) {
-          .el-input__inner {
-            border-radius: 8px;
-          }
         }
       }
     }
