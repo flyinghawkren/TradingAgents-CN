@@ -1,7 +1,10 @@
 """
 基金数据适配器
-- 搜索：优先 AKShare（免费、无需Token）
-- 详情：优先 AKShare（字段有限但免费），AKShare 查不到的字段再降级 Tushare
+- 搜索：优先 AKShare fund_name_em（免费、无需Token）
+- 详情：优先 AKShare fund_info_ths（同花顺，字段完整）
+  + fund_individual_basic_info_xq（雪球，补充规模、基金经理、评级等）
+  + 指数型基金额外调用 fund_info_index_em
+  + Tushare 仅作为最后补充（有频率限制）
 """
 import asyncio
 import logging
@@ -42,7 +45,7 @@ class FundDataAdapter:
     # ==================== 搜索基金 ====================
 
     async def search_funds(self, keyword: str, market: Optional[str] = None, limit: int = 20) -> List[Dict[str, Any]]:
-        """搜索基金：优先 AKShare，降级 Tushare"""
+        """搜索基金：优先 AKShare fund_name_em，降级 Tushare"""
         if self._akshare_available:
             try:
                 logger.info(f"🔄 [FundDataAdapter] 尝试使用 AKShare 搜索基金: {keyword}")
@@ -63,7 +66,7 @@ class FundDataAdapter:
             return []
 
     async def _search_with_akshare(self, keyword: str, limit: int = 20) -> List[Dict[str, Any]]:
-        """使用 AKShare 搜索基金"""
+        """使用 AKShare fund_name_em 搜索基金"""
         def _do_search():
             try:
                 df = self._ak.fund_name_em()
@@ -132,7 +135,11 @@ class FundDataAdapter:
         """
         获取基金详情
         1. 优先 AKShare（免费、无频率限制）
-        2. AKShare 查不到的字段，再用 Tushare 补充（有频率限制，尽量少调用）
+           - fund_info_ths: 同花顺基金详情（费率、管理人、托管人、业绩基准等）
+           - fund_individual_basic_info_xq: 雪球基金详情（规模、基金经理、评级等）
+           - fund_info_index_em: 指数型基金额外信息（跟踪标的、跟踪方式等）
+           - fund_name_em: 最新净值
+        2. Tushare 仅补充缺失字段（有频率限制）
         """
         result = {
             "ts_code": ts_code,
@@ -192,137 +199,180 @@ class FundDataAdapter:
         has_basic = False
         pure_code = ts_code.split('.')[0] if '.' in ts_code else ts_code
 
-        def _do_fill():
-            nonlocal has_basic
+        # ========== 1. 同花顺基金基本信息 fund_info_ths（核心数据源）==========
+        try:
+            logger.info(f"🔄 [AKShare] 调用 fund_info_ths: {pure_code}")
+            ths_df = self._ak.fund_info_ths(symbol=pure_code)
+            if ths_df is not None and not ths_df.empty:
+                # fund_info_ths 返回的是 item/value 两列格式
+                # 转换为字典
+                ths_dict = {}
+                for _, row in ths_df.iterrows():
+                    item = str(row.get("字段", row.get("item", ""))).strip()
+                    value = row.get("值", row.get("value", ""))
+                    if item:
+                        ths_dict[item] = value
 
-            # 1. fund_name_em：基础信息 + 最新净值
+                logger.info(f"[AKShare] fund_info_ths 返回字段: {list(ths_dict.keys())}")
+
+                if ths_dict:
+                    has_basic = True
+                    result["basic"] = {
+                        "ts_code": ts_code,
+                        "name": self._extract_value(ths_dict, ["基金简称", "简称", "name"]),
+                        "fund_type": self._extract_value(ths_dict, ["基金类型", "类型", "fund_type"]),
+                        "invest_type": self._extract_value(ths_dict, ["投资类型", "invest_type"]),
+                        "management": self._extract_value(ths_dict, ["基金管理人", "管理人", "基金公司", "management"]),
+                        "custodian": self._extract_value(ths_dict, ["基金托管人", "托管人", "托管银行", "custodian"]),
+                        "found_date": self._extract_value(ths_dict, ["成立日期", "成立日", "found_date"]),
+                        "benchmark": self._extract_value(ths_dict, ["业绩比较基准", "业绩基准", "比较基准", "benchmark"]),
+                        "m_fee": self._parse_fee(ths_dict, ["管理费", "管理费率", "m_fee"]),
+                        "c_fee": self._parse_fee(ths_dict, ["托管费", "托管费率", "c_fee"]),
+                        "p_fee": self._parse_fee(ths_dict, ["最高申购费", "申购费率", "最高认购费", "p_fee"]),
+                        "r_fee": self._parse_fee(ths_dict, ["最高赎回费", "赎回费率", "r_fee"]),
+                        "market": "O",
+                        "status": "L",
+                    }
+
+                    # 基金经理（同花顺返回的是字符串，可能多个）
+                    mgr_names = self._extract_value(ths_dict, ["基金经理", "经理人", "manager"])
+                    if mgr_names:
+                        # 可能返回 "伍臣东" 或 "王泽实 万方方"
+                        for name in str(mgr_names).split():
+                            name = name.strip()
+                            if name and name not in [m.get("name") for m in result["managers"]]:
+                                result["managers"].append({"name": name})
+
+                    # 规模（同花顺返回格式如 "4.13亿份（2026-03-31）"）
+                    scale_str = self._extract_value(ths_dict, ["份额规模", "规模", "最新规模", "fund_size"])
+                    if scale_str:
+                        parsed = self._parse_scale(str(scale_str))
+                        if parsed:
+                            result["latest_share"] = parsed
+
+                    # 成立规模
+                    init_scale = self._extract_value(ths_dict, ["成立规模", "初始规模", "init_scale"])
+                    if init_scale and not result.get("latest_share"):
+                        parsed = self._parse_scale(str(init_scale))
+                        if parsed:
+                            result["latest_share"] = parsed
+            else:
+                logger.warning(f"⚠️ [AKShare] fund_info_ths 返回空数据: {pure_code}")
+        except Exception as e:
+            logger.warning(f"⚠️ [AKShare] fund_info_ths 获取失败: {e}")
+
+        # ========== 2. 雪球基金详情 fund_individual_basic_info_xq（补充数据源）==========
+        try:
+            logger.info(f"🔄 [AKShare] 调用 fund_individual_basic_info_xq: {pure_code}")
+            xq_df = self._ak.fund_individual_basic_info_xq(symbol=pure_code)
+            if xq_df is not None and not xq_df.empty:
+                xq_dict = {}
+                for _, row in xq_df.iterrows():
+                    item = str(row.get("item", row.get("字段", ""))).strip()
+                    value = row.get("value", row.get("值", ""))
+                    if item:
+                        xq_dict[item] = value
+
+                logger.info(f"[AKShare] fund_individual_basic_info_xq 返回字段: {list(xq_dict.keys())}")
+
+                # 确保 basic 存在
+                if not result.get("basic"):
+                    result["basic"] = {"ts_code": ts_code, "market": "O", "status": "L"}
+                    has_basic = True
+                b = result["basic"]
+
+                # 补充缺失字段
+                if not b.get("name"):
+                    b["name"] = self._extract_value(xq_dict, ["基金名称", "名称", "name"])
+                if not b.get("fund_type"):
+                    b["fund_type"] = self._extract_value(xq_dict, ["基金类型", "类型", "fund_type"])
+                if not b.get("management"):
+                    b["management"] = self._extract_value(xq_dict, ["基金公司", "管理人", "management"])
+                if not b.get("custodian"):
+                    b["custodian"] = self._extract_value(xq_dict, ["托管银行", "托管人", "custodian"])
+                if not b.get("found_date"):
+                    b["found_date"] = self._extract_value(xq_dict, ["成立时间", "成立日期", "found_date"])
+                if not b.get("benchmark"):
+                    b["benchmark"] = self._extract_value(xq_dict, ["业绩比较基准", "业绩基准", "benchmark"])
+
+                # 规模（雪球格式如 "27.30亿"）
+                if not result.get("latest_share"):
+                    scale_str = self._extract_value(xq_dict, ["最新规模", "规模", "fund_size"])
+                    if scale_str:
+                        parsed = self._parse_scale(str(scale_str))
+                        if parsed:
+                            result["latest_share"] = parsed
+
+                # 基金经理（雪球可能返回 "王泽实 万方方"）
+                mgr_names = self._extract_value(xq_dict, ["基金经理", "经理人", "manager"])
+                if mgr_names:
+                    for name in str(mgr_names).split():
+                        name = name.strip()
+                        if name and name not in [m.get("name") for m in result["managers"]]:
+                            result["managers"].append({"name": name})
+            else:
+                logger.warning(f"⚠️ [AKShare] fund_individual_basic_info_xq 返回空数据: {pure_code}")
+        except Exception as e:
+            logger.warning(f"⚠️ [AKShare] fund_individual_basic_info_xq 获取失败: {e}")
+
+        # ========== 3. fund_name_em：最新净值 ==========
+        try:
+            df = self._ak.fund_name_em()
+            if not df.empty:
+                code_col = self._find_col(df, ['基金代码', 'code', '代码'])
+                nav_col = self._find_col(df, ['单位净值', 'nav', '净值'])
+                acc_nav_col = self._find_col(df, ['累计净值', 'acc_nav'])
+                date_col = self._find_col(df, ['日期', 'date', 'nav_date'])
+                daily_return_col = self._find_col(df, ['日增长率', '日涨幅', 'daily_return'])
+
+                if code_col:
+                    matched = df[df[code_col].astype(str).str.strip() == pure_code]
+                    if not matched.empty:
+                        row = matched.iloc[0]
+                        if nav_col:
+                            nav_val = row.get(nav_col)
+                            daily_ret = row.get(daily_return_col) if daily_return_col else None
+                            result["latest_nav"] = {
+                                "nav_date": str(row.get(date_col, '')).strip() if date_col else None,
+                                "nav": float(nav_val) if pd.notna(nav_val) else None,
+                                "acc_nav": float(row.get(acc_nav_col)) if acc_nav_col and pd.notna(row.get(acc_nav_col)) else None,
+                                "daily_return": float(daily_ret) / 100 if daily_ret is not None and pd.notna(daily_ret) else None,
+                            }
+        except Exception as e:
+            logger.warning(f"⚠️ [AKShare] fund_name_em 净值获取失败: {e}")
+
+        # ========== 4. 指数型基金额外信息 fund_info_index_em ==========
+        fund_type = (result.get("basic") or {}).get("fund_type", "")
+        if fund_type and ("指数" in str(fund_type) or "ETF" in str(fund_type) or "LOF" in str(fund_type)):
             try:
-                df = self._ak.fund_name_em()
-                if not df.empty:
-                    code_col = self._find_col(df, ['基金代码', 'code', '代码'])
-                    name_col = self._find_col(df, ['基金简称', 'name', '简称', '名称'])
-                    type_col = self._find_col(df, ['基金类型', '类型', 'fund_type'])
-                    nav_col = self._find_col(df, ['单位净值', 'nav', '净值'])
-                    acc_nav_col = self._find_col(df, ['累计净值', 'acc_nav'])
-                    date_col = self._find_col(df, ['日期', 'date', 'nav_date'])
-                    daily_return_col = self._find_col(df, ['日增长率', '日涨幅', 'daily_return'])
-
+                logger.info(f"🔄 [AKShare] 检测到指数型基金，调用 fund_info_index_em: {pure_code}")
+                # fund_info_index_em 返回全量数据表，需要筛选
+                idx_df = self._ak.fund_info_index_em(symbol="全部", indicator="全部")
+                if idx_df is not None and not idx_df.empty:
+                    code_col = self._find_col(idx_df, ['基金代码', 'code', '代码'])
                     if code_col:
-                        matched = df[df[code_col].astype(str).str.strip() == pure_code]
+                        matched = idx_df[idx_df[code_col].astype(str).str.strip() == pure_code]
                         if not matched.empty:
                             row = matched.iloc[0]
-                            result["basic"] = {
-                                "ts_code": ts_code,
-                                "name": str(row.get(name_col, '')).strip() if name_col else ts_code,
-                                "fund_type": str(row.get(type_col, '')).strip() if type_col else None,
-                                "market": "O",
-                                "status": "L",
-                            }
-                            has_basic = True
-
-                            # 净值
-                            if nav_col:
-                                nav_val = row.get(nav_col)
-                                daily_ret = row.get(daily_return_col) if daily_return_col else None
-                                result["latest_nav"] = {
-                                    "nav_date": str(row.get(date_col, '')).strip() if date_col else None,
-                                    "nav": float(nav_val) if pd.notna(nav_val) else None,
-                                    "acc_nav": float(row.get(acc_nav_col)) if acc_nav_col and pd.notna(row.get(acc_nav_col)) else None,
-                                    "daily_return": float(daily_ret) / 100 if daily_ret is not None and pd.notna(daily_ret) else None,
-                                }
+                            b = result.setdefault("basic", {})
+                            # 跟踪标的
+                            track_col = self._find_col(idx_df, ['跟踪标的', '跟踪指数', 'track_index'])
+                            if track_col and not b.get("benchmark"):
+                                b["benchmark"] = str(row.get(track_col, '')).strip() or None
+                            # 跟踪方式
+                            mode_col = self._find_col(idx_df, ['跟踪方式', 'track_mode'])
+                            if mode_col:
+                                b["track_mode"] = str(row.get(mode_col, '')).strip() or None
+                            # 手续费
+                            fee_col = self._find_col(idx_df, ['手续费', 'fee'])
+                            if fee_col and not b.get("p_fee"):
+                                try:
+                                    b["p_fee"] = float(row.get(fee_col))
+                                except (ValueError, TypeError):
+                                    pass
             except Exception as e:
-                logger.warning(f"⚠️ [AKShare] fund_name_em 获取失败: {e}")
+                logger.debug(f"[AKShare] fund_info_index_em 获取失败（非关键）: {e}")
 
-            # 2. fund_individual_basic_info_xq：雪球基金详情（管理人、托管人、成立日期、业绩基准、费率）
-            try:
-                detail_df = self._ak.fund_individual_basic_info_xq(symbol=pure_code)
-                if detail_df is not None and not detail_df.empty:
-                    row = detail_df.iloc[0]
-                    if not result.get("basic"):
-                        result["basic"] = {"ts_code": ts_code}
-                        has_basic = True
-
-                    b = result["basic"]
-                    # 管理人
-                    val = row.get("管理人") or row.get("management") or row.get("基金公司")
-                    if val and pd.notna(val):
-                        b["management"] = str(val).strip()
-
-                    # 托管人
-                    val = row.get("托管人") or row.get("custodian") or row.get("托管银行")
-                    if val and pd.notna(val):
-                        b["custodian"] = str(val).strip()
-
-                    # 成立日期
-                    val = row.get("成立日期") or row.get("found_date") or row.get("成立日")
-                    if val and pd.notna(val):
-                        b["found_date"] = str(val).strip()
-
-                    # 业绩基准
-                    val = row.get("业绩基准") or row.get("benchmark") or row.get("业绩比较基准")
-                    if val and pd.notna(val):
-                        b["benchmark"] = str(val).strip()
-
-                    # 费率（尝试解析各种可能的字段名）
-                    for fee_key, target_key in [
-                        ("管理费", "m_fee"), ("管理费率", "m_fee"),
-                        ("托管费", "c_fee"), ("托管费率", "c_fee"),
-                        ("销售服务费", "s_fee"), ("销售服务费率", "s_fee"),
-                        ("申购费", "p_fee"), ("申购费率", "p_fee"),
-                        ("赎回费", "r_fee"), ("赎回费率", "r_fee"),
-                    ]:
-                        val = row.get(fee_key)
-                        if val is not None and pd.notna(val) and target_key not in b:
-                            try:
-                                b[target_key] = float(val)
-                            except (ValueError, TypeError):
-                                pass
-            except Exception as e:
-                logger.debug(f"[AKShare] fund_individual_basic_info_xq 获取失败（非关键）: {e}")
-
-            # 3. fund_individual_achievement_xq：雪球基金业绩（规模信息）
-            try:
-                achieve_df = self._ak.fund_individual_achievement_xq(symbol=pure_code)
-                if achieve_df is not None and not achieve_df.empty:
-                    row = achieve_df.iloc[0]
-                    # 规模
-                    scale_val = row.get("基金规模") or row.get("规模") or row.get("asset") or row.get("fund_size")
-                    if scale_val is not None and pd.notna(scale_val):
-                        try:
-                            result["latest_share"] = {
-                                "trade_date": str(row.get("日期", row.get("date", ""))).strip() or None,
-                                "fd_share": None,
-                                "fd_amount": float(scale_val),
-                            }
-                        except (ValueError, TypeError):
-                            pass
-            except Exception as e:
-                logger.debug(f"[AKShare] fund_individual_achievement_xq 获取失败（非关键）: {e}")
-
-            # 4. fund_manager_em：东方财富基金经理
-            try:
-                manager_df = self._ak.fund_manager_em()
-                if manager_df is not None and not manager_df.empty:
-                    code_col = self._find_col(manager_df, ['基金代码', '代码'])
-                    if code_col:
-                        matched = manager_df[manager_df[code_col].astype(str).str.strip() == pure_code]
-                        if not matched.empty:
-                            managers = []
-                            for _, row in matched.iterrows():
-                                mgr = {
-                                    "name": str(row.get("姓名", row.get("name", ""))).strip() or None,
-                                    "gender": str(row.get("性别", row.get("gender", ""))).strip() or None,
-                                    "begin_date": str(row.get("任职日期", row.get("begin_date", ""))).strip() or None,
-                                    "resume": str(row.get("基金经理简介", row.get("resume", ""))).strip() or None,
-                                }
-                                if mgr["name"]:
-                                    managers.append(mgr)
-                            if managers:
-                                result["managers"] = managers
-            except Exception as e:
-                logger.debug(f"[AKShare] fund_manager_em 获取失败（非关键）: {e}")
-
-        await asyncio.to_thread(_do_fill)
         return has_basic
 
     async def _fill_missing_with_tushare(self, ts_code: str, result: Dict[str, Any], missing_fields: List[str]):
@@ -414,6 +464,8 @@ class FundDataAdapter:
             except Exception as e:
                 logger.warning(f"⚠️ [Tushare] 补充基金经理失败: {e}")
 
+    # ==================== 辅助方法 ====================
+
     @staticmethod
     def _find_col(df: pd.DataFrame, candidates: List[str]) -> Optional[str]:
         """在 DataFrame 列中查找匹配的列名"""
@@ -422,6 +474,60 @@ class FundDataAdapter:
                 if cand in str(col):
                     return col
         return None
+
+    @staticmethod
+    def _extract_value(data_dict: Dict[str, Any], keys: List[str]) -> Optional[str]:
+        """从字典中提取第一个匹配的值"""
+        for key in keys:
+            for k, v in data_dict.items():
+                if key in str(k) and v is not None:
+                    val = str(v).strip()
+                    if val and val != "nan" and val != "None":
+                        return val
+        return None
+
+    @staticmethod
+    def _parse_fee(data_dict: Dict[str, Any], keys: List[str]) -> Optional[float]:
+        """解析费率字段，去除 % 符号"""
+        for key in keys:
+            for k, v in data_dict.items():
+                if key in str(k) and v is not None:
+                    try:
+                        val_str = str(v).strip().replace('%', '').replace('％', '')
+                        if val_str and val_str != "nan" and val_str != "None":
+                            return float(val_str)
+                    except (ValueError, TypeError):
+                        continue
+        return None
+
+    @staticmethod
+    def _parse_scale(scale_str: str) -> Optional[Dict[str, Any]]:
+        """解析规模字符串，如 '4.13亿份（2026-03-31）' 或 '27.30亿'"""
+        try:
+            import re
+            # 提取数字
+            num_match = re.search(r'(\d+\.?\d*)', str(scale_str))
+            if not num_match:
+                return None
+
+            num = float(num_match.group(1))
+            # 判断单位
+            if '亿' in str(scale_str):
+                num = num * 100000000
+            elif '万' in str(scale_str):
+                num = num * 10000
+
+            # 提取日期
+            date_match = re.search(r'(\d{4}-\d{2}-\d{2})', str(scale_str))
+            trade_date = date_match.group(1) if date_match else None
+
+            # 判断是份额还是金额
+            if '份' in str(scale_str):
+                return {"trade_date": trade_date, "fd_share": num, "fd_amount": None}
+            else:
+                return {"trade_date": trade_date, "fd_share": None, "fd_amount": num}
+        except Exception:
+            return None
 
 
 # 全局适配器实例
