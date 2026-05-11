@@ -20,42 +20,37 @@
       <el-row :gutter="24">
         <!-- 左侧：基金数据 + 分析配置 -->
         <el-col :span="18">
-          <!-- 基金搜索与数据展示 -->
           <el-card class="main-form-card" shadow="hover">
             <template #header>
               <div class="card-header">
-                <h3>基金数据</h3>
-                <el-tag type="info" size="small">支持代码/名称搜索</el-tag>
+                <h3>分析配置</h3>
+                <el-tag type="info" size="small">必填信息</el-tag>
               </div>
             </template>
 
-            <el-form label-width="100px" class="analysis-form">
+            <el-form label-position="top" class="analysis-form">
               <!-- 基金搜索 -->
               <div class="form-section">
                 <h4 class="section-title">🔍 基金搜索</h4>
-                <el-row :gutter="16">
-                  <el-col :span="24">
-                    <el-form-item label="基金代码/名称" required>
-                      <el-input
-                        v-model="searchKeyword"
-                        placeholder="输入基金代码或名称，如：510050 或 华夏上证50"
-                        clearable
-                        size="large"
-                        class="stock-input"
-                        @keyup.enter="searchFunds"
-                      >
-                        <template #prefix>
-                          <el-icon><Search /></el-icon>
-                        </template>
-                        <template #append>
-                          <el-button type="primary" @click="searchFunds" :loading="searching">
-                            搜索
-                          </el-button>
-                        </template>
-                      </el-input>
-                    </el-form-item>
-                  </el-col>
-                </el-row>
+                <el-form-item label="基金代码/名称" required>
+                  <el-input
+                    v-model="searchKeyword"
+                    placeholder="输入基金代码或名称，如：510050 或 华夏上证50"
+                    clearable
+                    size="large"
+                    class="search-input"
+                    @keyup.enter="searchFunds"
+                  >
+                    <template #prefix>
+                      <el-icon><Search /></el-icon>
+                    </template>
+                    <template #append>
+                      <el-button type="primary" @click="searchFunds" :loading="searching">
+                        搜索
+                      </el-button>
+                    </template>
+                  </el-input>
+                </el-form-item>
 
                 <!-- 搜索结果 -->
                 <div v-if="searchResults.length > 0" class="search-results">
@@ -88,32 +83,52 @@
 
               <!-- 选中基金信息 -->
               <div v-if="selectedFund" class="form-section">
-                <h4 class="section-title">📋 基金信息</h4>
-                <el-descriptions :column="2" border>
+                <h4 class="section-title">📋 已选基金</h4>
+                <el-descriptions :column="3" border>
                   <el-descriptions-item label="基金名称">{{ selectedFund.name }}</el-descriptions-item>
                   <el-descriptions-item label="基金代码">{{ selectedFund.ts_code }}</el-descriptions-item>
                   <el-descriptions-item label="基金类型">{{ selectedFund.fund_type || '-' }}</el-descriptions-item>
                   <el-descriptions-item label="管理人">{{ selectedFund.management || '-' }}</el-descriptions-item>
                   <el-descriptions-item label="市场">{{ selectedFund.market === 'E' ? '场内(ETF/LOF)' : '场外' }}</el-descriptions-item>
                   <el-descriptions-item label="状态">
-                    <el-tag v-if="selectedFund.status === 'L'" type="success">存续</el-tag>
-                    <el-tag v-else type="info">{{ selectedFund.status || '-' }}</el-tag>
+                    <el-tag v-if="selectedFund.status === 'L'" type="success" size="small">存续</el-tag>
+                    <el-tag v-else type="info" size="small">{{ selectedFund.status || '-' }}</el-tag>
                   </el-descriptions-item>
                 </el-descriptions>
               </div>
-            </el-form>
-          </el-card>
 
-          <!-- 分析配置 -->
-          <el-card v-if="selectedFund" class="main-form-card" shadow="hover" style="margin-top: 24px;">
-            <template #header>
-              <div class="card-header">
-                <h3>分析配置</h3>
-                <el-tag type="info" size="small">选填信息</el-tag>
+              <!-- 分析时间范围 -->
+              <div class="form-section">
+                <h4 class="section-title">📅 分析时间范围</h4>
+                <div class="time-range-selector">
+                  <el-radio-group v-model="analysisConfig.timeRange" size="large">
+                    <el-radio-button label="1m">近1月</el-radio-button>
+                    <el-radio-button label="3m">近3月</el-radio-button>
+                    <el-radio-button label="6m">近6月</el-radio-button>
+                    <el-radio-button label="1y">近1年</el-radio-button>
+                    <el-radio-button label="2y">近2年</el-radio-button>
+                    <el-radio-button label="3y">近3年</el-radio-button>
+                    <el-radio-button label="5y">近5年</el-radio-button>
+                    <el-radio-button label="all">成立以来</el-radio-button>
+                  </el-radio-group>
+                </div>
               </div>
-            </template>
 
-            <el-form label-width="100px" class="analysis-form">
+              <!-- 业绩对比基准 -->
+              <div class="form-section">
+                <h4 class="section-title">📊 业绩对比基准</h4>
+                <div class="benchmark-selector">
+                  <el-select v-model="analysisConfig.benchmark" size="large" style="width: 280px">
+                    <el-option label="业绩比较基准（默认）" value="default" />
+                    <el-option label="沪深300指数" value="hs300" />
+                    <el-option label="中证500指数" value="zz500" />
+                    <el-option label="中证全债指数" value="bond" />
+                    <el-option label="同类基金平均" value="peer_avg" />
+                    <el-option label="货币基金平均" value="mmf_avg" />
+                  </el-select>
+                </div>
+              </div>
+
               <!-- 分析深度 -->
               <div class="form-section">
                 <h4 class="section-title">🎯 分析深度</h4>
@@ -147,25 +162,21 @@
                     @click="toggleAnalyst(analyst.name)"
                   >
                     <div class="analyst-avatar">
-                      <el-icon>
-                        <component :is="analyst.icon" />
-                      </el-icon>
+                      <el-icon size="20"><component :is="analyst.iconComponent" /></el-icon>
                     </div>
                     <div class="analyst-content">
                       <div class="analyst-name">{{ analyst.name }}</div>
                       <div class="analyst-desc">{{ analyst.description }}</div>
                     </div>
                     <div class="analyst-check">
-                      <el-icon v-if="analysisConfig.selectedAnalysts.includes(analyst.name)" class="check-icon">
-                        <Check />
-                      </el-icon>
+                      <el-icon v-if="analysisConfig.selectedAnalysts.includes(analyst.name)" class="check-icon" size="20"><Check /></el-icon>
                     </div>
                   </div>
                 </div>
               </div>
 
               <!-- 操作按钮 -->
-              <div class="form-section">
+              <div class="form-section action-section">
                 <div class="action-buttons">
                   <el-button
                     v-if="analysisStatus === 'idle'"
@@ -191,7 +202,7 @@
                     分析进行中...
                   </el-button>
 
-                  <div v-else-if="analysisStatus === 'completed'" style="display: flex; gap: 12px;">
+                  <div v-else-if="analysisStatus === 'completed'" class="result-btn-group">
                     <el-button
                       type="success"
                       size="large"
@@ -273,7 +284,7 @@
                     <div class="model-label">
                       <span>快速分析模型</span>
                     </div>
-                    <el-select v-model="modelSettings.quickAnalysisModel" size="small" style="width: 100%">
+                    <el-select v-model="modelSettings.quickAnalysisModel" size="default" style="width: 100%">
                       <el-option label="自动选择" value="auto" />
                       <el-option
                         v-for="model in availableModels"
@@ -288,7 +299,7 @@
                     <div class="model-label">
                       <span>深度决策模型</span>
                     </div>
-                    <el-select v-model="modelSettings.deepAnalysisModel" size="small" style="width: 100%">
+                    <el-select v-model="modelSettings.deepAnalysisModel" size="default" style="width: 100%">
                       <el-option label="自动选择" value="auto" />
                       <el-option
                         v-for="model in availableModels"
@@ -306,31 +317,32 @@
                 <h4 class="config-title">⚙️ 分析选项</h4>
                 <div class="option-list">
                   <div class="option-item">
-                    <div class="option-info">
-                      <span class="option-name">净值走势分析</span>
-                    </div>
+                    <span class="option-name">净值走势分析</span>
                     <el-switch v-model="analysisConfig.includeNav" />
                   </div>
-
                   <div class="option-item">
-                    <div class="option-info">
-                      <span class="option-name">持仓结构分析</span>
-                    </div>
+                    <span class="option-name">持仓结构分析</span>
                     <el-switch v-model="analysisConfig.includePortfolio" />
                   </div>
-
                   <div class="option-item">
-                    <div class="option-info">
-                      <span class="option-name">基金经理评估</span>
-                    </div>
+                    <span class="option-name">基金经理评估</span>
                     <el-switch v-model="analysisConfig.includeManager" />
                   </div>
-
                   <div class="option-item">
-                    <div class="option-info">
-                      <span class="option-name">风险评估</span>
-                    </div>
+                    <span class="option-name">风险评估</span>
                     <el-switch v-model="analysisConfig.includeRisk" />
+                  </div>
+                  <div class="option-item">
+                    <span class="option-name">费率分析</span>
+                    <el-switch v-model="analysisConfig.includeFee" />
+                  </div>
+                  <div class="option-item">
+                    <span class="option-name">规模变动分析</span>
+                    <el-switch v-model="analysisConfig.includeScale" />
+                  </div>
+                  <div class="option-item">
+                    <span class="option-name">机构持仓分析</span>
+                    <el-switch v-model="analysisConfig.includeInstitution" />
                   </div>
                 </div>
               </div>
@@ -338,11 +350,9 @@
               <!-- 语言偏好 -->
               <div class="config-section">
                 <h4 class="config-title">🌐 语言偏好</h4>
-                <div class="option-item">
-                  <div class="option-info">
-                    <span class="option-name">报告语言</span>
-                  </div>
-                  <el-select v-model="analysisConfig.language" size="small" style="width: 100px">
+                <div class="option-item language-option">
+                  <span class="option-name">报告语言</span>
+                  <el-select v-model="analysisConfig.language" size="default" style="width: 100px">
                     <el-option label="中文" value="zh-CN" />
                     <el-option label="English" value="en-US" />
                   </el-select>
@@ -419,7 +429,10 @@ import {
   Wallet,
   User,
   WarningFilled,
-  InfoFilled
+  InfoFilled,
+  Coin,
+  Histogram,
+  OfficeBuilding
 } from '@element-plus/icons-vue'
 import { analysisApi } from '@/api/analysis'
 import { configApi } from '@/api/config'
@@ -450,20 +463,26 @@ const depthOptions = [
 ]
 
 const FUND_ANALYSTS = [
-  { id: 'nav', name: '净值分析师', description: '分析净值走势、历史业绩、回撤控制', icon: 'TrendCharts' },
-  { id: 'portfolio', name: '持仓分析师', description: '分析持仓结构、行业分布、重仓股', icon: 'Wallet' },
-  { id: 'manager', name: '基金经理评估师', description: '评估基金经理能力、任期、历史业绩', icon: 'User' },
-  { id: 'risk', name: '风险评估师', description: '评估波动率、夏普比率、最大回撤', icon: 'WarningFilled' },
-  { id: 'macro', name: '宏观分析师', description: '分析市场环境对基金的影响', icon: 'DataAnalysis' }
+  { id: 'nav', name: '净值分析师', description: '分析净值走势、历史业绩、回撤控制', iconComponent: TrendCharts },
+  { id: 'portfolio', name: '持仓分析师', description: '分析持仓结构、行业分布、重仓股', iconComponent: Wallet },
+  { id: 'manager', name: '基金经理评估师', description: '评估基金经理能力、任期、历史业绩', iconComponent: User },
+  { id: 'risk', name: '风险评估师', description: '评估波动率、夏普比率、最大回撤', iconComponent: WarningFilled },
+  { id: 'fee', name: '费率分析师', description: '分析管理费、托管费、综合费率水平', iconComponent: Coin },
+  { id: 'macro', name: '宏观分析师', description: '分析市场环境对基金的影响', iconComponent: DataAnalysis }
 ]
 
 const analysisConfig = reactive({
+  timeRange: '1y',
+  benchmark: 'default',
   researchDepth: 3,
   selectedAnalysts: ['净值分析师', '持仓分析师', '基金经理评估师'],
   includeNav: true,
   includePortfolio: true,
   includeManager: true,
   includeRisk: true,
+  includeFee: true,
+  includeScale: false,
+  includeInstitution: false,
   language: 'zh-CN' as 'zh-CN' | 'en-US'
 })
 
@@ -517,6 +536,8 @@ const selectFund = (row: any) => {
   analysisResult.value = null
   analysisStatus.value = 'idle'
   showResults.value = false
+  // 清空搜索结果，避免占用空间
+  searchResults.value = []
   ElMessage.success(`已选择基金：${row.name}`)
 }
 
@@ -558,8 +579,15 @@ const submitAnalysis = async () => {
       parameters: {
         research_depth: getDepthDescription(analysisConfig.researchDepth),
         selected_analysts: analysisConfig.selectedAnalysts,
-        include_sentiment: analysisConfig.includeNav,
+        time_range: analysisConfig.timeRange,
+        benchmark: analysisConfig.benchmark,
+        include_nav: analysisConfig.includeNav,
+        include_portfolio: analysisConfig.includePortfolio,
+        include_manager: analysisConfig.includeManager,
         include_risk: analysisConfig.includeRisk,
+        include_fee: analysisConfig.includeFee,
+        include_scale: analysisConfig.includeScale,
+        include_institution: analysisConfig.includeInstitution,
         language: analysisConfig.language,
         quick_analysis_model: modelSettings.value.quickAnalysisModel === 'auto' ? undefined : modelSettings.value.quickAnalysisModel,
         deep_analysis_model: modelSettings.value.deepAnalysisModel === 'auto' ? undefined : modelSettings.value.deepAnalysisModel
@@ -717,6 +745,27 @@ onMounted(() => {
         }
       }
 
+      :deep(.el-form-item__label) {
+        font-weight: 500;
+        color: #374151;
+      }
+
+      .search-input {
+        :deep(.el-input__inner) {
+          border-radius: 8px 0 0 8px;
+        }
+        :deep(.el-input-group__append) {
+          border-radius: 0 8px 8px 0;
+          background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+          color: white;
+          border: none;
+          .el-button {
+            color: white;
+            font-weight: 500;
+          }
+        }
+      }
+
       .search-results {
         margin-top: 16px;
       }
@@ -724,18 +773,39 @@ onMounted(() => {
       .empty-results {
         margin-top: 40px;
       }
+
+      .time-range-selector {
+        :deep(.el-radio-group) {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        :deep(.el-radio-button__inner) {
+          border-radius: 8px !important;
+          border: 1px solid #e2e8f0;
+          box-shadow: none !important;
+        }
+      }
+
+      .benchmark-selector {
+        :deep(.el-select) {
+          .el-input__inner {
+            border-radius: 8px;
+          }
+        }
+      }
     }
 
     // 分析深度选择器
     .depth-selector {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
       gap: 12px;
 
       .depth-option {
         display: flex;
         align-items: center;
-        padding: 16px;
+        padding: 14px;
         border: 2px solid #e2e8f0;
         border-radius: 12px;
         cursor: pointer;
@@ -755,28 +825,30 @@ onMounted(() => {
         }
 
         .depth-icon {
-          font-size: 28px;
-          margin-right: 12px;
+          font-size: 26px;
+          margin-right: 10px;
+          flex-shrink: 0;
         }
 
         .depth-info {
           flex: 1;
+          min-width: 0;
 
           .depth-name {
             font-weight: 600;
-            font-size: 14px;
+            font-size: 13px;
             color: #1a202c;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
           }
 
           .depth-desc {
-            font-size: 12px;
+            font-size: 11px;
             color: #64748b;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
           }
 
           .depth-time {
-            font-size: 12px;
+            font-size: 11px;
             color: #8b5cf6;
             font-weight: 500;
           }
@@ -787,13 +859,13 @@ onMounted(() => {
     // 分析师团队
     .analysts-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
       gap: 12px;
 
       .analyst-card {
         display: flex;
         align-items: center;
-        padding: 16px;
+        padding: 14px;
         border: 2px solid #e2e8f0;
         border-radius: 12px;
         cursor: pointer;
@@ -823,30 +895,33 @@ onMounted(() => {
           justify-content: center;
           margin-right: 12px;
           color: white;
-          font-size: 18px;
+          flex-shrink: 0;
         }
 
         .analyst-content {
           flex: 1;
+          min-width: 0;
 
           .analyst-name {
             font-weight: 600;
-            font-size: 14px;
+            font-size: 13px;
             color: #1a202c;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
           }
 
           .analyst-desc {
-            font-size: 12px;
+            font-size: 11px;
             color: #64748b;
             line-height: 1.4;
           }
         }
 
         .analyst-check {
+          flex-shrink: 0;
+          margin-left: 8px;
+
           .check-icon {
             color: #8b5cf6;
-            font-size: 20px;
             font-weight: bold;
           }
         }
@@ -854,42 +929,61 @@ onMounted(() => {
     }
 
     // 操作按钮
+    .action-section {
+      padding-top: 8px;
+    }
+
     .action-buttons {
       display: flex;
       justify-content: center;
       align-items: center;
       width: 100%;
-      text-align: center;
 
       .submit-btn {
-        width: 280px;
-        height: 56px;
-        font-size: 18px;
+        min-width: 200px;
+        height: 52px;
+        font-size: 17px;
         font-weight: 700;
-        border-radius: 16px;
-        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+        border-radius: 14px;
         border: none;
         transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(139, 92, 246, 0.2);
+      }
+
+      .large-analysis-btn {
+        min-width: 280px;
+        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+        box-shadow: 0 4px 15px rgba(139, 92, 246, 0.25);
 
         &:hover {
           transform: translateY(-3px);
           box-shadow: 0 12px 30px rgba(139, 92, 246, 0.4);
+          background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
         }
+      }
+
+      .result-btn-group {
+        display: flex;
+        gap: 12px;
       }
     }
 
     // 进度区域
     .progress-section {
-      margin-top: 24px;
+      margin-top: 8px;
 
       .progress-card {
         border-radius: 12px;
+        border: none;
 
         :deep(.el-card__header) {
           background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
           color: white;
           border-radius: 12px 12px 0 0;
+          padding: 16px 20px;
+        }
+
+        :deep(.el-card__body) {
+          padding: 20px;
         }
 
         .progress-content {
@@ -897,10 +991,10 @@ onMounted(() => {
             .task-title {
               display: flex;
               align-items: center;
-              font-size: 16px;
+              font-size: 15px;
               font-weight: 600;
               color: #1a202c;
-              margin-bottom: 12px;
+              margin-bottom: 8px;
 
               .task-icon {
                 margin-right: 8px;
@@ -909,7 +1003,7 @@ onMounted(() => {
             }
 
             .task-description {
-              font-size: 14px;
+              font-size: 13px;
               color: #64748b;
               line-height: 1.6;
             }
@@ -986,7 +1080,7 @@ onMounted(() => {
               display: flex;
               align-items: center;
               justify-content: space-between;
-              padding: 12px 0;
+              padding: 10px 0;
               border-bottom: 1px solid #f3f4f6;
 
               &:last-child {
@@ -994,19 +1088,15 @@ onMounted(() => {
                 padding-bottom: 0;
               }
 
-              .option-info {
-                .option-name {
-                  font-size: 14px;
-                  font-weight: 500;
-                  color: #374151;
-                }
-
-                .option-desc {
-                  font-size: 12px;
-                  color: #9ca3af;
-                  margin-top: 2px;
-                }
+              .option-name {
+                font-size: 13px;
+                font-weight: 500;
+                color: #374151;
               }
+            }
+
+            .language-option {
+              padding: 8px 0;
             }
           }
         }
@@ -1073,21 +1163,5 @@ onMounted(() => {
       }
     }
   }
-}
-</style>
-
-<style>
-/* 全局样式确保按钮样式生效 */
-.large-analysis-btn.el-button {
-  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%) !important;
-  border: none !important;
-  transition: all 0.3s ease !important;
-  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.2) !important;
-}
-
-.large-analysis-btn.el-button:hover {
-  transform: translateY(-3px) !important;
-  box-shadow: 0 12px 30px rgba(139, 92, 246, 0.4) !important;
-  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%) !important;
 }
 </style>
