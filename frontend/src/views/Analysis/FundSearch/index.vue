@@ -93,154 +93,171 @@
       </div>
     </el-card>
 
-    <!-- 基金详情 -->
-    <el-row v-if="selectedFund" :gutter="24" class="detail-row">
-      <!-- 基本信息 -->
-      <el-col :span="12">
-        <el-card class="detail-card" shadow="hover">
-          <template #header>
-            <div class="card-header">
-              <h3>📋 基本信息</h3>
-              <el-tag type="success" size="small">{{ selectedFund.ts_code }}</el-tag>
-            </div>
-          </template>
-          <el-descriptions :column="1" border>
-            <el-descriptions-item label="基金名称">{{ selectedFund.name }}</el-descriptions-item>
-            <el-descriptions-item label="基金类型">{{ selectedFund.fund_type || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="管理人">{{ selectedFund.management || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="托管人">{{ selectedFund.custodian || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="市场">
-              <el-tag v-if="selectedFund.market === 'E'" type="success" size="small">场内(ETF/LOF)</el-tag>
-              <el-tag v-else type="info" size="small">场外</el-tag>
-            </el-descriptions-item>
-            <el-descriptions-item label="状态">
-              <el-tag v-if="selectedFund.status === 'L'" type="success" size="small">存续</el-tag>
-              <el-tag v-else-if="selectedFund.status === 'D'" type="danger" size="small">清盘</el-tag>
-              <el-tag v-else type="info" size="small">{{ selectedFund.status || '-' }}</el-tag>
-            </el-descriptions-item>
-            <el-descriptions-item label="成立日期">{{ selectedFund.found_date || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="投资风格">{{ selectedFund.invest_type || '-' }}</el-descriptions-item>
-          </el-descriptions>
-        </el-card>
-      </el-col>
-
-      <!-- 费率与规模 -->
-      <el-col :span="12">
-        <el-card class="detail-card" shadow="hover">
-          <template #header>
-            <div class="card-header">
-              <h3>💰 费率与规模</h3>
-            </div>
-          </template>
-          <el-descriptions :column="1" border>
-            <el-descriptions-item label="管理费">
-              <span v-if="selectedFund.m_fee" class="fee-value">{{ selectedFund.m_fee }}%</span>
-              <span v-else>-</span>
-            </el-descriptions-item>
-            <el-descriptions-item label="托管费">
-              <span v-if="selectedFund.c_fee" class="fee-value">{{ selectedFund.c_fee }}%</span>
-              <span v-else>-</span>
-            </el-descriptions-item>
-            <el-descriptions-item label="销售服务费">
-              <span v-if="selectedFund.s_fee" class="fee-value">{{ selectedFund.s_fee }}%</span>
-              <span v-else>-</span>
-            </el-descriptions-item>
-            <el-descriptions-item label="申购费">
-              <span v-if="selectedFund.p_fee" class="fee-value">{{ selectedFund.p_fee }}%</span>
-              <span v-else>-</span>
-            </el-descriptions-item>
-            <el-descriptions-item label="赎回费">
-              <span v-if="selectedFund.r_fee" class="fee-value">{{ selectedFund.r_fee }}%</span>
-              <span v-else>-</span>
-            </el-descriptions-item>
-            <el-descriptions-item label="最新规模">
-              <span v-if="selectedFund.latest_share" class="scale-value">{{ formatScale(selectedFund.latest_share) }}</span>
-              <span v-else>-</span>
-            </el-descriptions-item>
-            <el-descriptions-item label="业绩比较基准">{{ selectedFund.benchmark || '-' }}</el-descriptions-item>
-          </el-descriptions>
-        </el-card>
-      </el-col>
-    </el-row>
-
-    <!-- 净值走势与基金经理 -->
-    <el-row v-if="selectedFund" :gutter="24" class="detail-row">
-      <el-col :span="12">
-        <el-card class="detail-card" shadow="hover">
-          <template #header>
-            <div class="card-header">
-              <h3>📈 最新净值</h3>
-            </div>
-          </template>
-          <div v-if="navData" class="nav-info">
-            <div class="nav-main">
-              <div class="nav-value">{{ navData.nav || '-' }}</div>
-              <div class="nav-date">净值日期：{{ navData.nav_date || '-' }}</div>
-            </div>
-            <div class="nav-change">
-              <div class="change-item">
-                <span class="label">日涨跌幅</span>
-                <span :class="['value', getChangeClass(navData.daily_return)]">
-                  {{ formatPercent(navData.daily_return) }}
-                </span>
-              </div>
-              <div class="change-item">
-                <span class="label">累计净值</span>
-                <span class="value">{{ navData.acc_nav || '-' }}</span>
-              </div>
-            </div>
-          </div>
-          <el-empty v-else description="暂无净值数据" />
-        </el-card>
-      </el-col>
-
-      <el-col :span="12">
-        <el-card class="detail-card" shadow="hover">
-          <template #header>
-            <div class="card-header">
-              <h3>👤 基金经理</h3>
-            </div>
-          </template>
-          <div v-if="managerData && managerData.length > 0" class="manager-list">
-            <div
-              v-for="(manager, idx) in managerData"
-              :key="idx"
-              class="manager-item"
-            >
-              <div class="manager-name">{{ manager.name }}</div>
-              <div class="manager-info">
-                <el-tag v-if="manager.gender" size="small">{{ manager.gender }}</el-tag>
-                <span v-if="manager.birth_year">{{ manager.birth_year }}年生</span>
-                <span v-if="manager.edu">{{ manager.edu }}</span>
-              </div>
-              <div v-if="manager.resume" class="manager-resume">{{ manager.resume }}</div>
-            </div>
-          </div>
-          <el-empty v-else description="暂无基金经理数据" />
-        </el-card>
-      </el-col>
-    </el-row>
-
-    <!-- 去分析按钮 -->
-    <div v-if="selectedFund" class="action-bar">
-      <el-button
-        type="primary"
-        size="large"
-        @click="goToAnalysis"
-        class="analysis-btn"
-      >
-        <el-icon><TrendCharts /></el-icon>
-        前往基金分析
-      </el-button>
+    <!-- 详情加载中 -->
+    <div v-if="detailLoading" class="detail-loading">
+      <el-card class="loading-card" shadow="hover">
+        <div class="loading-content">
+          <el-icon class="loading-icon is-loading"><Loading /></el-icon>
+          <p class="loading-text">正在获取 {{ selectedFund?.name }} 的详情数据...</p>
+          <el-progress :percentage="detailProgress" :show-text="false" :stroke-width="8" class="loading-progress" />
+          <p class="loading-hint">数据源：优先 AKShare，备用 Tushare</p>
+        </div>
+      </el-card>
     </div>
+
+    <!-- 基金详情 -->
+    <template v-if="detailLoaded && fundDetail">
+      <!-- 基本信息 + 费率与规模 -->
+      <el-row :gutter="24" class="detail-row">
+        <!-- 基本信息 -->
+        <el-col :span="12">
+          <el-card class="detail-card" shadow="hover">
+            <template #header>
+              <div class="card-header">
+                <h3>📋 基本信息</h3>
+                <el-tag type="success" size="small">{{ fundDetail.ts_code }}</el-tag>
+              </div>
+            </template>
+            <el-descriptions :column="1" border>
+              <el-descriptions-item label="基金名称">{{ fundDetail.basic?.name || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="基金类型">{{ fundDetail.basic?.fund_type || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="管理人">{{ fundDetail.basic?.management || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="托管人">{{ fundDetail.basic?.custodian || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="市场">
+                <el-tag v-if="fundDetail.basic?.market === 'E'" type="success" size="small">场内(ETF/LOF)</el-tag>
+                <el-tag v-else type="info" size="small">场外</el-tag>
+              </el-descriptions-item>
+              <el-descriptions-item label="状态">
+                <el-tag v-if="fundDetail.basic?.status === 'L'" type="success" size="small">存续</el-tag>
+                <el-tag v-else-if="fundDetail.basic?.status === 'D'" type="danger" size="small">清盘</el-tag>
+                <el-tag v-else type="info" size="small">{{ fundDetail.basic?.status || '-' }}</el-tag>
+              </el-descriptions-item>
+              <el-descriptions-item label="成立日期">{{ fundDetail.basic?.found_date || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="投资风格">{{ fundDetail.basic?.invest_type || '-' }}</el-descriptions-item>
+            </el-descriptions>
+          </el-card>
+        </el-col>
+
+        <!-- 费率与规模 -->
+        <el-col :span="12">
+          <el-card class="detail-card" shadow="hover">
+            <template #header>
+              <div class="card-header">
+                <h3>💰 费率与规模</h3>
+              </div>
+            </template>
+            <el-descriptions :column="1" border>
+              <el-descriptions-item label="管理费">
+                <span v-if="fundDetail.basic?.m_fee != null" class="fee-value">{{ fundDetail.basic.m_fee }}%</span>
+                <span v-else>-</span>
+              </el-descriptions-item>
+              <el-descriptions-item label="托管费">
+                <span v-if="fundDetail.basic?.c_fee != null" class="fee-value">{{ fundDetail.basic.c_fee }}%</span>
+                <span v-else>-</span>
+              </el-descriptions-item>
+              <el-descriptions-item label="销售服务费">
+                <span v-if="fundDetail.basic?.s_fee != null" class="fee-value">{{ fundDetail.basic.s_fee }}%</span>
+                <span v-else>-</span>
+              </el-descriptions-item>
+              <el-descriptions-item label="申购费">
+                <span v-if="fundDetail.basic?.p_fee != null" class="fee-value">{{ fundDetail.basic.p_fee }}%</span>
+                <span v-else>-</span>
+              </el-descriptions-item>
+              <el-descriptions-item label="赎回费">
+                <span v-if="fundDetail.basic?.r_fee != null" class="fee-value">{{ fundDetail.basic.r_fee }}%</span>
+                <span v-else>-</span>
+              </el-descriptions-item>
+              <el-descriptions-item label="最新规模">
+                <span v-if="fundDetail.latest_share?.fd_share" class="scale-value">{{ formatScale(fundDetail.latest_share.fd_share) }}</span>
+                <span v-else-if="fundDetail.latest_share?.fd_amount" class="scale-value">{{ formatScale(fundDetail.latest_share.fd_amount) }}</span>
+                <span v-else>-</span>
+              </el-descriptions-item>
+              <el-descriptions-item label="业绩比较基准">{{ fundDetail.basic?.benchmark || '-' }}</el-descriptions-item>
+            </el-descriptions>
+          </el-card>
+        </el-col>
+      </el-row>
+
+      <!-- 最新净值 + 基金经理 -->
+      <el-row :gutter="24" class="detail-row">
+        <el-col :span="12">
+          <el-card class="detail-card" shadow="hover">
+            <template #header>
+              <div class="card-header">
+                <h3>📈 最新净值</h3>
+              </div>
+            </template>
+            <div v-if="fundDetail.latest_nav" class="nav-info">
+              <div class="nav-main">
+                <div class="nav-value">{{ fundDetail.latest_nav.nav || '-' }}</div>
+                <div class="nav-date">净值日期：{{ fundDetail.latest_nav.nav_date || '-' }}</div>
+              </div>
+              <div class="nav-change">
+                <div class="change-item">
+                  <span class="label">日涨跌幅</span>
+                  <span :class="['value', getChangeClass(fundDetail.latest_nav.daily_return)]">
+                    {{ formatPercent(fundDetail.latest_nav.daily_return) }}
+                  </span>
+                </div>
+                <div class="change-item">
+                  <span class="label">累计净值</span>
+                  <span class="value">{{ fundDetail.latest_nav.acc_nav || '-' }}</span>
+                </div>
+              </div>
+            </div>
+            <el-empty v-else description="暂无净值数据" />
+          </el-card>
+        </el-col>
+
+        <el-col :span="12">
+          <el-card class="detail-card" shadow="hover">
+            <template #header>
+              <div class="card-header">
+                <h3>👤 基金经理</h3>
+              </div>
+            </template>
+            <div v-if="fundDetail.managers && fundDetail.managers.length > 0" class="manager-list">
+              <div
+                v-for="(manager, idx) in fundDetail.managers"
+                :key="idx"
+                class="manager-item"
+              >
+                <div class="manager-name">{{ manager.name || '-' }}</div>
+                <div class="manager-info">
+                  <el-tag v-if="manager.gender" size="small">{{ manager.gender }}</el-tag>
+                  <span v-if="manager.birth_year">{{ manager.birth_year }}年生</span>
+                  <span v-if="manager.edu">{{ manager.edu }}</span>
+                  <span v-if="manager.begin_date">任职：{{ manager.begin_date }}</span>
+                </div>
+                <div v-if="manager.resume" class="manager-resume">{{ manager.resume }}</div>
+              </div>
+            </div>
+            <el-empty v-else description="暂无基金经理数据" />
+          </el-card>
+        </el-col>
+      </el-row>
+
+      <!-- 去分析按钮 -->
+      <div class="action-bar">
+        <el-button
+          type="primary"
+          size="large"
+          @click="goToAnalysis"
+          class="analysis-btn"
+        >
+          <el-icon><TrendCharts /></el-icon>
+          前往基金分析
+        </el-button>
+      </div>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Search, TrendCharts } from '@element-plus/icons-vue'
+import { Search, TrendCharts, Loading } from '@element-plus/icons-vue'
 import { analysisApi } from '@/api/analysis'
 
 const router = useRouter()
@@ -250,8 +267,29 @@ const searching = ref(false)
 const searched = ref(false)
 const searchResults = ref<any[]>([])
 const selectedFund = ref<any>(null)
-const navData = ref<any>(null)
-const managerData = ref<any[]>([])
+const fundDetail = ref<any>(null)
+const detailLoading = ref(false)
+const detailLoaded = ref(false)
+const detailProgress = ref(0)
+
+// 模拟进度条动画
+let progressTimer: ReturnType<typeof setInterval> | null = null
+const startProgress = () => {
+  detailProgress.value = 0
+  progressTimer = setInterval(() => {
+    if (detailProgress.value < 90) {
+      detailProgress.value += Math.random() * 15
+      if (detailProgress.value > 90) detailProgress.value = 90
+    }
+  }, 300)
+}
+const stopProgress = () => {
+  if (progressTimer) {
+    clearInterval(progressTimer)
+    progressTimer = null
+  }
+  detailProgress.value = 100
+}
 
 // 搜索基金
 const searchFunds = async () => {
@@ -264,8 +302,8 @@ const searchFunds = async () => {
   searched.value = true
   searchResults.value = []
   selectedFund.value = null
-  navData.value = null
-  managerData.value = []
+  fundDetail.value = null
+  detailLoaded.value = false
 
   try {
     const response = await analysisApi.searchFunds(searchKeyword.value.trim())
@@ -289,42 +327,26 @@ const searchFunds = async () => {
 // 选择基金并获取详情
 const selectFund = async (row: any) => {
   selectedFund.value = row
-  navData.value = null
-  managerData.value = []
-  ElMessage.success(`已选择：${row.name}，正在获取详情...`)
+  fundDetail.value = null
+  detailLoaded.value = false
+  detailLoading.value = true
+  startProgress()
 
   try {
     const response = await analysisApi.getFundDetail(row.ts_code)
     if (response?.success && response.data) {
-      const detail = response.data
-
-      // 合并基础信息到 selectedFund
-      if (detail.basic) {
-        selectedFund.value = {
-          ...row,
-          ...detail.basic,
-          // 确保规模字段兼容性
-          latest_share: detail.latest_share?.fd_share || detail.latest_share?.fd_amount,
-        }
-      }
-
-      // 最新净值
-      if (detail.latest_nav) {
-        navData.value = detail.latest_nav
-      }
-
-      // 基金经理
-      if (detail.managers && detail.managers.length > 0) {
-        managerData.value = detail.managers
-      }
-
-      ElMessage.success('基金详情获取成功')
+      fundDetail.value = response.data
+      detailLoaded.value = true
+      ElMessage.success(`「${row.name}」详情获取成功`)
     } else {
       ElMessage.warning(response?.message || '获取基金详情失败')
     }
   } catch (error: any) {
     console.error('获取基金详情失败:', error)
     ElMessage.error(error.message || '获取基金详情失败')
+  } finally {
+    stopProgress()
+    detailLoading.value = false
   }
 }
 
@@ -363,15 +385,16 @@ const getChangeClass = (val: number) => {
 
 // 前往分析页面
 const goToAnalysis = () => {
-  if (!selectedFund.value) return
+  if (!fundDetail.value) return
+  const basic = fundDetail.value.basic || {}
   router.push({
     path: '/analysis/fund',
     query: {
-      ts_code: selectedFund.value.ts_code,
-      name: selectedFund.value.name,
-      fund_type: selectedFund.value.fund_type || '',
-      market: selectedFund.value.market || '',
-      management: selectedFund.value.management || ''
+      ts_code: fundDetail.value.ts_code,
+      name: basic.name || '',
+      fund_type: basic.fund_type || '',
+      market: basic.market || '',
+      management: basic.management || ''
     }
   })
 }
@@ -496,6 +519,52 @@ const goToAnalysis = () => {
     }
   }
 
+  // 详情加载中
+  .detail-loading {
+    margin-bottom: 24px;
+
+    .loading-card {
+      border-radius: 16px;
+      border: none;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+
+      :deep(.el-card__body) {
+        padding: 48px 24px;
+      }
+
+      .loading-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+
+        .loading-icon {
+          font-size: 48px;
+          color: #8b5cf6;
+          margin-bottom: 16px;
+        }
+
+        .loading-text {
+          font-size: 16px;
+          font-weight: 600;
+          color: #1a202c;
+          margin: 0 0 20px 0;
+        }
+
+        .loading-progress {
+          width: 320px;
+          margin-bottom: 12px;
+        }
+
+        .loading-hint {
+          font-size: 13px;
+          color: #9ca3af;
+          margin: 0;
+        }
+      }
+    }
+  }
+
   .detail-row {
     margin-bottom: 0 !important;
 
@@ -614,6 +683,7 @@ const goToAnalysis = () => {
             font-size: 13px;
             color: #64748b;
             margin-bottom: 6px;
+            flex-wrap: wrap;
           }
 
           .manager-resume {
