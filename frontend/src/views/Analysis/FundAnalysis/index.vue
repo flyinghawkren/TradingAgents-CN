@@ -487,7 +487,13 @@ const saveState = () => {
       language: analysisConfig.language,
     },
     modelSettings: modelSettings.value,
-    // Note: analysis results are NOT cached — each click starts a new analysis
+    // 保存分析任务状态，支持页面切换后恢复进度或结果
+    analysisStatus: analysisStatus.value,
+    showResults: showResults.value,
+    analysisResult: analysisResult.value,
+    currentTaskId: currentTaskId.value,
+    taskProgress: taskProgress.value,
+    taskStep: taskStep.value,
   }
   sessionStorage.setItem(CACHE_KEY, JSON.stringify(state))
 }
@@ -573,8 +579,8 @@ const modelSettings = ref({
 
 const availableModels = ref<any[]>([])
 
-// 自动缓存关键状态变化（仅缓存配置，不缓存分析结果）
-watch([selectedFund], () => {
+// 自动缓存关键状态变化（配置 + 分析任务状态均缓存）
+watch([selectedFund, analysisStatus, showResults, analysisResult, currentTaskId, taskProgress, taskStep], () => {
   saveState()
 }, { deep: true })
 
@@ -872,7 +878,7 @@ onMounted(() => {
   const hasQuery = initFundFromQuery()
   const cached = restoreState()
 
-  // 恢复基金选择和分析配置（但不恢复分析结果）
+  // 恢复基金选择和分析配置
   if (hasQuery) {
     if (cached && cached.selectedFund?.ts_code === selectedFund.value?.ts_code) {
       if (cached.analysisConfig) {
@@ -890,12 +896,54 @@ onMounted(() => {
     ElMessage.success('已恢复上次分析状态')
   }
 
-  // 始终重置分析结果，确保每次点击都重新发起分析
-  analysisStatus.value = 'idle'
-  showResults.value = false
-  analysisResult.value = null
+  // 判断是否同一支基金：是则恢复分析任务状态，否则重置
+  const isSameFund = cached && cached.selectedFund?.ts_code === selectedFund.value?.ts_code
+  if (isSameFund && cached) {
+    // 恢复分析任务状态
+    if (cached.analysisStatus) {
+      analysisStatus.value = cached.analysisStatus
+    }
+    if (cached.showResults !== undefined) {
+      showResults.value = cached.showResults
+    }
+    if (cached.analysisResult) {
+      analysisResult.value = cached.analysisResult
+    }
+    if (cached.currentTaskId) {
+      currentTaskId.value = cached.currentTaskId
+    }
+    if (cached.taskProgress !== undefined) {
+      taskProgress.value = cached.taskProgress
+    }
+    if (cached.taskStep) {
+      taskStep.value = cached.taskStep
+    }
 
-  initializeModelSettings()
+    // 如果之前正在分析，恢复轮询
+    if (analysisStatus.value === 'running' && currentTaskId.value) {
+      analyzing.value = true
+      startPolling(currentTaskId.value)
+      ElMessage.info('分析任务正在继续，已恢复进度跟踪')
+    } else if (analysisStatus.value === 'completed') {
+      analyzing.value = false
+      showResults.value = true
+    } else if (analysisStatus.value === 'failed') {
+      analyzing.value = false
+    }
+  } else {
+    // 不同基金或首次分析，重置分析状态
+    analysisStatus.value = 'idle'
+    showResults.value = false
+    analysisResult.value = null
+    currentTaskId.value = ''
+    taskProgress.value = 0
+    taskStep.value = ''
+  }
+
+  // 加载模型配置：先恢复缓存的选择，再验证有效性
+  const cachedQuick = cached?.modelSettings?.quickAnalysisModel || ''
+  const cachedDeep = cached?.modelSettings?.deepAnalysisModel || ''
+  fetchAvailableModels(cachedQuick, cachedDeep)
 })
 
 onBeforeUnmount(() => {
