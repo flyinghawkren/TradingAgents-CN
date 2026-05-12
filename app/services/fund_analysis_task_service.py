@@ -128,6 +128,8 @@ class FundAnalysisTaskService:
             stock_code=ts_code,
             stock_name=fund_name,
             parameters=params,
+            task_type="fund_analysis",
+            task_name=f"基金分析【{ts_code}{'-' + fund_name if fund_name else ''}】",
         )
 
         # 写入 MongoDB

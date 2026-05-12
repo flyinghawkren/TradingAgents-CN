@@ -36,7 +36,11 @@ class TaskState:
     end_time: Optional[datetime] = None
     result_data: Optional[Dict[str, Any]] = None
     error_message: Optional[str] = None
-    
+
+    # 任务类型与名称（用于任务中心展示）
+    task_type: Optional[str] = None  # single / batch / portfolio / fund_analysis
+    task_name: Optional[str] = None  # 规范化的任务名称
+
     # 分析参数
     parameters: Optional[Dict[str, Any]] = None
 
@@ -113,6 +117,8 @@ class MemoryStateManager:
         stock_code: str,
         parameters: Optional[Dict[str, Any]] = None,
         stock_name: Optional[str] = None,
+        task_type: Optional[str] = None,
+        task_name: Optional[str] = None,
     ) -> TaskState:
         """创建新任务"""
         with self._lock:
@@ -128,7 +134,9 @@ class MemoryStateManager:
                 start_time=datetime.now(),
                 parameters=parameters or {},
                 estimated_duration=estimated_duration,
-                message="任务已创建，等待执行..."
+                message="任务已创建，等待执行...",
+                task_type=task_type,
+                task_name=task_name,
             )
             self._tasks[task_id] = task_state
             logger.info(f"📝 创建任务状态: {task_id}")

@@ -534,6 +534,11 @@ const getTaskType = (row: any): 'single' | 'batch' | 'portfolio' | 'fund_analysi
 
 // 生成任务名称
 const getTaskName = (row: any): string => {
+  // 如果后端已提供规范化的 task_name，直接使用
+  if (row.task_name) {
+    return row.task_name
+  }
+
   const type = getTaskType(row)
 
   // 基金分析：基金分析【<基金ID>-<基金名称>】

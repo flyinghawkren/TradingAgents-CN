@@ -723,12 +723,15 @@ class SimpleAnalysisService:
             logger.info(f"🔍 内存管理器实例ID: {id(self.memory_manager)}")
 
             # 在内存中创建任务状态
+            stock_name = self._resolve_stock_name(stock_code) if hasattr(self, '_resolve_stock_name') else None
             task_state = await self.memory_manager.create_task(
                 task_id=task_id,
                 user_id=user_id,
                 stock_code=stock_code,
                 parameters=request.parameters.model_dump() if request.parameters else {},
-                stock_name=(self._resolve_stock_name(stock_code) if hasattr(self, '_resolve_stock_name') else None),
+                stock_name=stock_name,
+                task_type="single",
+                task_name=f"股票个股分析【{stock_code}{'-' + stock_name if stock_name else ''}】",
             )
 
             logger.info(f"✅ 任务状态已创建: {task_state.task_id}")
@@ -2113,7 +2116,8 @@ class SimpleAnalysisService:
                         "stock_symbol": stock_code_value,  # 🔧 兼容字段
                         "stock_name": doc.get("stock_name"),
                         "title": doc.get("title"),  # 🔧 组合分析任务名称
-                        "task_type": doc.get("task_type"),  # 🔧 任务类型（portfolio/batch/single）
+                        "task_type": doc.get("task_type"),  # 🔧 任务类型（portfolio/batch/single/fund_analysis）
+                        "task_name": doc.get("task_name"),  # 🔧 规范化任务名称
                         "status": str(doc.get("status", "pending")),
                         "progress": int(doc.get("progress", 0) or 0),
                         "message": doc.get("message", ""),
@@ -2173,6 +2177,11 @@ class SimpleAnalysisService:
                         mem_task["progress"] = mongo_task.get("progress", mem_task.get("progress", 0))
                         mem_task["message"] = mongo_task.get("message", mem_task.get("message", ""))
                         mem_task["current_step"] = mongo_task.get("current_step", mem_task.get("current_step", ""))
+                        # 同步 task_type / task_name（内存中可能没有）
+                        if mongo_task.get("task_type") and not mem_task.get("task_type"):
+                            mem_task["task_type"] = mongo_task.get("task_type")
+                        if mongo_task.get("task_name") and not mem_task.get("task_name"):
+                            mem_task["task_name"] = mongo_task.get("task_name")
                         logger.debug(f"🔄 [Tasks] 更新任务进度: {task_id}, progress={mem_task['progress']}%")
                 else:
                     # 内存中没有，直接添加 MongoDB 中的任务
@@ -2241,6 +2250,8 @@ class SimpleAnalysisService:
                     **(parameters.model_dump() if parameters else {})
                 },
                 stock_name=title,
+                task_type="portfolio",
+                task_name=f"股票组合分析【{title}】",
             )
             logger.info(f"✅ 组合分析任务已创建到内存: {portfolio_task_id}")
         except Exception as e:
