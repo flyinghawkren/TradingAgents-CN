@@ -361,7 +361,16 @@
                             <span>分析摘要</span>
                           </div>
                         </template>
-                        <div class="insight-body markdown-body" v-html="renderMarkdown(cleanLLMFluff(analysisResult.summary))" />
+                        <div class="insight-body">
+                          <div
+                            v-for="(line, idx) in analysisResult.summary.split('\n').filter(Boolean)"
+                            :key="idx"
+                            class="summary-line"
+                          >
+                            <span class="summary-label">{{ line.split('：')[0] }}：</span>
+                            <span class="summary-value">{{ line.split('：').slice(1).join('：') }}</span>
+                          </div>
+                        </div>
                       </el-card>
                     </el-col>
                     <el-col :span="12">
@@ -380,15 +389,18 @@
 
                 <!-- 关键要点 -->
                 <div v-if="analysisResult.key_points && analysisResult.key_points.length > 0" class="keypoints-section">
-                  <h4>🔑 关键要点</h4>
+                  <div class="keypoints-header">
+                    <el-icon size="18"><Key /></el-icon>
+                    <span>关键要点</span>
+                  </div>
                   <div class="keypoints-list">
                     <div
                       v-for="(point, idx) in analysisResult.key_points"
                       :key="idx"
                       class="keypoint-item"
                     >
-                      <el-icon class="keypoint-icon"><Check /></el-icon>
-                      <span>{{ point }}</span>
+                      <div class="keypoint-index">{{ idx + 1 }}</div>
+                      <div class="keypoint-text">{{ point }}</div>
                     </div>
                   </div>
                 </div>
@@ -442,7 +454,8 @@ import {
   Wallet,
   User,
   WarningFilled,
-  Coin
+  Coin,
+  Key
 } from '@element-plus/icons-vue'
 import { analysisApi } from '@/api/analysis'
 import { configApi } from '@/api/config'
@@ -1424,6 +1437,75 @@ onBeforeUnmount(() => {
             }
           }
 
+          // 关键要点
+          .keypoints-section {
+            margin-bottom: 24px;
+            background: white;
+            border-radius: 12px;
+            padding: 20px 24px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+
+            .keypoints-header {
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              font-size: 16px;
+              font-weight: 600;
+              color: #1a202c;
+              margin-bottom: 16px;
+              padding-bottom: 12px;
+              border-bottom: 2px solid #e2e8f0;
+
+              .el-icon {
+                color: #8b5cf6;
+              }
+            }
+
+            .keypoints-list {
+              display: flex;
+              flex-direction: column;
+              gap: 12px;
+
+              .keypoint-item {
+                display: flex;
+                align-items: flex-start;
+                gap: 12px;
+                padding: 14px 16px;
+                background: #f8fafc;
+                border-radius: 10px;
+                border-left: 3px solid #8b5cf6;
+                transition: all 0.2s ease;
+
+                &:hover {
+                  background: #f3e8ff;
+                  transform: translateX(4px);
+                }
+
+                .keypoint-index {
+                  width: 24px;
+                  height: 24px;
+                  border-radius: 50%;
+                  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+                  color: white;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  font-size: 12px;
+                  font-weight: 700;
+                  flex-shrink: 0;
+                  margin-top: 2px;
+                }
+
+                .keypoint-text {
+                  flex: 1;
+                  font-size: 14px;
+                  line-height: 1.7;
+                  color: #374151;
+                }
+              }
+            }
+          }
+
           // 摘要与建议卡片
           .summary-card-section {
             margin-bottom: 24px;
@@ -1507,6 +1589,31 @@ onBeforeUnmount(() => {
                   border-radius: 4px;
                   font-size: 13px;
                   color: #334155;
+                }
+
+                .summary-line {
+                  display: flex;
+                  align-items: baseline;
+                  gap: 4px;
+                  margin-bottom: 12px;
+                  font-size: 14px;
+                  line-height: 1.6;
+
+                  &:last-child {
+                    margin-bottom: 0;
+                  }
+
+                  .summary-label {
+                    font-weight: 600;
+                    color: #1a202c;
+                    white-space: nowrap;
+                    flex-shrink: 0;
+                  }
+
+                  .summary-value {
+                    color: #374151;
+                    font-weight: 500;
+                  }
                 }
               }
 

@@ -515,26 +515,82 @@ class FundAnalysisTaskService:
         analyst_reports: Dict[str, str],
     ) -> FundAnalysisResult:
         """解析综合分析报告为结构化结果"""
+        import re
         basic = fund_detail.get("basic", {})
+        text = comprehensive_report or ""
 
-        # 提取投资建议（简单规则提取）
+        # 1. 提取投资摘要：匹配 "投资摘要" 后的内容（直到下一个 ### 或 ** 章节）
+        invest_summary = ""
+        m = re.search(r'投资摘要[（(][^）)]*[）)]?\s*[:：]?\s*(.+?)(?=\n\s*#{1,6}\s|\n\s*\*\*\d+\.\s|\n\s*\d+\.|\Z)', text, re.DOTALL)
+        if m:
+            invest_summary = m.group(1).strip().replace('\n', ' ')
+        if not invest_summary:
+            # 兜底：取第一段非空文本（通常就是摘要）
+            first_para = text.strip().split('\n')[0]
+            if len(first_para) > 20 and len(first_para) < 300:
+                invest_summary = first_para
+
+        # 2. 提取综合评分
+        score = ""
+        m_score = re.search(r'综合评分[:：]?\s*(\d+(?:\.\d+)?)\s*分', text)
+        if not m_score:
+            m_score = re.search(r'评分[:：]?\s*(\d+(?:\.\d+)?)\s*分', text)
+        if not m_score:
+            m_score = re.search(r'(\d+(?:\.\d+)?)\s*分', text)
+        if m_score:
+            score = m_score.group(1) + "分"
+
+        # 3. 提取评级（含括号备注）
+        rating = ""
+        m_rating = re.search(r'评级[:：]?\s*(强烈买入|买入|持有|卖出)[（(]([^）)]*)[）)]?', text)
+        if m_rating:
+            rating = m_rating.group(1) + "（" + m_rating.group(2) + "）"
+        else:
+            m_rating = re.search(r'(强烈买入|买入|持有|卖出)', text)
+            if m_rating:
+                rating = m_rating.group(1)
+
+        # 组装结构化摘要
+        summary_lines = []
+        if invest_summary:
+            summary_lines.append(f"投资摘要：{invest_summary}")
+        if score:
+            summary_lines.append(f"综合评分：{score}")
+        if rating:
+            summary_lines.append(f"评级：{rating}")
+        summary = "\n".join(summary_lines) if summary_lines else text[:300]
+
+        # 提取投资建议（完整文本）
         recommendation = "请查看完整报告"
         for keyword in ["强烈买入", "买入", "持有", "卖出"]:
-            if keyword in comprehensive_report:
+            if keyword in text:
                 recommendation = f"建议{keyword}"
                 break
+        # 尝试提取投资建议整段
+        m_rec = re.search(r'投资建议[（(][^）)]*[）)]?\s*[:：]?\s*(.+?)(?=\n\s*#{1,6}\s|\n\s*\*\*\d+\.\s|\n\s*\d+\.|\Z)', text, re.DOTALL)
+        if m_rec:
+            recommendation = m_rec.group(1).strip()
 
-        # 提取摘要（取前500字）
-        summary = comprehensive_report[:500] if comprehensive_report else ""
-
-        # 提取关键点
+        # 提取关键点（从核心风险提醒中提取 bullet points）
         key_points = []
-        for line in comprehensive_report.split("\n"):
+        risk_section = ""
+        m_risk = re.search(r'核心风险提醒[（(][^）)]*[）)]?\s*[:：]?\s*(.+?)(?=\n\s*#{1,6}\s|\n\s*\*\*\d+\.\s|\n\s*\d+\.|\Z)', text, re.DOTALL)
+        if m_risk:
+            risk_section = m_risk.group(1)
+        for line in risk_section.split("\n"):
             line = line.strip()
             if line.startswith("-") or line.startswith("•") or line.startswith("*"):
                 clean = line.lstrip("-•* ").strip()
                 if clean and len(clean) > 10:
                     key_points.append(clean)
+        if not key_points:
+            # 兜底：从全文中提取 bullet points
+            for line in text.split("\n"):
+                line = line.strip()
+                if line.startswith("-") or line.startswith("•") or line.startswith("*"):
+                    clean = line.lstrip("-•* ").strip()
+                    if clean and len(clean) > 10 and len(clean) < 200:
+                        key_points.append(clean)
         if not key_points:
             key_points = ["基金分析已完成，请查看详细报告"]
         key_points = key_points[:8]
