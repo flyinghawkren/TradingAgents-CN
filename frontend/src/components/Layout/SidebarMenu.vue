@@ -11,30 +11,35 @@
       <template #title>仪表板</template>
     </el-menu-item>
 
-    <el-menu-item index="/learning">
-      <el-icon><Reading /></el-icon>
-      <template #title>学习中心</template>
-    </el-menu-item>
-
     <el-sub-menu index="/analysis">
       <template #title>
         <el-icon><TrendCharts /></el-icon>
         <span>股票分析</span>
       </template>
-      <el-menu-item index="/analysis/single">单股分析</el-menu-item>
+      <el-menu-item index="/analysis/single">个股分析</el-menu-item>
       <el-menu-item index="/analysis/batch">批量分析</el-menu-item>
-      <!-- 新增：将分析报告作为股票分析的子菜单 -->
-      <el-menu-item index="/reports">分析报告</el-menu-item>
+      <el-menu-item index="/analysis/portfolio">组合分析</el-menu-item>
+      <el-menu-item index="/screening">股票筛选</el-menu-item>
     </el-sub-menu>
+
+    <el-sub-menu index="/wealth">
+      <template #title>
+        <el-icon><Money /></el-icon>
+        <span>基金分析</span>
+      </template>
+      <el-menu-item index="/analysis/fund-search">基金搜索</el-menu-item>
+      <el-menu-item index="/analysis/fund">基金分析</el-menu-item>
+      <el-menu-item index="/analysis/fund-portfolio">组合分析</el-menu-item>
+    </el-sub-menu>
+
+    <el-menu-item index="/reports">
+      <el-icon><Document /></el-icon>
+      <template #title>分析报告</template>
+    </el-menu-item>
 
     <el-menu-item index="/tasks">
       <el-icon><List /></el-icon>
       <template #title>任务中心</template>
-    </el-menu-item>
-
-    <el-menu-item index="/screening">
-      <el-icon><Search /></el-icon>
-      <template #title>股票筛选</template>
     </el-menu-item>
 
     <el-menu-item index="/favorites">
@@ -42,19 +47,22 @@
       <template #title>我的自选股</template>
     </el-menu-item>
 
+    <el-menu-item index="/portfolio">
+      <el-icon><Wallet /></el-icon>
+      <template #title>我的投资</template>
+    </el-menu-item>
+
     <el-menu-item index="/paper">
       <el-icon><CreditCard /></el-icon>
       <template #title>模拟交易</template>
     </el-menu-item>
 
-
-    <!-- 分析报告已移至“股票分析”子菜单，保留注释便于追踪 -->
-    <!--
-    <el-menu-item index="/reports">
-      <el-icon><Document /></el-icon>
-      <template #title>分析报告</template>
+    <el-menu-item index="/learning">
+      <el-icon><Reading /></el-icon>
+      <template #title>学习中心</template>
     </el-menu-item>
-    -->
+
+
 
     <el-sub-menu index="/settings">
       <template #title>
@@ -109,10 +117,12 @@ import {
   Search,
   Star,
   List,
-  /* Document 移除：不再使用顶级分析报告菜单图标 */
+  Document,
+  Money,
   Setting,
   InfoFilled,
-  CreditCard
+  CreditCard,
+  Wallet
 } from '@element-plus/icons-vue'
 
 const route = useRoute()

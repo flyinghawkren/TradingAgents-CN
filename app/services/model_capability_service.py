@@ -334,6 +334,10 @@ class ModelCapabilityService:
             # 使用默认模型
             return self._get_default_models()
         
+        logger.info(f"🔍 [模型推荐] research_depth={research_depth}, 可用模型数={len(enabled_models)}")
+        for m in enabled_models:
+            logger.info(f"   候选模型: {m.model_name} (provider={m.provider}, enabled={m.enabled})")
+        
         if not enabled_models:
             logger.warning("没有启用的模型，使用默认配置")
             return self._get_default_models()
@@ -345,9 +349,11 @@ class ModelCapabilityService:
             level = getattr(m, 'capability_level', 2)
             features = getattr(m, 'features', [])
             
-            if (ModelRole.QUICK_ANALYSIS in roles or ModelRole.BOTH in roles) and \
+            match_quick = (ModelRole.QUICK_ANALYSIS in roles or ModelRole.BOTH in roles) and \
                level >= requirements["quick_model_min"] and \
-               ModelFeature.TOOL_CALLING in features:
+               ModelFeature.TOOL_CALLING in features
+            logger.info(f"   快速模型筛选 {m.model_name}: roles={roles}, level={level}, features={features}, match={match_quick}")
+            if match_quick:
                 quick_candidates.append(m)
         
         # 筛选适合深度分析的模型
@@ -356,9 +362,13 @@ class ModelCapabilityService:
             roles = getattr(m, 'suitable_roles', [ModelRole.BOTH])
             level = getattr(m, 'capability_level', 2)
             
-            if (ModelRole.DEEP_ANALYSIS in roles or ModelRole.BOTH in roles) and \
-               level >= requirements["deep_model_min"]:
+            match_deep = (ModelRole.DEEP_ANALYSIS in roles or ModelRole.BOTH in roles) and \
+               level >= requirements["deep_model_min"]
+            logger.info(f"   深度模型筛选 {m.model_name}: roles={roles}, level={level}, match={match_deep}")
+            if match_deep:
                 deep_candidates.append(m)
+        
+        logger.info(f"🔍 [模型推荐] 快速候选={len(quick_candidates)}个, 深度候选={len(deep_candidates)}个")
         
         # 按性价比排序（能力等级 vs 成本）
         quick_candidates.sort(
@@ -383,6 +393,7 @@ class ModelCapabilityService:
         
         # 如果没找到合适的，使用系统默认
         if not quick_model or not deep_model:
+            logger.warning(f"⚠️ 未找到合适模型 (quick={quick_model}, deep={deep_model})，回退到系统默认")
             return self._get_default_models()
         
         logger.info(
@@ -394,15 +405,29 @@ class ModelCapabilityService:
         return quick_model, deep_model
     
     def _get_default_models(self) -> Tuple[str, str]:
-        """获取默认模型对"""
+        """获取默认模型对——优先从 unified_config 读取，失败时自动选择第一个可用模型"""
         try:
             quick_model = unified_config.get_quick_analysis_model()
             deep_model = unified_config.get_deep_analysis_model()
-            logger.info(f"使用系统默认模型: quick={quick_model}, deep={deep_model}")
-            return quick_model, deep_model
+            if quick_model and deep_model:
+                logger.info(f"使用系统默认模型: quick={quick_model}, deep={deep_model}")
+                return quick_model, deep_model
         except Exception as e:
-            logger.error(f"获取默认模型失败: {e}")
-            return "qwen-turbo", "qwen-plus"
+            logger.error(f"从 unified_config 获取默认模型失败: {e}")
+
+        # 回退：从 .env 可用模型中选择第一个
+        try:
+            env_configs = unified_config.get_llm_configs()
+            enabled_models = [m for m in env_configs if getattr(m, 'enabled', False)]
+            if enabled_models:
+                first = enabled_models[0].model_name
+                logger.warning(f"⚠️ 系统默认模型未配置，回退到第一个可用模型: {first}")
+                return first, first
+        except Exception as e2:
+            logger.error(f"从 .env 获取可用模型也失败: {e2}")
+
+        logger.error("❌ 无法获取任何可用模型，分析将会失败")
+        return "", ""
     
     def _recommend_model(self, model_type: str, min_level: int) -> str:
         """推荐满足要求的模型"""

@@ -62,13 +62,54 @@ class ConfigProvider:
             if found is not None:
                 merged[k] = found
 
-        # Optionally: allow whitelisting additional env-only keys via prefix
-        # For now, keep minimal behavior to avoid surprising surfaces.
+        # 🔧 修正默认模型：如果 quick/deep_analysis_model 缺失或对应模型不可用，自动选择第一个可用模型
+        merged = await self._validate_and_fix_default_models(merged, cfg)
 
         # Cache
         self._cache_settings = dict(merged)
         self._cache_time = __import__("datetime").datetime.now(__import__("datetime").timezone.utc)
         return dict(merged)
+
+    async def _validate_and_fix_default_models(self, settings: Dict[str, Any], cfg) -> Dict[str, Any]:
+        """验证并修正默认模型设置，确保 quick/deep_analysis_model 指向实际可用的模型"""
+        result = dict(settings)
+
+        # 获取当前可用的模型列表
+        available_models = set()
+        if cfg and cfg.llm_configs:
+            available_models = {m.model_name for m in cfg.llm_configs if m.enabled}
+
+        # 如果数据库中没有可用模型，尝试从 .env 生成
+        if not available_models:
+            from app.core.unified_config import unified_config
+            env_configs = unified_config.get_llm_configs()
+            available_models = {m.model_name for m in env_configs if m.enabled}
+
+        if not available_models:
+            print("⚠️ [config_provider] 未找到任何可用模型，跳过默认模型修正")
+            return result
+
+        print(f"🔍 [config_provider] 当前可用模型: {available_models}")
+
+        # 检查并修正 quick_analysis_model
+        quick_model = result.get("quick_analysis_model", "")
+        if not quick_model or quick_model not in available_models:
+            first_model = sorted(available_models)[0]
+            print(f"   ⚠️ quick_analysis_model='{quick_model}' 不可用，自动修正为 '{first_model}'")
+            result["quick_analysis_model"] = first_model
+        else:
+            print(f"   ✓ quick_analysis_model='{quick_model}' 有效")
+
+        # 检查并修正 deep_analysis_model
+        deep_model = result.get("deep_analysis_model", "")
+        if not deep_model or deep_model not in available_models:
+            first_model = sorted(available_models)[0]
+            print(f"   ⚠️ deep_analysis_model='{deep_model}' 不可用，自动修正为 '{first_model}'")
+            result["deep_analysis_model"] = first_model
+        else:
+            print(f"   ✓ deep_analysis_model='{deep_model}' 有效")
+
+        return result
     async def get_system_settings_meta(self) -> Dict[str, Dict[str, Any]]:
         """Return metadata for system settings keys including sensitivity, editability and source.
         Fields per key:

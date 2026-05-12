@@ -557,6 +557,9 @@ def create_analysis_config(
     logger.info(f"   🤖 LLM供应商: {llm_provider}")
     logger.info(f"   ⚡ 快速模型: {config['quick_think_llm']}")
     logger.info(f"   🧠 深度模型: {config['deep_think_llm']}")
+    logger.info(f"   🔗 backend_url: {config.get('backend_url', '未设置')}")
+    logger.info(f"   🔑 quick_api_key: {'已配置' if config.get('quick_api_key') else '未配置'}")
+    logger.info(f"   🔑 deep_api_key : {'已配置' if config.get('deep_api_key') else '未配置'}")
     logger.info(f"📋 ========================================")
 
     return config
@@ -1139,6 +1142,20 @@ class SimpleAnalysisService:
             capability_service = get_model_capability_service()
 
             research_depth = request.parameters.research_depth if request.parameters else "标准"
+
+            # 🔍 打印前端传入的完整参数（用于排查模型选择问题）
+            logger.info(f"\n{'='*60}")
+            logger.info(f"📥 [分析服务] 收到分析请求参数")
+            if request.parameters:
+                logger.info(f"   stock_code           : {request.stock_code}")
+                logger.info(f"   research_depth       : {research_depth}")
+                logger.info(f"   quick_analysis_model : {getattr(request.parameters, 'quick_analysis_model', 'None')}")
+                logger.info(f"   deep_analysis_model  : {getattr(request.parameters, 'deep_analysis_model', 'None')}")
+                logger.info(f"   selected_analysts    : {request.parameters.selected_analysts}")
+                logger.info(f"   market_type          : {request.parameters.market_type}")
+            else:
+                logger.info(f"   request.parameters 为 None，使用全部默认配置")
+            logger.info(f"{'='*60}\n")
 
             # 1. 检查前端是否指定了模型
             if (request.parameters and
@@ -1947,7 +1964,7 @@ class SimpleAnalysisService:
             db = get_mongo_db()
             collection = db["analysis_tasks"]
 
-            query = {}
+            query = {"parent_task_id": {"$exists": false}}  # 过滤掉组合分析的子任务
             if task_status:
                 query["status"] = task_status.value
 
@@ -2071,7 +2088,7 @@ class SimpleAnalysisService:
                     {"user_id": base_condition},
                     {"user": base_condition}
                 ]
-                query = {"$or": or_conditions}
+                query = {"$and": [{"$or": or_conditions}, {"parent_task_id": {"$exists": false}}]}  # 过滤掉组合分析的子任务
 
                 if task_status:
                     # 使用映射后的状态值（TaskStatus枚举的value）
@@ -2094,6 +2111,8 @@ class SimpleAnalysisService:
                         "stock_code": stock_code_value,  # 🔧 兼容字段
                         "stock_symbol": stock_code_value,  # 🔧 兼容字段
                         "stock_name": doc.get("stock_name"),
+                        "title": doc.get("title"),  # 🔧 组合分析任务名称
+                        "task_type": doc.get("task_type"),  # 🔧 任务类型（portfolio/batch/single）
                         "status": str(doc.get("status", "pending")),
                         "progress": int(doc.get("progress", 0) or 0),
                         "message": doc.get("message", ""),
@@ -2192,6 +2211,486 @@ class SimpleAnalysisService:
         except Exception as outer_e:
             logger.error(f"❌ list_user_tasks 外层异常: {outer_e}", exc_info=True)
             return []
+
+    # ==================== 组合分析 ====================
+
+    async def create_portfolio_analysis_task(
+        self,
+        user_id: str,
+        title: str,
+        description: Optional[str],
+        stocks: List[Dict[str, Any]],
+        parameters: Optional[AnalysisParameters]
+    ) -> Dict[str, Any]:
+        """创建组合分析主任务"""
+        portfolio_task_id = str(uuid.uuid4())
+        logger.info(f"📝 创建组合分析任务: {portfolio_task_id} - {title}")
+
+        # 同时在内存管理器中创建任务状态（用于进度查询）
+        try:
+            await self.memory_manager.create_task(
+                task_id=portfolio_task_id,
+                user_id=user_id,
+                stock_code="PORTFOLIO",
+                parameters={
+                    "task_type": "portfolio",
+                    "title": title,
+                    "description": description,
+                    "stocks": stocks,
+                    **(parameters.model_dump() if parameters else {})
+                },
+                stock_name=title,
+            )
+            logger.info(f"✅ 组合分析任务已创建到内存: {portfolio_task_id}")
+        except Exception as e:
+            logger.warning(f"⚠️ 创建组合分析任务到内存失败(忽略): {e}")
+
+        # 保存到 MongoDB
+        try:
+            db = get_mongo_db()
+            await db.analysis_tasks.update_one(
+                {"task_id": portfolio_task_id},
+                {"$setOnInsert": {
+                    "task_id": portfolio_task_id,
+                    "user_id": user_id,
+                    "task_type": "portfolio",
+                    "title": title,
+                    "description": description,
+                    "stocks": stocks,
+                    "status": "pending",
+                    "progress": 0,
+                    "phase": "pending",  # pending -> phase1 -> phase2 -> completed
+                    "created_at": datetime.utcnow(),
+                }},
+                upsert=True
+            )
+        except Exception as e:
+            logger.error(f"❌ 创建组合分析任务写入MongoDB失败: {e}")
+
+        return {
+            "task_id": portfolio_task_id,
+            "status": "pending",
+            "message": "组合分析任务已创建"
+        }
+
+    async def _update_portfolio_task_status(
+        self,
+        portfolio_task_id: str,
+        status: str,
+        progress: int,
+        message: str,
+        phase: Optional[str] = None,
+        result_data: Optional[Dict[str, Any]] = None
+    ):
+        """同步更新组合分析任务状态到 MongoDB 和内存
+
+        注意：MongoDB 使用 "processing" 保持与其他任务一致，内存使用 "running"
+        """
+        # 更新 MongoDB（使用 "processing" 保持与其他 analysis_tasks 一致）
+        try:
+            db = get_mongo_db()
+            mongo_status = "processing" if status == "running" else status
+            update_doc: Dict[str, Any] = {
+                "status": mongo_status,
+                "progress": progress,
+                "message": message,
+            }
+            if phase:
+                update_doc["phase"] = phase
+            if result_data:
+                update_doc["result"] = result_data
+            await db.analysis_tasks.update_one(
+                {"task_id": portfolio_task_id},
+                {"$set": update_doc}
+            )
+        except Exception as e:
+            logger.error(f"❌ 更新组合分析任务MongoDB状态失败: {e}")
+
+        # 更新内存（使用 TaskStatus 枚举值）
+        try:
+            memory_status_map = {
+                "pending": TaskStatus.PENDING,
+                "running": TaskStatus.RUNNING,
+                "completed": TaskStatus.COMPLETED,
+                "failed": TaskStatus.FAILED,
+            }
+            await self.memory_manager.update_task_status(
+                task_id=portfolio_task_id,
+                status=memory_status_map.get(status, TaskStatus.RUNNING),
+                progress=progress,
+                message=message,
+                current_step=phase or message,
+                result_data=result_data
+            )
+        except Exception as e:
+            logger.warning(f"⚠️ 更新组合分析任务内存状态失败(忽略): {e}")
+
+    async def execute_portfolio_analysis(
+        self,
+        portfolio_task_id: str,
+        user_id: str,
+        title: str,
+        description: Optional[str],
+        stocks: List[Dict[str, Any]],
+        parameters: Optional[AnalysisParameters]
+    ):
+        """执行组合分析（两阶段）
+
+        第一阶段：并发发起每只股票的单股分析
+        第二阶段：整合各股票分析报告，进行综合分析，给出调仓建议
+        """
+        from app.models.analysis import PortfolioAnalysisRequest, PortfolioStockInfo
+
+        logger.info(f"🚀🚀🚀 开始执行组合分析: {portfolio_task_id} - {title}")
+        logger.info(f"📊 组合包含 {len(stocks)} 只股票")
+
+        db = get_mongo_db()
+
+        # 更新状态为运行中 - 第一阶段
+        await self._update_portfolio_task_status(
+            portfolio_task_id,
+            status="running",
+            progress=5,
+            message="第一阶段：并发单股分析中...",
+            phase="phase1"
+        )
+
+        # ========== 第一阶段：并发单股分析 ==========
+        stock_symbols = [s["stock_code"] for s in stocks]
+        stock_results: Dict[str, Dict[str, Any]] = {}
+        single_task_ids: List[str] = []
+
+        async def run_single_for_portfolio(symbol: str, stock_info: Dict[str, Any]) -> Dict[str, Any]:
+            """为组合分析执行单股分析"""
+            try:
+                single_req = SingleAnalysisRequest(
+                    symbol=symbol,
+                    stock_code=symbol,
+                    parameters=parameters
+                )
+                # 创建任务
+                create_res = await self.create_analysis_task(user_id, single_req)
+                task_id = create_res.get("task_id")
+                if not task_id:
+                    return {"symbol": symbol, "success": False, "error": "创建任务失败"}
+
+                # 标记子任务，并记录到组合任务
+                try:
+                    await db.analysis_tasks.update_one(
+                        {"task_id": task_id},
+                        {"$set": {"parent_task_id": portfolio_task_id}}
+                    )
+                    await db.analysis_tasks.update_one(
+                        {"task_id": portfolio_task_id},
+                        {"$push": {"sub_task_ids": task_id}}
+                    )
+                except Exception:
+                    pass
+
+                # 执行分析
+                await self.execute_analysis_background(task_id, user_id, single_req)
+
+                # 获取结果
+                task_status = await self.get_task_status(task_id)
+                if task_status and task_status.get("status") == "completed":
+                    result_data = task_status.get("result_data", {})
+                    return {
+                        "symbol": symbol,
+                        "stock_name": stock_info.get("stock_name", symbol),
+                        "success": True,
+                        "task_id": task_id,
+                        "result": result_data
+                    }
+                else:
+                    return {
+                        "symbol": symbol,
+                        "success": False,
+                        "error": task_status.get("message", "分析未完成") if task_status else "未知错误"
+                    }
+            except Exception as e:
+                logger.error(f"❌ 组合分析中单股分析失败: {symbol} - {e}")
+                return {"symbol": symbol, "success": False, "error": str(e)}
+
+        # 并发执行所有单股分析
+        tasks = []
+        for stock in stocks:
+            symbol = stock["stock_code"]
+            tasks.append(asyncio.create_task(run_single_for_portfolio(symbol, stock)))
+
+        # 等待所有单股分析完成，并更新进度
+        total = len(tasks)
+        completed = 0
+        for coro in asyncio.as_completed(tasks):
+            res = await coro
+            symbol = res["symbol"]
+            if res["success"]:
+                stock_results[symbol] = res
+                completed += 1
+                logger.info(f"✅ 组合分析 - 单股分析完成: {symbol} ({completed}/{total})")
+            else:
+                logger.warning(f"⚠️ 组合分析 - 单股分析失败: {symbol} - {res.get('error')}")
+
+            # 更新组合任务进度（第一阶段占50%）
+            progress = 5 + int((completed / total) * 45)
+            await self._update_portfolio_task_status(
+                portfolio_task_id,
+                status="running",
+                progress=progress,
+                message=f"第一阶段：已完成 {completed}/{total} 只单股分析",
+                phase="phase1"
+            )
+
+        # 检查是否有成功结果
+        if not stock_results:
+            logger.error(f"❌ 组合分析第一阶段全部失败: {portfolio_task_id}")
+            await self._update_portfolio_task_status(
+                portfolio_task_id,
+                status="failed",
+                progress=0,
+                message="第一阶段单股分析全部失败",
+                phase="failed"
+            )
+            return
+
+        # ========== 第二阶段：综合分析 + 调仓建议 ==========
+        logger.info(f"🔄 组合分析进入第二阶段: {portfolio_task_id}")
+        await self._update_portfolio_task_status(
+            portfolio_task_id,
+            status="running",
+            progress=55,
+            message="第二阶段：整合分析报告并生成调仓建议...",
+            phase="phase2"
+        )
+
+        try:
+            # 构建综合分析提示词
+            portfolio_summary = self._build_portfolio_summary(stocks, stock_results)
+
+            # 调用大模型进行综合分析
+            comprehensive_report = await self._run_portfolio_comprehensive_analysis(
+                portfolio_task_id, title, description, stocks, stock_results, parameters
+            )
+
+            # 更新任务为完成状态
+            final_result = {
+                "portfolio_name": title,
+                "description": description,
+                "stocks": stocks,
+                "stock_results": {
+                    symbol: {
+                        "stock_name": r["stock_name"],
+                        "task_id": r["task_id"],
+                        "summary": r["result"].get("summary", "")[:500] if r.get("result") else "",
+                        "recommendation": r["result"].get("recommendation", "")[:300] if r.get("result") else "",
+                        "decision": r["result"].get("decision", {}) if r.get("result") else {},
+                    }
+                    for symbol, r in stock_results.items()
+                },
+                "comprehensive_report": comprehensive_report,
+                "analysis_date": datetime.now().strftime("%Y-%m-%d"),
+            }
+
+            await self._update_portfolio_task_status(
+                portfolio_task_id,
+                status="completed",
+                progress=100,
+                message="组合分析完成",
+                phase="completed",
+                result_data=final_result
+            )
+
+            # 同时保存到 analysis_reports 以便报告查询
+            await self._save_portfolio_report(portfolio_task_id, user_id, title, final_result)
+
+            logger.info(f"✅ 组合分析完成: {portfolio_task_id}")
+
+        except Exception as e:
+            logger.error(f"❌ 组合分析第二阶段失败: {portfolio_task_id} - {e}")
+            await self._update_portfolio_task_status(
+                portfolio_task_id,
+                status="failed",
+                progress=55,
+                message=f"第二阶段综合分析失败: {str(e)}",
+                phase="failed"
+            )
+
+    def _build_portfolio_summary(
+        self,
+        stocks: List[Dict[str, Any]],
+        stock_results: Dict[str, Dict[str, Any]]
+    ) -> str:
+        """构建组合持仓摘要"""
+        lines = ["## 组合持仓概况\n"]
+        total_value = sum(s.get("quantity", 0) * s.get("avg_price", 0) for s in stocks)
+        for s in stocks:
+            code = s["stock_code"]
+            name = s.get("stock_name", code)
+            qty = s.get("quantity", 0)
+            price = s.get("avg_price", 0)
+            value = qty * price
+            weight = (value / total_value * 100) if total_value > 0 else 0
+            market = s.get("market", "A股")
+            lines.append(f"- **{name}** ({code}, {market}): 持仓 {qty} 股, 均价 ¥{price:.2f}, 市值 ¥{value:.2f}, 权重 {weight:.1f}%")
+        lines.append(f"\n**总持仓市值**: ¥{total_value:.2f}\n")
+        return "\n".join(lines)
+
+    async def _run_portfolio_comprehensive_analysis(
+        self,
+        portfolio_task_id: str,
+        title: str,
+        description: Optional[str],
+        stocks: List[Dict[str, Any]],
+        stock_results: Dict[str, Dict[str, Any]],
+        parameters: Optional[AnalysisParameters]
+    ) -> Dict[str, Any]:
+        """调用大模型进行组合综合分析"""
+        logger.info(f"🧠 开始组合综合分析: {portfolio_task_id}")
+
+        # 构建提示词
+        system_prompt = """你是一位资深投资组合分析师，擅长从多维度分析股票持仓组合，并给出专业的调仓建议。
+请基于各股票的单股分析报告，进行组合层面的综合分析。"""
+
+        # 收集各股票分析摘要
+        stock_summaries = []
+        for symbol, res in stock_results.items():
+            result = res.get("result", {})
+            summary = result.get("summary", "")[:800]
+            recommendation = result.get("recommendation", "")[:400]
+            decision = result.get("decision", {})
+            action = decision.get("action", "未知") if isinstance(decision, dict) else "未知"
+            confidence = decision.get("confidence", 0) if isinstance(decision, dict) else 0
+            stock_summaries.append(f"""
+### 股票: {res.get('stock_name', symbol)} ({symbol})
+- 单股分析摘要: {summary}
+- 投资建议: {recommendation}
+- AI倾向: {action} (置信度: {confidence})
+""")
+
+        # 持仓信息
+        portfolio_info = self._build_portfolio_summary(stocks, stock_results)
+
+        user_prompt = f"""# 组合分析报告请求
+
+## 组合名称
+{title}
+
+## 组合描述
+{description or '无'}
+
+{portfolio_info}
+
+## 各股票单股分析摘要
+{''.join(stock_summaries)}
+
+## 分析要求
+请作为资深投资组合分析师，完成以下分析并输出结构化报告：
+
+### 1. 组合整体评估
+- 组合的行业/板块分布是否合理？
+- 组合的集中度风险如何？
+- 组合的估值水平处于什么位置？
+
+### 2. 个股诊断
+- 对每只个股给出简评（亮点 + 风险点）
+- 哪些股票值得继续持有、增持、减持或清仓？
+
+### 3. 调仓建议（重点）
+- 基于当前持仓和最新分析，给出具体的调仓操作方案
+- 包括：增持哪些、减持哪些、清仓哪些、新增哪些方向
+- 给出调仓后的理想持仓结构（目标权重）
+
+### 4. 风险提示
+- 组合层面最大的3个风险点
+- 宏观/市场环境对组合的潜在影响
+
+请用中文输出，结构清晰，建议具体可操作。"""
+
+        # 获取模型配置
+        research_depth = parameters.research_depth if parameters else "标准"
+        from app.services.model_capability_service import get_model_capability_service
+        capability_service = get_model_capability_service()
+        quick_model, deep_model = capability_service.recommend_models_for_depth(research_depth)
+
+        # 使用深度模型进行综合分析
+        provider_info = get_provider_and_url_by_model_sync(deep_model)
+        provider = provider_info["provider"]
+        backend_url = provider_info["backend_url"]
+        api_key = provider_info["api_key"]
+
+        # 构建综合分析配置
+        from tradingagents.llm_clients import create_llm_client
+        from tradingagents.llm_clients.provider_keys import normalize_provider_key
+        from langchain_core.messages import SystemMessage, HumanMessage
+
+        provider_key = normalize_provider_key(provider)
+        llm_client = create_llm_client(
+            provider=provider_key,
+            model=deep_model,
+            base_url=backend_url,
+            api_key=api_key,
+            temperature=0.3,
+            max_tokens=8000,
+        )
+
+        try:
+            llm = llm_client.get_llm()
+            messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=user_prompt),
+            ]
+            # 在线程池中执行同步 LangChain 调用，避免阻塞事件循环
+            response = await asyncio.to_thread(llm.invoke, messages)
+            report_text = response.content if hasattr(response, "content") else str(response)
+            logger.info(f"✅ 组合综合分析完成，报告长度: {len(report_text)}")
+        except Exception as e:
+            logger.error(f"❌ 组合综合分析LLM调用失败: {e}")
+            report_text = f"综合分析生成失败: {str(e)}\n\n请查看各股票的单股分析报告获取详情。"
+
+        # 解析结构化报告
+        return {
+            "report_text": report_text,
+            "model_used": deep_model,
+            "provider": provider,
+            "analysis_date": datetime.now().strftime("%Y-%m-%d"),
+            "tokens_used": len(user_prompt) + len(report_text),
+        }
+
+    async def _save_portfolio_report(
+        self,
+        portfolio_task_id: str,
+        user_id: str,
+        title: str,
+        final_result: Dict[str, Any]
+    ):
+        """保存组合分析报告到 analysis_reports 集合"""
+        try:
+            db = get_mongo_db()
+            report_doc = {
+                "task_id": portfolio_task_id,
+                "analysis_id": portfolio_task_id,
+                "user_id": user_id,
+                "task_type": "portfolio",
+                "portfolio_name": title,
+                "title": title,
+                "stock_symbol": "PORTFOLIO",
+                "summary": final_result.get("comprehensive_report", {}).get("report_text", "")[:2000],
+                "recommendation": "请查看完整组合分析报告",
+                "reports": {
+                    "comprehensive_report": final_result.get("comprehensive_report", {}).get("report_text", ""),
+                },
+                # 🔧 组合分析特有字段：直接存到顶层，便于 get_task_result 查询
+                "stock_results": final_result.get("stock_results"),
+                "comprehensive_report": final_result.get("comprehensive_report"),
+                "stocks": final_result.get("stocks"),
+                "result": final_result,
+                "status": "completed",
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow(),
+            }
+            await db.analysis_reports.insert_one(report_doc)
+            logger.info(f"✅ 组合分析报告已保存: {portfolio_task_id}")
+        except Exception as e:
+            logger.error(f"❌ 保存组合分析报告失败: {e}")
 
     async def cleanup_zombie_tasks(self, max_running_hours: int = 2) -> Dict[str, Any]:
         """清理僵尸任务（长时间处于 processing/running 状态的任务）

@@ -14,20 +14,6 @@
         </div>
       </div>
 
-      <!-- 风险提示 -->
-      <div class="risk-disclaimer">
-        <el-alert
-          type="warning"
-          :closable="false"
-          show-icon
-        >
-          <template #title>
-            <span style="font-size: 14px;">
-              <strong>⚠️ 重要提示：</strong>本工具为股票分析辅助工具，所有分析结果仅供参考，不构成投资建议。投资有风险，决策需谨慎。
-            </span>
-          </template>
-        </el-alert>
-      </div>
     </div>
 
     <!-- 股票列表输入区域 -->
@@ -213,29 +199,29 @@
                 <h4 class="config-title">⚙️ 分析选项</h4>
                 <div class="analysis-options">
                   <div class="option-item">
+                    <div class="option-info">
+                      <span class="option-name">情绪分析</span>
+                      <span class="option-desc">分析市场情绪和投资者心理</span>
+                    </div>
                     <el-switch v-model="batchForm.includeSentiment" />
-                    <div class="option-content">
-                      <div class="option-name">情绪分析</div>
-                      <div class="option-desc">分析市场情绪和投资者心理</div>
-                    </div>
                   </div>
 
                   <div class="option-item">
+                    <div class="option-info">
+                      <span class="option-name">风险评估</span>
+                      <span class="option-desc">包含详细的风险因素分析</span>
+                    </div>
                     <el-switch v-model="batchForm.includeRisk" />
-                    <div class="option-content">
-                      <div class="option-name">风险评估</div>
-                      <div class="option-desc">包含详细的风险因素分析</div>
-                    </div>
                   </div>
 
                   <div class="option-item">
-                    <el-select v-model="batchForm.language" size="small" style="width: 100%">
+                    <div class="option-info">
+                      <span class="option-name">语言偏好</span>
+                    </div>
+                    <el-select v-model="batchForm.language" size="small" style="width: 100px">
                       <el-option label="中文" value="zh-CN" />
                       <el-option label="English" value="en-US" />
                     </el-select>
-                    <div class="option-content">
-                      <div class="option-name">语言偏好</div>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -313,8 +299,8 @@ const invalidCodes = ref<string[]>([])
 
 // 模型设置
 const modelSettings = ref({
-  quickAnalysisModel: 'qwen-turbo',
-  deepAnalysisModel: 'qwen-max'
+  quickAnalysisModel: '',
+  deepAnalysisModel: ''
 })
 
 // 可用的模型列表（从配置中获取）
@@ -382,16 +368,32 @@ const initializeModelSettings = async () => {
       return [...configs].sort((a, b) => getTimestamp(b) - getTimestamp(a))
     }
 
-    // 获取默认模型
-    const defaultModels = await configApi.getDefaultModels()
-    modelSettings.value.quickAnalysisModel = defaultModels.quick_analysis_model
-    modelSettings.value.deepAnalysisModel = defaultModels.deep_analysis_model
-
-    // 获取所有可用的模型列表
+    // 1️⃣ 先获取所有可用的模型列表
     const llmConfigs = await configApi.getLLMConfigs()
     availableModels.value = sortModelsByNewest(
       llmConfigs.filter((config: any) => config.enabled)
     )
+
+    // 2️⃣ 获取后端推荐的默认模型
+    const defaultModels = await configApi.getDefaultModels()
+    let quickModel = defaultModels.quick_analysis_model
+    let deepModel = defaultModels.deep_analysis_model
+
+    // 3️⃣ 如果后端未返回默认模型，或返回的模型不在可用列表中，自动选择第一个可用模型
+    const availableModelNames = new Set(availableModels.value.map(m => m.model_name))
+    if (!quickModel || !availableModelNames.has(quickModel)) {
+      const fallback = availableModels.value[0]?.model_name || ''
+      console.warn(`⚠️ 快速模型 '${quickModel}' 不可用，自动选择第一个可用模型: ${fallback}`)
+      quickModel = fallback
+    }
+    if (!deepModel || !availableModelNames.has(deepModel)) {
+      const fallback = availableModels.value[0]?.model_name || ''
+      console.warn(`⚠️ 深度模型 '${deepModel}' 不可用，自动选择第一个可用模型: ${fallback}`)
+      deepModel = fallback
+    }
+
+    modelSettings.value.quickAnalysisModel = quickModel
+    modelSettings.value.deepAnalysisModel = deepModel
 
     console.log('✅ 加载模型配置成功:', {
       quick: modelSettings.value.quickAnalysisModel,
@@ -399,10 +401,9 @@ const initializeModelSettings = async () => {
       available: availableModels.value.length
     })
   } catch (error) {
-    console.error('加载默认模型配置失败:', error)
-    // 使用硬编码的默认值
-    modelSettings.value.quickAnalysisModel = 'qwen-plus'
-    modelSettings.value.deepAnalysisModel = 'qwen-max'
+    console.error('❌ 加载默认模型配置失败:', error)
+    modelSettings.value.quickAnalysisModel = ''
+    modelSettings.value.deepAnalysisModel = ''
   }
 }
 
@@ -679,8 +680,8 @@ const submitBatchAnalysis = async () => {
           .analysis-options {
             .option-item {
               display: flex;
-              align-items: flex-start;
-              gap: 12px;
+              align-items: center;
+              justify-content: space-between;
               padding: 12px 0;
               border-bottom: 1px solid #f3f4f6;
 
@@ -689,13 +690,12 @@ const submitBatchAnalysis = async () => {
                 padding-bottom: 0;
               }
 
-              .option-content {
-                flex: 1;
-
+              .option-info {
                 .option-name {
                   font-size: 14px;
                   font-weight: 500;
                   color: #374151;
+                  display: block;
                   margin-bottom: 2px;
                 }
 

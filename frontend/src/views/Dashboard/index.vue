@@ -24,33 +24,6 @@
     </div>
 
 
-    <!-- 学习中心推荐卡片 -->
-    <el-card class="learning-highlight-card">
-      <div class="learning-highlight">
-        <div class="learning-icon">
-          <el-icon size="48"><Reading /></el-icon>
-        </div>
-        <div class="learning-content">
-          <h2>📚 AI股票分析学习中心</h2>
-          <p>从零开始学习AI、大语言模型和智能股票分析。了解多智能体系统如何协作分析股票，掌握提示词工程技巧，选择合适的大模型，理解AI的能力与局限性。</p>
-          <div class="learning-features">
-            <span class="feature-tag">🤖 AI基础知识</span>
-            <span class="feature-tag">✍️ 提示词工程</span>
-            <span class="feature-tag">🎯 模型选择</span>
-            <span class="feature-tag">📊 分析原理</span>
-            <span class="feature-tag">⚠️ 风险认知</span>
-            <span class="feature-tag">🎓 实战教程</span>
-          </div>
-        </div>
-        <div class="learning-action">
-          <el-button type="primary" size="large" @click="goToLearning">
-            <el-icon><Reading /></el-icon>
-            开始学习
-          </el-button>
-        </div>
-      </div>
-    </el-card>
-
     <!-- 主要功能区域 -->
     <el-row :gutter="24" class="main-content">
       <!-- 左侧：快速操作 -->
@@ -295,6 +268,33 @@
         <MultiSourceSyncCard style="margin-top: 24px;" />
       </el-col>
     </el-row>
+
+    <!-- 学习中心推荐卡片 -->
+    <el-card class="learning-highlight-card">
+      <div class="learning-highlight">
+        <div class="learning-icon">
+          <el-icon size="48"><Reading /></el-icon>
+        </div>
+        <div class="learning-content">
+          <h2>📚 AI股票分析学习中心</h2>
+          <p>从零开始学习AI、大语言模型和智能股票分析。了解多智能体系统如何协作分析股票，掌握提示词工程技巧，选择合适的大模型，理解AI的能力与局限性。</p>
+          <div class="learning-features">
+            <span class="feature-tag">🤖 AI基础知识</span>
+            <span class="feature-tag">✍️ 提示词工程</span>
+            <span class="feature-tag">🎯 模型选择</span>
+            <span class="feature-tag">📊 分析原理</span>
+            <span class="feature-tag">⚠️ 风险认知</span>
+            <span class="feature-tag">🎓 实战教程</span>
+          </div>
+        </div>
+        <div class="learning-action">
+          <el-button type="primary" size="large" @click="goToLearning">
+            <el-icon><Reading /></el-icon>
+            开始学习
+          </el-button>
+        </div>
+      </div>
+    </el-card>
   </div>
 </template>
 
@@ -626,6 +626,7 @@ onMounted(async () => {
   }
 
   .learning-highlight-card {
+    margin-top: 24px;
     margin-bottom: 24px;
     border: 2px solid var(--el-color-primary);
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);

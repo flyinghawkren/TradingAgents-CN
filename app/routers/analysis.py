@@ -18,7 +18,7 @@ from app.services.analysis_service import get_analysis_service
 from app.services.simple_analysis_service import get_simple_analysis_service
 from app.services.websocket_manager import get_websocket_manager
 from app.models.analysis import (
-    SingleAnalysisRequest, BatchAnalysisRequest, AnalysisParameters,
+    SingleAnalysisRequest, BatchAnalysisRequest, PortfolioAnalysisRequest, FundAnalysisRequest, AnalysisParameters,
     AnalysisTaskResponse, AnalysisBatchResponse, AnalysisHistoryQuery
 )
 
@@ -291,7 +291,12 @@ async def get_task_result(
                     "updated_at": mongo_result.get("updated_at"),
                     "status": mongo_result.get("status", "completed"),
                     "decision": mongo_result.get("decision", {}),
-                    "source": "mongodb"  # 标记数据来源
+                    "source": "mongodb",  # 标记数据来源
+                    # 🔧 组合分析特有字段
+                    "portfolio_name": mongo_result.get("portfolio_name"),
+                    "stock_results": mongo_result.get("stock_results"),
+                    "comprehensive_report": mongo_result.get("comprehensive_report"),
+                    "stocks": mongo_result.get("stocks"),
                 }
 
                 # 添加调试信息
@@ -335,7 +340,12 @@ async def get_task_result(
                         "updated_at": tasks_doc.get("completed_at"),
                         "status": r.get("status", "completed"),
                         "decision": r.get("decision", {}),
-                        "source": "analysis_tasks"  # 数据来源标记
+                        "source": "analysis_tasks",  # 数据来源标记
+                        # 🔧 组合分析特有字段
+                        "portfolio_name": r.get("portfolio_name"),
+                        "stock_results": r.get("stock_results"),
+                        "comprehensive_report": r.get("comprehensive_report"),
+                        "stocks": r.get("stocks"),
                     }
 
         if not result_data:
@@ -682,6 +692,14 @@ async def get_task_result(
 
         final_result_data["reports"] = validated_reports
 
+        # 🔧 组合分析特有字段：如果存在则透传，确保前端能正确展示组合报告
+        if result_data.get("stock_results") or result_data.get("comprehensive_report"):
+            final_result_data["portfolio_name"] = result_data.get("portfolio_name")
+            final_result_data["stock_results"] = result_data.get("stock_results")
+            final_result_data["comprehensive_report"] = result_data.get("comprehensive_report")
+            final_result_data["stocks"] = result_data.get("stocks")
+            logger.info(f"📊 [RESULT] 识别为组合分析结果，已透传组合特有字段")
+
         logger.info(f"✅ [RESULT] 成功获取任务结果: {task_id}")
         logger.info(f"📊 [RESULT] 最终返回 {len(final_result_data.get('reports', {}))} 个报告")
 
@@ -870,6 +888,190 @@ async def submit_batch_analysis(
     except Exception as e:
         logger.error(f"❌ [批量分析] 提交失败: {e}", exc_info=True)
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/portfolio", response_model=Dict[str, Any])
+async def submit_portfolio_analysis(
+    request: PortfolioAnalysisRequest,
+    user: dict = Depends(get_current_user)
+):
+    """提交组合分析任务（两阶段执行）
+
+    第一阶段：并发发起组合中每只股票的单股分析
+    第二阶段：整合各股票分析报告，进行综合分析，给出调仓建议
+    """
+    try:
+        logger.info(f"🎯 [组合分析] 收到组合分析请求: title={request.title}")
+        logger.info(f"📊 [组合分析] 股票数量: {len(request.stocks)}")
+
+        # 验证股票数量
+        MAX_PORTFOLIO_SIZE = 20
+        if len(request.stocks) > MAX_PORTFOLIO_SIZE:
+            raise ValueError(f"组合分析最多支持 {MAX_PORTFOLIO_SIZE} 只股票，当前提交了 {len(request.stocks)} 只")
+
+        simple_service = get_simple_analysis_service()
+
+        # 创建组合分析主任务
+        stocks_data = [s.model_dump() for s in request.stocks]
+        create_res = await simple_service.create_portfolio_analysis_task(
+            user_id=user["id"],
+            title=request.title,
+            description=request.description,
+            stocks=stocks_data,
+            parameters=request.parameters
+        )
+        portfolio_task_id = create_res["task_id"]
+
+        # 在后台启动组合分析（两阶段）
+        async def run_portfolio_analysis():
+            try:
+                await simple_service.execute_portfolio_analysis(
+                    portfolio_task_id=portfolio_task_id,
+                    user_id=user["id"],
+                    title=request.title,
+                    description=request.description,
+                    stocks=stocks_data,
+                    parameters=request.parameters
+                )
+            except Exception as e:
+                logger.error(f"❌ [组合分析] 后台执行失败: {portfolio_task_id} - {e}", exc_info=True)
+                # 更新任务为失败状态
+                try:
+                    from app.core.database import get_mongo_db
+                    db = get_mongo_db()
+                    await db.analysis_tasks.update_one(
+                        {"task_id": portfolio_task_id},
+                        {"$set": {
+                            "status": "failed",
+                            "message": f"执行失败: {str(e)}",
+                            "completed_at": datetime.utcnow(),
+                        }}
+                    )
+                except Exception:
+                    pass
+
+        # 启动后台任务（不等待完成）
+        asyncio.create_task(run_portfolio_analysis())
+
+        return {
+            "success": True,
+            "data": {
+                "task_id": portfolio_task_id,
+                "title": request.title,
+                "total_stocks": len(request.stocks),
+                "status": "submitted"
+            },
+            "message": f"组合分析任务已提交，共{len(request.stocks)}只股票，正在两阶段执行中"
+        }
+
+    except Exception as e:
+        logger.error(f"❌ [组合分析] 提交失败: {e}", exc_info=True)
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/fund", response_model=Dict[str, Any])
+async def analyze_fund(
+    request: FundAnalysisRequest,
+    background_tasks: BackgroundTasks,
+    user: dict = Depends(get_current_user)
+):
+    """基金分析（异步任务模式）
+
+    提交基金分析任务，立即返回 task_id，后台执行分析：
+    - 净值走势与业绩表现
+    - 持仓结构与集中度
+    - 基金经理能力评估
+    - 风险收益特征
+    - 综合投资建议
+
+    通过 /tasks/{task_id}/status 查询进度
+    通过 /tasks/{task_id}/result 获取结果
+    """
+    try:
+        logger.info(f"🎯 [基金分析] 收到请求: ts_code={request.ts_code}")
+
+        from app.services.fund_analysis_task_service import get_fund_analysis_task_service
+        service = get_fund_analysis_task_service()
+
+        # 1. 创建任务（立即返回）
+        task_info = await service.create_fund_analysis_task(user["id"], request)
+        task_id = task_info["task_id"]
+
+        # 2. 在后台启动分析（不等待完成）
+        async def run_fund_analysis():
+            try:
+                await service.execute_fund_analysis_background(
+                    task_id=task_id,
+                    user_id=user["id"],
+                    request=request,
+                )
+            except Exception as e:
+                logger.error(f"❌ [基金分析] 后台执行失败: {task_id} - {e}", exc_info=True)
+
+        background_tasks.add_task(run_fund_analysis)
+
+        logger.info(f"✅ [基金分析] 任务已提交: {task_id}")
+        return {
+            "success": True,
+            "data": task_info,
+            "message": "基金分析任务已提交，正在后台执行"
+        }
+
+    except Exception as e:
+        logger.error(f"❌ [基金分析] 提交失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/fund/search", response_model=Dict[str, Any])
+async def search_funds(
+    keyword: str = Query(..., description="搜索关键词：基金代码或名称"),
+    market: Optional[str] = Query(None, description="市场: E-场内, O-场外"),
+    user: dict = Depends(get_current_user)
+):
+    """搜索基金（支持代码或名称模糊搜索）
+
+    数据源优先级：AKShare → Tushare
+    """
+    try:
+        from app.services.fund_data_adapter import get_fund_data_adapter
+        adapter = get_fund_data_adapter()
+
+        funds = await adapter.search_funds(keyword=keyword, market=market, limit=20)
+
+        return {
+            "success": True,
+            "data": funds,
+            "message": f"找到 {len(funds)} 只基金"
+        }
+
+    except Exception as e:
+        logger.error(f"❌ [基金搜索] 失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/fund/detail", response_model=Dict[str, Any])
+async def get_fund_detail(
+    ts_code: str = Query(..., description="基金代码"),
+    user: dict = Depends(get_current_user)
+):
+    """获取基金详情（基础信息+最新净值+规模+基金经理）
+
+    数据源优先级：AKShare → Tushare
+    """
+    try:
+        from app.services.fund_data_adapter import get_fund_data_adapter
+        adapter = get_fund_data_adapter()
+
+        result = await adapter.get_fund_detail(ts_code)
+
+        return {
+            "success": True,
+            "data": result,
+            "message": "获取基金详情成功"
+        }
+
+    except Exception as e:
+        logger.error(f"❌ [基金详情] 失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 # 兼容性：保留原有端点
 @router.post("/analyze")

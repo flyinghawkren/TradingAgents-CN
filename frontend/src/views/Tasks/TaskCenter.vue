@@ -39,8 +39,8 @@
             <el-option label="失败" value="failed" />
           </el-select>
         </el-form-item>
-        <el-form-item label="股票">
-          <el-input v-model="filters.stock" placeholder="代码或名称" style="width: 160px" />
+        <el-form-item label="任务名称">
+          <el-input v-model="filters.taskName" placeholder="搜索任务名称" style="width: 180px" />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="applyFilters" :loading="loading">查询</el-button>
@@ -69,7 +69,7 @@
     <el-card class="list-card" shadow="never">
       <div class="list-header">
         <div class="left">
-          <el-input v-model="keyword" placeholder="搜索股票代码/名称" clearable style="width: 220px" />
+          <el-input v-model="keyword" placeholder="搜索任务名称" clearable style="width: 220px" />
           <el-button @click="refreshList" :loading="loading">
             <el-icon><Refresh /></el-icon>
             刷新
@@ -86,8 +86,15 @@
       <el-table :data="filteredList" v-loading="loading" style="width: 100%" @selection-change="onSelectionChange">
         <el-table-column type="selection" width="50" />
         <el-table-column prop="task_id" label="任务ID" width="220" />
-        <el-table-column prop="stock_code" label="股票代码" width="120" />
-        <el-table-column prop="stock_name" label="股票名称" width="150" />
+        <el-table-column label="任务名称" width="220">
+          <template #default="{ row }">
+            <div class="task-name-cell">
+              <span class="task-name">{{ getTaskName(row) }}</span>
+              <el-tag v-if="getTaskType(row) === 'batch'" type="warning" size="small" effect="plain">批量</el-tag>
+              <el-tag v-if="getTaskType(row) === 'portfolio'" type="success" size="small" effect="plain">组合</el-tag>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column label="状态" width="110">
           <template #default="{ row }">
             <el-tag :type="getStatusType(row.status)">{{ getStatusText(row.status) }}</el-tag>
@@ -164,8 +171,8 @@ const total = ref(0)
 const list = ref<any[]>([])
 const selectedRows = ref<any[]>([])
 // 筛选与统计
-const filters = ref<{ dateRange: string[]; market: string; status: string; stock: string }>({
-  dateRange: [], market: '', status: '', stock: ''
+const filters = ref<{ dateRange: string[]; market: string; status: string; taskName: string }>({
+  dateRange: [], market: '', status: '', taskName: ''
 })
 const stats = ref({ total: 0, completed: 0, failed: 0, uniqueStocks: 0 })
 
@@ -257,8 +264,7 @@ const loadList = async () => {
     const params: any = {
       page: currentPage.value,
       page_size: pageSize.value,
-      status: filters.value.status || statusParam.value,
-      stock_code: filters.value.stock || undefined
+      status: filters.value.status || statusParam.value
     }
     if (filters.value.market) params.market_type = filters.value.market
     if (filters.value.dateRange && filters.value.dateRange.length === 2) {
@@ -310,7 +316,7 @@ const loadList = async () => {
 
 // 查询/重置
 const applyFilters = () => { currentPage.value = 1; loadList() }
-const resetFilters = () => { filters.value = { dateRange: [], market: '', status: '', stock: '' }; currentPage.value = 1; loadList() }
+const resetFilters = () => { filters.value = { dateRange: [], market: '', status: '', taskName: '' }; currentPage.value = 1; loadList() }
 
 // 报告弹窗状态
 const reportVisible = ref(false)
@@ -320,7 +326,10 @@ const filteredList = computed(() => {
   let arr = list.value
   if (keyword.value) {
     const k = keyword.value.toLowerCase()
-    arr = arr.filter((x:any) => (x.stock_code||'').toLowerCase().includes(k) || (x.stock_name||'').toLowerCase().includes(k) || (x.task_id||'').toLowerCase().includes(k))
+    arr = arr.filter((x:any) => {
+      const taskName = getTaskName(x).toLowerCase()
+      return taskName.includes(k) || (x.task_id||'').toLowerCase().includes(k)
+    })
   }
   return arr
 })
@@ -512,6 +521,34 @@ onUnmounted(() => {
   disconnectAllWebSockets()
 })
 
+// 获取任务类型：single | batch | portfolio
+const getTaskType = (row: any): 'single' | 'batch' | 'portfolio' => {
+  // 如果后端明确返回 task_type，优先使用
+  if (row.task_type === 'portfolio') return 'portfolio'
+  if (row.task_type === 'batch') return 'batch'
+  // 通过 batch_id 推断批量分析
+  if (row.batch_id) return 'batch'
+  return 'single'
+}
+
+// 生成任务名称
+const getTaskName = (row: any): string => {
+  const type = getTaskType(row)
+
+  // 组合分析：使用组合名称
+  if (type === 'portfolio') {
+    return row.title || row.batch_title || row.portfolio_name || '组合分析'
+  }
+
+  // 单股/批量分析：股票代码-股票名称
+  const code = row.stock_code || row.symbol || row.stock_symbol || ''
+  const name = row.stock_name || ''
+  if (code && name) return `${code}-${name}`
+  if (code) return code
+  if (name) return name
+  return '未知任务'
+}
+
 const getStatusType = (status:string): 'success' | 'info' | 'warning' | 'danger' => {
   const map: Record<string,'success'|'info'|'warning'|'danger'> = {
     pending: 'info', processing: 'warning', completed: 'success', failed: 'danger', cancelled: 'info'
@@ -532,6 +569,17 @@ const formatTime = (t:string) => t ? formatDateTime(t) : '-'
   .tabs-card { margin-bottom: 16px; }
   .list-header { display:flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap:8px; }
   .pagination-wrapper { display:flex; justify-content:center; margin-top: 16px; }
+
+  .task-name-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .task-name {
+      font-weight: 500;
+      color: var(--el-text-color-primary);
+    }
+  }
 }
 </style>
 

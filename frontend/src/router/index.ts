@@ -66,6 +66,26 @@ const routes: RouteRecordRaw[] = [
         name: 'BatchAnalysis',
         component: () => import('@/views/Analysis/BatchAnalysis.vue')
       },
+      {
+        path: 'portfolio',
+        name: 'PortfolioAnalysis',
+        component: () => import('@/views/Analysis/PortfolioAnalysis/index.vue')
+      },
+      {
+        path: 'fund-search',
+        name: 'FundSearch',
+        component: () => import('@/views/Analysis/FundSearch/index.vue')
+      },
+      {
+        path: 'fund',
+        name: 'FundAnalysis',
+        component: () => import('@/views/Analysis/FundAnalysis/index.vue')
+      },
+      {
+        path: 'fund-portfolio',
+        name: 'FundPortfolio',
+        component: () => import('@/views/Analysis/FundPortfolio/index.vue')
+      },
 
     ]
   },
@@ -109,6 +129,28 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/Favorites/index.vue'),
         meta: {
           title: '我的自选股',
+          requiresAuth: true
+        }
+      }
+    ]
+  },
+  {
+    path: '/portfolio',
+    name: 'Portfolio',
+    component: () => import('@/layouts/BasicLayout.vue'),
+    meta: {
+      title: '我的投资',
+      icon: 'Wallet',
+      requiresAuth: true,
+      transition: 'slide-up'
+    },
+    children: [
+      {
+        path: '',
+        name: 'PortfolioHome',
+        component: () => import('@/views/Portfolio/index.vue'),
+        meta: {
+          title: '我的投资',
           requiresAuth: true
         }
       }
@@ -351,13 +393,24 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/about',
     name: 'About',
-    component: () => import('@/views/About/index.vue'),
+    component: () => import('@/layouts/BasicLayout.vue'),
     meta: {
       title: '关于',
       icon: 'InfoFilled',
       requiresAuth: false, // 关于页面不需要认证
       transition: 'fade'
-    }
+    },
+    children: [
+      {
+        path: '',
+        name: 'AboutPage',
+        component: () => import('@/views/About/index.vue'),
+        meta: {
+          title: '关于',
+          requiresAuth: false
+        }
+      }
+    ]
   },
   {
     path: '/paper',

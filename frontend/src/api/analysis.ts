@@ -185,6 +185,23 @@ export const analysisApi = {
     return request.post('/api/analysis/batch', batchRequest)
   },
 
+  // 组合分析（两阶段：并发单股分析 + 综合调仓建议）
+  startPortfolioAnalysis(portfolioRequest: {
+    title: string
+    description?: string
+    stocks: Array<{
+      stock_code: string
+      stock_name?: string
+      quantity: number
+      avg_price: number
+      market?: string
+      weight?: number
+    }>
+    parameters?: SingleAnalysisRequest['parameters']
+  }): Promise<ApiResponse<{ task_id: string; title: string; total_stocks: number; status: string }>>{
+    return request.post('/api/analysis/portfolio', portfolioRequest)
+  },
+
   // 获取批次详情（兼容原有队列接口，若后续需要）
   getBatch(batchId: string): Promise<any> {
     return request.get(`/api/analysis/batches/${batchId}`)
@@ -193,6 +210,85 @@ export const analysisApi = {
   // 获取任务详情（兼容原有队列接口，若后续需要）
   getTaskDetails(taskId: string): Promise<any> {
     return request.get(`/api/analysis/tasks/${taskId}/details`)
+  },
+
+  // ==================== 基金分析 ====================
+  // 基金分析（异步任务模式，返回 task_id）
+  analyzeFund(fundRequest: {
+    ts_code: string
+    fund_name?: string
+    parameters?: SingleAnalysisRequest['parameters']
+  }): Promise<ApiResponse<{
+    task_id: string
+    status: string
+    ts_code: string
+    fund_name?: string
+    message?: string
+  }>> {
+    return request.post('/api/analysis/fund', fundRequest)
+  },
+
+  // 搜索基金
+  searchFunds(keyword: string, market?: string): Promise<ApiResponse<Array<{
+    ts_code: string
+    name: string
+    fund_type?: string
+    market?: string
+    status?: string
+    management?: string
+  }>>> {
+    return request.get('/api/analysis/fund/search', {
+      params: { keyword, market }
+    })
+  },
+
+  // 获取基金详情
+  getFundDetail(ts_code: string): Promise<ApiResponse<{
+    ts_code: string
+    basic: {
+      ts_code?: string
+      name?: string
+      short_name?: string
+      fund_type?: string
+      market?: string
+      status?: string
+      found_date?: string
+      list_date?: string
+      invest_type?: string
+      type?: string
+      management?: string
+      custodian?: string
+      benchmark?: string
+      m_fee?: number
+      c_fee?: number
+      s_fee?: number
+      p_fee?: number
+      r_fee?: number
+    }
+    latest_nav: {
+      nav_date?: string
+      nav?: number
+      acc_nav?: number
+      daily_return?: number
+    } | null
+    latest_share: {
+      trade_date?: string
+      fd_share?: number
+      fd_amount?: number
+    } | null
+    managers: Array<{
+      name?: string
+      gender?: string
+      birth_year?: string
+      edu?: string
+      resume?: string
+      begin_date?: string
+      end_date?: string
+    }>
+  }>> {
+    return request.get('/api/analysis/fund/detail', {
+      params: { ts_code }
+    })
   },
 
   // 获取任务列表（新版 simple service）

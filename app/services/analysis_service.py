@@ -457,10 +457,25 @@ class AnalysisService:
 
             # 填充分析参数中的模型（若请求未显式提供）
             params = request.parameters or AnalysisParameters()
+
+            # 🔧 如果 effective_settings 中模型为空，尝试从 unified_config 获取第一个可用模型
+            quick_model = effective_settings.get("quick_analysis_model")
+            deep_model = effective_settings.get("deep_analysis_model")
+            if not quick_model or not deep_model:
+                from app.core.unified_config import unified_config
+                env_configs = unified_config.get_llm_configs()
+                enabled_models = [m.model_name for m in env_configs if m.enabled]
+                if enabled_models:
+                    if not quick_model:
+                        quick_model = enabled_models[0]
+                    if not deep_model:
+                        deep_model = enabled_models[0]
+                    logger.info(f"🔄 [analysis_service] 从.env自动选择模型: quick={quick_model}, deep={deep_model}")
+
             if not getattr(params, 'quick_analysis_model', None):
-                params.quick_analysis_model = effective_settings.get("quick_analysis_model", "qwen-turbo")
+                params.quick_analysis_model = quick_model or ""
             if not getattr(params, 'deep_analysis_model', None):
-                params.deep_analysis_model = effective_settings.get("deep_analysis_model", "qwen-max")
+                params.deep_analysis_model = deep_model or ""
 
             # 应用系统级并发与可见性超时（若提供）
             try:
@@ -535,10 +550,25 @@ class AnalysisService:
                 effective_settings = {}
 
             params = request.parameters or AnalysisParameters()
+
+            # 🔧 如果 effective_settings 中模型为空，尝试从 unified_config 获取第一个可用模型
+            quick_model = effective_settings.get("quick_analysis_model")
+            deep_model = effective_settings.get("deep_analysis_model")
+            if not quick_model or not deep_model:
+                from app.core.unified_config import unified_config
+                env_configs = unified_config.get_llm_configs()
+                enabled_models = [m.model_name for m in env_configs if m.enabled]
+                if enabled_models:
+                    if not quick_model:
+                        quick_model = enabled_models[0]
+                    if not deep_model:
+                        deep_model = enabled_models[0]
+                    logger.info(f"🔄 [analysis_service] 从.env自动选择模型: quick={quick_model}, deep={deep_model}")
+
             if not getattr(params, 'quick_analysis_model', None):
-                params.quick_analysis_model = effective_settings.get("quick_analysis_model", "qwen-turbo")
+                params.quick_analysis_model = quick_model or ""
             if not getattr(params, 'deep_analysis_model', None):
-                params.deep_analysis_model = effective_settings.get("deep_analysis_model", "qwen-max")
+                params.deep_analysis_model = deep_model or ""
 
             try:
                 self.queue_service.user_concurrent_limit = int(effective_settings.get("max_concurrent_tasks", DEFAULT_USER_CONCURRENT_LIMIT))

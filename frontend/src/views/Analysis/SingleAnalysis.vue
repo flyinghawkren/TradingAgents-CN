@@ -783,8 +783,8 @@ const generateStepsFromBackend = (backendSteps: any[]) => {
 
 // 模型设置
 const modelSettings = ref({
-  quickAnalysisModel: 'qwen-turbo',
-  deepAnalysisModel: 'qwen-max'
+  quickAnalysisModel: '',
+  deepAnalysisModel: ''
 })
 
 // 可用的模型列表（从配置中获取）
@@ -1888,31 +1888,49 @@ const initializeModelSettings = async () => {
       return [...configs].sort((a, b) => getTimestamp(b) - getTimestamp(a))
     }
 
-    // 获取默认模型
-    const defaultModels = await configApi.getDefaultModels()
-    modelSettings.value.quickAnalysisModel = defaultModels.quick_analysis_model
-    modelSettings.value.deepAnalysisModel = defaultModels.deep_analysis_model
-
-    // 获取所有可用的模型列表
+    // 1️⃣ 先获取所有可用的模型列表（优先，确保下拉框数据完整）
     const llmConfigs = await configApi.getLLMConfigs()
     availableModels.value = sortModelsByNewest(
       llmConfigs.filter((config: any) => config.enabled)
     )
+
+    console.log('📋 可用模型列表:', availableModels.value.map(m => ({
+      model_name: m.model_name,
+      provider: m.provider,
+      enabled: m.enabled
+    })))
+
+    // 2️⃣ 获取后端推荐的默认模型
+    const defaultModels = await configApi.getDefaultModels()
+    let quickModel = defaultModels.quick_analysis_model
+    let deepModel = defaultModels.deep_analysis_model
+
+    // 3️⃣ 如果后端未返回默认模型，或返回的模型不在可用列表中，自动选择第一个可用模型
+    const availableModelNames = new Set(availableModels.value.map(m => m.model_name))
+    if (!quickModel || !availableModelNames.has(quickModel)) {
+      const fallback = availableModels.value[0]?.model_name || ''
+      console.warn(`⚠️ 快速模型 '${quickModel}' 不可用，自动选择第一个可用模型: ${fallback}`)
+      quickModel = fallback
+    }
+    if (!deepModel || !availableModelNames.has(deepModel)) {
+      const fallback = availableModels.value[0]?.model_name || ''
+      console.warn(`⚠️ 深度模型 '${deepModel}' 不可用，自动选择第一个可用模型: ${fallback}`)
+      deepModel = fallback
+    }
+
+    modelSettings.value.quickAnalysisModel = quickModel
+    modelSettings.value.deepAnalysisModel = deepModel
 
     console.log('✅ 加载模型配置成功:', {
       quick: modelSettings.value.quickAnalysisModel,
       deep: modelSettings.value.deepAnalysisModel,
       available: availableModels.value.length
     })
-    console.log('🔍 可用模型详细信息:', availableModels.value.map(m => ({
-      model_name: m.model_name,
-      model_display_name: m.model_display_name,
-      provider: m.provider
-    })))
   } catch (error) {
-    console.error('加载默认模型配置失败:', error)
-    modelSettings.value.quickAnalysisModel = 'qwen-turbo'
-    modelSettings.value.deepAnalysisModel = 'qwen-max'
+    console.error('❌ 加载默认模型配置失败:', error)
+    // 出错时清空模型选择，避免提交不可用模型
+    modelSettings.value.quickAnalysisModel = ''
+    modelSettings.value.deepAnalysisModel = ''
   }
 }
 
