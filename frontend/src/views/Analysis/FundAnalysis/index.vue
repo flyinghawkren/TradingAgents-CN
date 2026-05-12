@@ -943,7 +943,7 @@ onMounted(() => {
   // 加载模型配置：先恢复缓存的选择，再验证有效性
   const cachedQuick = cached?.modelSettings?.quickAnalysisModel || ''
   const cachedDeep = cached?.modelSettings?.deepAnalysisModel || ''
-  fetchAvailableModels(cachedQuick, cachedDeep)
+  initializeModelSettings()
 })
 
 onBeforeUnmount(() => {
