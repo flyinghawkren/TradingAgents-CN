@@ -2208,15 +2208,16 @@ onMounted(async () => {
 
   // 优先从 authStore.user.preferences 读取，其次从 appStore.preferences 读取
   const userPrefs = authStore.user?.preferences
+
+  // 加载默认分析深度：优先用户设置 -> appStore -> 默认3级
+  const rawDepth = userPrefs?.default_depth ?? appStore.preferences.defaultDepth ?? '3'
+  const parsedDepth = parseInt(rawDepth)
+  analysisForm.researchDepth = isNaN(parsedDepth) ? 3 : parsedDepth
+
   if (userPrefs) {
     // 加载默认市场
     if (userPrefs.default_market) {
       analysisForm.market = userPrefs.default_market as MarketType
-    }
-
-    // 加载默认分析深度（转换为数字）
-    if (userPrefs.default_depth) {
-      analysisForm.researchDepth = parseInt(userPrefs.default_depth)
     }
 
     // 加载默认分析师
@@ -2233,9 +2234,6 @@ onMounted(async () => {
     // 降级到 appStore.preferences
     if (appStore.preferences.defaultMarket) {
       analysisForm.market = appStore.preferences.defaultMarket as MarketType
-    }
-    if (appStore.preferences.defaultDepth) {
-      analysisForm.researchDepth = parseInt(appStore.preferences.defaultDepth)
     }
     console.log('✅ 已加载应用偏好设置（降级）')
   }
