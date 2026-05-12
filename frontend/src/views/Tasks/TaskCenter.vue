@@ -521,10 +521,11 @@ onUnmounted(() => {
   disconnectAllWebSockets()
 })
 
-// 获取任务类型：single | batch | portfolio
-const getTaskType = (row: any): 'single' | 'batch' | 'portfolio' => {
+// 获取任务类型：single | batch | portfolio | fund_analysis
+const getTaskType = (row: any): 'single' | 'batch' | 'portfolio' | 'fund_analysis' => {
   // 如果后端明确返回 task_type，优先使用
   if (row.task_type === 'portfolio') return 'portfolio'
+  if (row.task_type === 'fund_analysis') return 'fund_analysis'
   if (row.task_type === 'batch') return 'batch'
   // 通过 batch_id 推断批量分析
   if (row.batch_id) return 'batch'
@@ -535,18 +536,23 @@ const getTaskType = (row: any): 'single' | 'batch' | 'portfolio' => {
 const getTaskName = (row: any): string => {
   const type = getTaskType(row)
 
-  // 组合分析：使用组合名称
-  if (type === 'portfolio') {
-    return row.title || row.batch_title || row.portfolio_name || '组合分析'
+  // 基金分析：基金分析【<基金ID>-<基金名称>】
+  if (type === 'fund_analysis') {
+    const code = row.stock_code || row.symbol || row.stock_symbol || row.ts_code || ''
+    const name = row.stock_name || row.fund_name || ''
+    return `基金分析【${code}${name ? '-' + name : ''}】`
   }
 
-  // 单股/批量分析：股票代码-股票名称
+  // 组合分析：股票组合分析【组合名称】
+  if (type === 'portfolio') {
+    const name = row.title || row.batch_title || row.portfolio_name || ''
+    return `股票组合分析【${name}】`
+  }
+
+  // 单股/批量分析：股票个股分析【<个股ID>-<个股名称>】
   const code = row.stock_code || row.symbol || row.stock_symbol || ''
   const name = row.stock_name || ''
-  if (code && name) return `${code}-${name}`
-  if (code) return code
-  if (name) return name
-  return '未知任务'
+  return `股票个股分析【${code}${name ? '-' + name : ''}】`
 }
 
 const getStatusType = (status:string): 'success' | 'info' | 'warning' | 'danger' => {

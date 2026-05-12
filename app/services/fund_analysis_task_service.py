@@ -141,6 +141,7 @@ class FundAnalysisTaskService:
                     "stock_code": ts_code,
                     "stock_name": fund_name,
                     "stock_symbol": ts_code,
+                    "task_name": f"基金分析【{ts_code}{'-' + fund_name if fund_name else ''}】",
                     "status": AnalysisStatus.PENDING.value,
                     "progress": 0,
                     "message": "基金分析任务已创建，等待执行...",
