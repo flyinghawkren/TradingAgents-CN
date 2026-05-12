@@ -139,7 +139,7 @@ const routes: RouteRecordRaw[] = [
     name: 'Portfolio',
     component: () => import('@/layouts/BasicLayout.vue'),
     meta: {
-      title: '我的投资组合',
+      title: '我的投资',
       icon: 'Wallet',
       requiresAuth: true,
       transition: 'slide-up'
@@ -150,7 +150,7 @@ const routes: RouteRecordRaw[] = [
         name: 'PortfolioHome',
         component: () => import('@/views/Portfolio/index.vue'),
         meta: {
-          title: '我的投资组合',
+          title: '我的投资',
           requiresAuth: true
         }
       }

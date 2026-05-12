@@ -49,7 +49,7 @@
 
     <el-menu-item index="/portfolio">
       <el-icon><Wallet /></el-icon>
-      <template #title>我的投资组合</template>
+      <template #title>我的投资</template>
     </el-menu-item>
 
     <el-menu-item index="/paper">

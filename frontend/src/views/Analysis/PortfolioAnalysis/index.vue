@@ -155,7 +155,7 @@
               <el-empty description="暂无组合股票">
                 <el-button type="primary" @click="importFromPortfolio" :loading="importing">
                   <el-icon><Download /></el-icon>
-                  从投资组合导入
+                  从我的投资（股票）导入
                 </el-button>
               </el-empty>
             </div>
@@ -553,7 +553,7 @@ watch(() => portfolioStocks.value, (newVal) => {
 
 import { watch } from 'vue'
 
-// 从投资组合导入
+// 从我的投资（股票）导入
 const importFromPortfolio = async () => {
   importing.value = true
   try {
