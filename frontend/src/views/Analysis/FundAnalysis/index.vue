@@ -361,7 +361,7 @@
                             <span>分析摘要</span>
                           </div>
                         </template>
-                        <p>{{ analysisResult.summary }}</p>
+                        <div class="insight-body markdown-body" v-html="renderMarkdown(cleanLLMFluff(analysisResult.summary))" />
                       </el-card>
                     </el-col>
                     <el-col :span="12">
@@ -372,7 +372,7 @@
                             <span>投资建议</span>
                           </div>
                         </template>
-                        <p class="rec-text">{{ analysisResult.recommendation }}</p>
+                        <div class="insight-body markdown-body" v-html="renderMarkdown(cleanLLMFluff(analysisResult.recommendation))" />
                       </el-card>
                     </el-col>
                   </el-row>
@@ -771,6 +771,29 @@ const renderMarkdown = (content: string) => {
   } catch {
     return content
   }
+}
+
+// 清理 LLM 套话
+const cleanLLMFluff = (text: string): string => {
+  if (!text) return ''
+  const fluffPatterns = [
+    /^好的[，,].*?(?:报告|分析|如下)[。:\n]*/,
+    /^作为.*?[，,].*?(?:为您|为你|向您).*?[。:\n]*/,
+    /^现[为為].*?(?:呈现|提供|展示).*?[。:\n]*/,
+    /^以下是.*?[的]?[权威]?投资分析[报告]?[。:\n]*/,
+    /^本文[将]?[对].*?进行.*?[分析|研究|评估][。:\n]*/,
+    /^综合.*?[报告|分析].*?[，,].*?(?:现|以下|给出|提出)[。:\n]*/,
+    /^(?:首先|综上|总的来说|简而言之)[，,].*?[:：\n]/,
+    /^---\s*$/gm,
+    /^#{2,6}\s*\*\*.*?\*\*\s*$/gm,
+  ]
+  let cleaned = text
+  fluffPatterns.forEach(pattern => {
+    cleaned = cleaned.replace(pattern, '')
+  })
+  // 去除多余空行
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n').trim()
+  return cleaned || text
 }
 
 // 获取可用模型列表（与个股分析保持完全一致）
@@ -1398,6 +1421,108 @@ onBeforeUnmount(() => {
 
             :deep(strong) {
               color: #1a202c;
+            }
+          }
+
+          // 摘要与建议卡片
+          .summary-card-section {
+            margin-bottom: 24px;
+
+            .insight-card {
+              border-radius: 12px;
+              border: none;
+              height: 100%;
+
+              :deep(.el-card__header) {
+                background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+                color: white;
+                border-radius: 12px 12px 0 0;
+                padding: 14px 20px;
+
+                .insight-header {
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  font-size: 15px;
+                  font-weight: 600;
+
+                  .el-icon {
+                    font-size: 18px;
+                  }
+                }
+              }
+
+              :deep(.el-card__body) {
+                padding: 16px 20px;
+                max-height: 320px;
+                overflow-y: auto;
+              }
+
+              .insight-body {
+                font-size: 14px;
+                line-height: 1.7;
+                color: #374151;
+
+                :deep(p) {
+                  margin: 0 0 10px 0;
+
+                  &:last-child {
+                    margin-bottom: 0;
+                  }
+                }
+
+                :deep(strong) {
+                  color: #1a202c;
+                  font-weight: 600;
+                }
+
+                :deep(h1, h2, h3, h4) {
+                  font-size: 15px;
+                  font-weight: 600;
+                  color: #1a202c;
+                  margin: 12px 0 8px 0;
+                }
+
+                :deep(ul, ol) {
+                  padding-left: 18px;
+                  margin: 8px 0;
+                }
+
+                :deep(li) {
+                  margin-bottom: 4px;
+                }
+
+                :deep(blockquote) {
+                  margin: 8px 0;
+                  padding: 8px 12px;
+                  border-left: 3px solid #0ea5e9;
+                  background: #f0f9ff;
+                  color: #0369a1;
+                  font-size: 13px;
+                }
+
+                :deep(code) {
+                  background: #f1f5f9;
+                  padding: 2px 6px;
+                  border-radius: 4px;
+                  font-size: 13px;
+                  color: #334155;
+                }
+              }
+
+              &.recommendation {
+                :deep(.el-card__header) {
+                  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+                }
+
+                .insight-body {
+                  :deep(blockquote) {
+                    border-left-color: #f59e0b;
+                    background: #fffbeb;
+                    color: #92400e;
+                  }
+                }
+              }
             }
           }
         }

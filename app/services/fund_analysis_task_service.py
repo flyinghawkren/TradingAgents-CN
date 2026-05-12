@@ -417,7 +417,8 @@ class FundAnalysisTaskService:
 
 {config['focus']}
 
-请用中文输出，结构清晰，分析客观。字数控制在 800-1500 字。"""
+请用中文输出，结构清晰，分析客观。字数控制在 800-1500 字。
+注意：严禁使用套话开场，如"作为...分析师"、"现为您分析"等，直接输出分析内容。"""
 
     async def _generate_comprehensive_report(
         self,
@@ -473,7 +474,12 @@ class FundAnalysisTaskService:
 - 基金经理、管理公司
 - 费率水平
 
-请用中文输出，结构清晰，建议具体可操作。"""
+请用中文输出，结构清晰，建议具体可操作。
+
+注意：
+- 严禁使用套话开场，如"作为资深基金研究总监"、"现为您呈现"、"以下是...报告"等，直接输出分析内容。
+- 摘要必须控制在200字以内，只保留核心结论，不要重复基金基本信息。
+- 投资建议必须具体可操作，给出明确的评级和配置比例建议。"""
 
         def _invoke():
             from tradingagents.llm_clients import create_llm_client
