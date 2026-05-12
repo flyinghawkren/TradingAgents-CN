@@ -579,6 +579,12 @@ const modelSettings = ref({
 
 const availableModels = ref<any[]>([])
 
+// ==================== 异步任务轮询 ====================
+let pollTimer: ReturnType<typeof setInterval> | null = null
+const currentTaskId = ref('')
+const taskProgress = ref(0)
+const taskStep = ref('')
+
 // 自动缓存关键状态变化（配置 + 分析任务状态均缓存）
 watch([selectedFund, analysisStatus, showResults, analysisResult, currentTaskId, taskProgress, taskStep], () => {
   saveState()
@@ -623,12 +629,6 @@ const toggleAnalyst = (analystName: string) => {
     analysisConfig.selectedAnalysts.push(analystName)
   }
 }
-
-// ==================== 异步任务轮询 ====================
-let pollTimer: ReturnType<typeof setInterval> | null = null
-const currentTaskId = ref('')
-const taskProgress = ref(0)
-const taskStep = ref('')
 
 const clearPollTimer = () => {
   if (pollTimer) {
