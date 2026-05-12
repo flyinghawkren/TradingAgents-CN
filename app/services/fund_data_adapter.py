@@ -156,8 +156,9 @@ class FundDataAdapter:
         """使用 AKShare fund_name_em 搜索基金"""
         def _do_search():
             try:
+                # 尝试获取全部基金列表（AKShare 1.18+ 的 fund_name_em 有时会因编码问题失败）
                 df = self._ak.fund_name_em()
-                if df.empty:
+                if df is None or df.empty:
                     return []
 
                 keyword_lower = keyword.lower()
@@ -186,35 +187,48 @@ class FundDataAdapter:
                     })
                 return funds
             except Exception as e:
-                logger.error(f"❌ [AKShare] 基金搜索内部错误: {e}")
-                raise
+                err_msg = str(e)
+                # pandas/lxml 编码错误：HTML 解析失败，通常是数据源临时问题
+                if "gibberish" in err_msg or "Unicode" in err_msg or "encoding" in err_msg.lower():
+                    logger.warning(f"⚠️ [AKShare] 基金搜索遇到编码问题（数据源临时异常）: {e}")
+                else:
+                    logger.warning(f"⚠️ [AKShare] 基金搜索失败: {e}")
+                return []
 
         return await asyncio.to_thread(_do_search)
 
     async def _search_with_tushare(self, keyword: str, market: Optional[str] = None, limit: int = 20) -> List[Dict[str, Any]]:
         """使用 Tushare 搜索基金"""
-        tushare = self._get_tushare()
-        df = await asyncio.to_thread(tushare.get_fund_basic, market=market)
-        if df.empty:
+        try:
+            tushare = self._get_tushare()
+            if tushare is None:
+                logger.warning("⚠️ [FundDataAdapter] Tushare 不可用，跳过基金搜索")
+                return []
+
+            df = await asyncio.to_thread(tushare.get_fund_basic, market=market)
+            if df is None or df.empty:
+                return []
+
+            keyword_lower = keyword.lower()
+            matched = df[
+                df['ts_code'].str.lower().str.contains(keyword_lower, na=False) |
+                df['name'].str.lower().str.contains(keyword_lower, na=False)
+            ]
+
+            funds = []
+            for _, row in matched.head(limit).iterrows():
+                funds.append({
+                    "ts_code": row.get("ts_code"),
+                    "name": row.get("name"),
+                    "fund_type": row.get("fund_type"),
+                    "market": row.get("market"),
+                    "status": row.get("status"),
+                    "management": row.get("management"),
+                })
+            return funds
+        except Exception as e:
+            logger.warning(f"⚠️ [FundDataAdapter] Tushare 基金搜索失败: {e}")
             return []
-
-        keyword_lower = keyword.lower()
-        matched = df[
-            df['ts_code'].str.lower().str.contains(keyword_lower, na=False) |
-            df['name'].str.lower().str.contains(keyword_lower, na=False)
-        ]
-
-        funds = []
-        for _, row in matched.head(limit).iterrows():
-            funds.append({
-                "ts_code": row.get("ts_code"),
-                "name": row.get("name"),
-                "fund_type": row.get("fund_type"),
-                "market": row.get("market"),
-                "status": row.get("status"),
-                "management": row.get("management"),
-            })
-        return funds
 
     # ==================== 基金详情 ====================
 
