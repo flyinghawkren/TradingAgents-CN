@@ -970,43 +970,53 @@ async def submit_portfolio_analysis(
 @router.post("/fund", response_model=Dict[str, Any])
 async def analyze_fund(
     request: FundAnalysisRequest,
+    background_tasks: BackgroundTasks,
     user: dict = Depends(get_current_user)
 ):
-    """基金分析（同步执行，直接返回结果）
+    """基金分析（异步任务模式）
 
-    基于Tushare基金数据，提供基金综合分析：
+    提交基金分析任务，立即返回 task_id，后台执行分析：
     - 净值走势与业绩表现
     - 持仓结构与集中度
     - 基金经理能力评估
     - 风险收益特征
     - 综合投资建议
+
+    通过 /tasks/{task_id}/status 查询进度
+    通过 /tasks/{task_id}/result 获取结果
     """
     try:
         logger.info(f"🎯 [基金分析] 收到请求: ts_code={request.ts_code}")
 
-        from app.services.fund_analysis_service import get_fund_analysis_service
-        service = get_fund_analysis_service()
+        from app.services.fund_analysis_task_service import get_fund_analysis_task_service
+        service = get_fund_analysis_task_service()
 
-        # 执行基金分析
-        result = await service.analyze_fund(request)
+        # 1. 创建任务（立即返回）
+        task_info = await service.create_fund_analysis_task(user["id"], request)
+        task_id = task_info["task_id"]
 
-        if result.error_message:
-            logger.warning(f"⚠️ [基金分析] 分析完成但有错误: {result.error_message}")
-            return {
-                "success": False,
-                "data": result.model_dump(),
-                "message": result.error_message
-            }
+        # 2. 在后台启动分析（不等待完成）
+        async def run_fund_analysis():
+            try:
+                await service.execute_fund_analysis_background(
+                    task_id=task_id,
+                    user_id=user["id"],
+                    request=request,
+                )
+            except Exception as e:
+                logger.error(f"❌ [基金分析] 后台执行失败: {task_id} - {e}", exc_info=True)
 
-        logger.info(f"✅ [基金分析] 完成: {request.ts_code}")
+        background_tasks.add_task(run_fund_analysis)
+
+        logger.info(f"✅ [基金分析] 任务已提交: {task_id}")
         return {
             "success": True,
-            "data": result.model_dump(),
-            "message": "基金分析完成"
+            "data": task_info,
+            "message": "基金分析任务已提交，正在后台执行"
         }
 
     except Exception as e:
-        logger.error(f"❌ [基金分析] 失败: {e}", exc_info=True)
+        logger.error(f"❌ [基金分析] 提交失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

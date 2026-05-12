@@ -208,16 +208,23 @@
                         <el-icon class="is-loading"><Loading /></el-icon>
                         分析进行中...
                       </h4>
+                      <el-tag type="warning" size="small">{{ taskProgress }}%</el-tag>
                     </div>
                   </template>
                   <div class="progress-content">
+                    <el-progress
+                      :percentage="taskProgress"
+                      :stroke-width="12"
+                      status="warning"
+                      class="analysis-progress-bar"
+                    />
                     <div class="current-task-info">
                       <div class="task-title">
                         <el-icon class="task-icon is-loading"><Loading /></el-icon>
-                        AI正在分析基金数据...
+                        {{ taskStep || 'AI正在分析基金数据...' }}
                       </div>
                       <div class="task-description">
-                        正在获取净值走势、持仓结构、基金经理等多维度数据，请稍候
+                        已选择 {{ analysisConfig.selectedAnalysts.length }} 位分析师，正在多维度并行分析中，请稍候
                       </div>
                     </div>
                   </div>
@@ -246,8 +253,7 @@
                     <div class="model-label">
                       <span>快速分析模型</span>
                     </div>
-                    <el-select v-model="modelSettings.quickAnalysisModel" size="default" style="width: 100%">
-                      <el-option label="自动选择" value="auto" />
+                    <el-select v-model="modelSettings.quickAnalysisModel" size="default" style="width: 100%" filterable>
                       <el-option
                         v-for="model in availableModels"
                         :key="`quick-${model.provider}/${model.model_name}`"
@@ -261,8 +267,7 @@
                     <div class="model-label">
                       <span>深度决策模型</span>
                     </div>
-                    <el-select v-model="modelSettings.deepAnalysisModel" size="default" style="width: 100%">
-                      <el-option label="自动选择" value="auto" />
+                    <el-select v-model="modelSettings.deepAnalysisModel" size="default" style="width: 100%" filterable>
                       <el-option
                         v-for="model in availableModels"
                         :key="`deep-${model.provider}/${model.model_name}`"
@@ -306,18 +311,13 @@
                     <span class="option-name">机构持仓分析</span>
                     <el-switch v-model="analysisConfig.includeInstitution" />
                   </div>
-                </div>
-              </div>
-
-              <!-- 语言偏好 -->
-              <div class="config-section">
-                <h4 class="config-title">🌐 语言偏好</h4>
-                <div class="option-item language-option">
-                  <span class="option-name">报告语言</span>
-                  <el-select v-model="analysisConfig.language" size="default" style="width: 100px">
-                    <el-option label="中文" value="zh-CN" />
-                    <el-option label="English" value="en-US" />
-                  </el-select>
+                  <div class="option-item">
+                    <span class="option-name">语言偏好</span>
+                    <el-select v-model="analysisConfig.language" size="default" style="width: 100px">
+                      <el-option label="中文" value="zh-CN" />
+                      <el-option label="English" value="en-US" />
+                    </el-select>
+                  </div>
                 </div>
               </div>
             </div>
@@ -350,22 +350,72 @@
                   </el-alert>
                 </div>
 
+                <!-- 投资摘要卡片 -->
+                <div v-if="analysisResult.summary || analysisResult.recommendation" class="summary-card-section">
+                  <el-row :gutter="16">
+                    <el-col :span="12">
+                      <el-card class="insight-card" shadow="hover">
+                        <template #header>
+                          <div class="insight-header">
+                            <el-icon><Document /></el-icon>
+                            <span>分析摘要</span>
+                          </div>
+                        </template>
+                        <p>{{ analysisResult.summary }}</p>
+                      </el-card>
+                    </el-col>
+                    <el-col :span="12">
+                      <el-card class="insight-card recommendation" shadow="hover">
+                        <template #header>
+                          <div class="insight-header">
+                            <el-icon><TrendCharts /></el-icon>
+                            <span>投资建议</span>
+                          </div>
+                        </template>
+                        <p class="rec-text">{{ analysisResult.recommendation }}</p>
+                      </el-card>
+                    </el-col>
+                  </el-row>
+                </div>
+
+                <!-- 关键要点 -->
+                <div v-if="analysisResult.key_points && analysisResult.key_points.length > 0" class="keypoints-section">
+                  <h4>🔑 关键要点</h4>
+                  <div class="keypoints-list">
+                    <div
+                      v-for="(point, idx) in analysisResult.key_points"
+                      :key="idx"
+                      class="keypoint-item"
+                    >
+                      <el-icon class="keypoint-icon"><Check /></el-icon>
+                      <span>{{ point }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 各分析师子报告 -->
+                <div v-if="analysisResult.nav_trend || analysisResult.holdings_analysis || analysisResult.manager_assessment || analysisResult.risk_assessment" class="sub-reports-section">
+                  <h4>📑 分析师报告</h4>
+                  <el-collapse>
+                    <el-collapse-item v-if="analysisResult.nav_trend" title="📈 净值走势分析">
+                      <div class="sub-report-content" v-html="renderMarkdown(analysisResult.nav_trend)"></div>
+                    </el-collapse-item>
+                    <el-collapse-item v-if="analysisResult.holdings_analysis" title="📊 持仓结构分析">
+                      <div class="sub-report-content" v-html="renderMarkdown(analysisResult.holdings_analysis)"></div>
+                    </el-collapse-item>
+                    <el-collapse-item v-if="analysisResult.manager_assessment" title="👤 基金经理评估">
+                      <div class="sub-report-content" v-html="renderMarkdown(analysisResult.manager_assessment)"></div>
+                    </el-collapse-item>
+                    <el-collapse-item v-if="analysisResult.risk_assessment" title="⚠️ 风险评估">
+                      <div class="sub-report-content" v-html="renderMarkdown(analysisResult.risk_assessment)"></div>
+                    </el-collapse-item>
+                  </el-collapse>
+                </div>
+
                 <!-- 综合报告 -->
                 <div v-if="analysisResult.comprehensive_report" class="report-section">
                   <h4>🎯 综合分析报告</h4>
                   <div class="comprehensive-report" v-html="renderMarkdown(analysisResult.comprehensive_report)"></div>
-                </div>
-
-                <!-- 摘要 -->
-                <div v-if="analysisResult.summary" class="summary-section">
-                  <h4>📋 分析摘要</h4>
-                  <p>{{ analysisResult.summary }}</p>
-                </div>
-
-                <!-- 建议 -->
-                <div v-if="analysisResult.recommendation" class="recommendation-section">
-                  <h4>💡 投资建议</h4>
-                  <p>{{ analysisResult.recommendation }}</p>
                 </div>
               </div>
             </el-card>
@@ -377,7 +427,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
@@ -403,7 +453,48 @@ marked.setOptions({ breaks: true, gfm: true })
 const route = useRoute()
 const router = useRouter()
 
-// ==================== 基金信息（从URL参数获取） ====================
+// ==================== 页面状态缓存 ====================
+const CACHE_KEY = 'fund_analysis_state'
+
+const saveState = () => {
+  const state = {
+    selectedFund: selectedFund.value,
+    analysisConfig: {
+      timeRange: analysisConfig.timeRange,
+      benchmark: analysisConfig.benchmark,
+      researchDepth: analysisConfig.researchDepth,
+      selectedAnalysts: analysisConfig.selectedAnalysts,
+      includeNav: analysisConfig.includeNav,
+      includePortfolio: analysisConfig.includePortfolio,
+      includeManager: analysisConfig.includeManager,
+      includeRisk: analysisConfig.includeRisk,
+      includeFee: analysisConfig.includeFee,
+      includeScale: analysisConfig.includeScale,
+      includeInstitution: analysisConfig.includeInstitution,
+      language: analysisConfig.language,
+    },
+    modelSettings: modelSettings.value,
+    // Note: analysis results are NOT cached — each click starts a new analysis
+  }
+  sessionStorage.setItem(CACHE_KEY, JSON.stringify(state))
+}
+
+const restoreState = () => {
+  const raw = sessionStorage.getItem(CACHE_KEY)
+  if (!raw) return null
+  try {
+    return JSON.parse(raw)
+  } catch (e) {
+    console.warn('恢复基金分析状态失败:', e)
+    return null
+  }
+}
+
+const clearState = () => {
+  sessionStorage.removeItem(CACHE_KEY)
+}
+
+// ==================== 基金信息（从URL参数获取，优先于缓存） ====================
 const selectedFund = ref<any>(null)
 
 const initFundFromQuery = () => {
@@ -417,7 +508,9 @@ const initFundFromQuery = () => {
       market: route.query.market as string || undefined,
       management: route.query.management as string || undefined
     }
+    return true
   }
+  return false
 }
 
 // ==================== 分析状态 ====================
@@ -461,15 +554,40 @@ const analysisConfig = reactive({
 
 // ==================== 模型配置 ====================
 const modelSettings = ref({
-  quickAnalysisModel: 'auto',
-  deepAnalysisModel: 'auto'
+  quickAnalysisModel: '',
+  deepAnalysisModel: ''
 })
 
 const availableModels = ref<any[]>([])
 
+// 自动缓存关键状态变化（仅缓存配置，不缓存分析结果）
+watch([selectedFund], () => {
+  saveState()
+}, { deep: true })
+
+watch(() => ({
+  timeRange: analysisConfig.timeRange,
+  benchmark: analysisConfig.benchmark,
+  researchDepth: analysisConfig.researchDepth,
+  selectedAnalysts: analysisConfig.selectedAnalysts,
+  includeNav: analysisConfig.includeNav,
+  includePortfolio: analysisConfig.includePortfolio,
+  includeManager: analysisConfig.includeManager,
+  includeRisk: analysisConfig.includeRisk,
+  includeFee: analysisConfig.includeFee,
+  includeScale: analysisConfig.includeScale,
+  includeInstitution: analysisConfig.includeInstitution,
+  language: analysisConfig.language,
+  quickAnalysisModel: modelSettings.value.quickAnalysisModel,
+  deepAnalysisModel: modelSettings.value.deepAnalysisModel,
+}), () => {
+  saveState()
+}, { deep: true })
+
 // ==================== 方法 ====================
 
 const goToSearch = () => {
+  saveState() // 切换前保存当前分析状态
   router.push('/analysis/fund-search')
 }
 
@@ -487,6 +605,81 @@ const toggleAnalyst = (analystName: string) => {
   }
 }
 
+// ==================== 异步任务轮询 ====================
+let pollTimer: ReturnType<typeof setInterval> | null = null
+const currentTaskId = ref('')
+const taskProgress = ref(0)
+const taskStep = ref('')
+
+const clearPollTimer = () => {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
+  }
+}
+
+const startPolling = (taskId: string) => {
+  clearPollTimer()
+  currentTaskId.value = taskId
+
+  pollTimer = setInterval(async () => {
+    try {
+      const resp = await analysisApi.getTaskStatus(taskId)
+      if (resp?.success && resp.data) {
+        const data = resp.data
+        taskProgress.value = data.progress || 0
+        taskStep.value = data.current_step || data.message || ''
+
+        if (data.status === 'completed') {
+          clearPollTimer()
+          await fetchTaskResult(taskId)
+        } else if (data.status === 'failed') {
+          clearPollTimer()
+          analysisStatus.value = 'failed'
+          analyzing.value = false
+          ElMessage.error(data.message || '基金分析失败')
+        }
+      }
+    } catch (e) {
+      console.warn('轮询进度失败:', e)
+    }
+  }, 2000)
+}
+
+const fetchTaskResult = async (taskId: string) => {
+  try {
+    const resp = await analysisApi.getTaskResult(taskId)
+    if (resp?.success && resp.data) {
+      const data = resp.data
+      // 兼容基金分析结果结构
+      analysisResult.value = {
+        summary: data.summary || '',
+        recommendation: data.recommendation || '',
+        comprehensive_report: data.comprehensive_report || data.reports?.comprehensive_report || '',
+        nav_trend: data.nav_trend || data.reports?.nav_trend || '',
+        holdings_analysis: data.holdings_analysis || data.reports?.holdings_analysis || '',
+        manager_assessment: data.manager_assessment || data.reports?.manager_assessment || '',
+        risk_assessment: data.risk_assessment || data.reports?.risk_assessment || '',
+        key_points: data.key_points || [],
+        execution_time: data.execution_time || 0,
+        tokens_used: data.tokens_used || 0,
+        model_info: data.model_info || '',
+      }
+      analysisStatus.value = 'completed'
+      showResults.value = true
+      analyzing.value = false
+      ElMessage.success('基金分析完成')
+      saveState()
+    } else {
+      throw new Error(resp?.message || '获取分析结果失败')
+    }
+  } catch (e: any) {
+    analysisStatus.value = 'failed'
+    analyzing.value = false
+    ElMessage.error(e.message || '获取分析结果失败')
+  }
+}
+
 // 提交分析
 const submitAnalysis = async () => {
   if (!selectedFund.value) {
@@ -499,10 +692,18 @@ const submitAnalysis = async () => {
     return
   }
 
+  if (!modelSettings.value.quickAnalysisModel || !modelSettings.value.deepAnalysisModel) {
+    ElMessage.warning('暂无可用AI模型，请检查模型配置（需启用且配置有效API Key）')
+    return
+  }
+
   analyzing.value = true
   analysisStatus.value = 'running'
   analysisResult.value = null
   showResults.value = false
+  currentTaskId.value = ''
+  taskProgress.value = 0
+  taskStep.value = '正在提交分析任务...'
 
   try {
     const response = await analysisApi.analyzeFund({
@@ -521,24 +722,24 @@ const submitAnalysis = async () => {
         include_scale: analysisConfig.includeScale,
         include_institution: analysisConfig.includeInstitution,
         language: analysisConfig.language,
-        quick_analysis_model: modelSettings.value.quickAnalysisModel === 'auto' ? undefined : modelSettings.value.quickAnalysisModel,
-        deep_analysis_model: modelSettings.value.deepAnalysisModel === 'auto' ? undefined : modelSettings.value.deepAnalysisModel
+        quick_analysis_model: modelSettings.value.quickAnalysisModel || undefined,
+        deep_analysis_model: modelSettings.value.deepAnalysisModel || undefined
       }
     })
 
-    if (response?.success && response.data) {
-      analysisResult.value = response.data
-      analysisStatus.value = 'completed'
-      showResults.value = true
-      ElMessage.success('基金分析完成')
+    if (response?.success && response.data?.task_id) {
+      const taskId = response.data.task_id
+      currentTaskId.value = taskId
+      ElMessage.success('分析任务已提交，正在后台执行')
+      startPolling(taskId)
     } else {
-      throw new Error(response?.message || '分析失败')
+      throw new Error(response?.message || '提交分析任务失败')
     }
   } catch (error: any) {
+    clearPollTimer()
     analysisStatus.value = 'failed'
-    ElMessage.error(error.message || '基金分析失败')
-  } finally {
     analyzing.value = false
+    ElMessage.error(error.message || '基金分析失败')
   }
 }
 
@@ -547,6 +748,7 @@ const restartAnalysis = () => {
   analysisStatus.value = 'idle'
   showResults.value = false
   analysisResult.value = null
+  saveState()
 }
 
 // 获取深度描述
@@ -571,22 +773,98 @@ const renderMarkdown = (content: string) => {
   }
 }
 
-// 获取可用模型列表
-const fetchAvailableModels = async () => {
+// 获取可用模型列表（与个股分析保持完全一致）
+const initializeModelSettings = async () => {
   try {
-    const configs = await configApi.getLLMConfigs()
-    if (configs && Array.isArray(configs)) {
-      availableModels.value = configs.filter((c: any) => c.enabled)
+    const sortModelsByNewest = (configs: any[]) => {
+      const getTimestamp = (config: any) => {
+        const timeValue = config.created_at || config.updated_at
+        const timestamp = timeValue ? new Date(timeValue).getTime() : 0
+        return Number.isNaN(timestamp) ? 0 : timestamp
+      }
+      return [...configs].sort((a, b) => getTimestamp(b) - getTimestamp(a))
     }
+
+    // 1️⃣ 先获取所有可用的模型列表（只过滤 enabled，不检查 api_key）
+    const llmConfigs = await configApi.getLLMConfigs()
+    availableModels.value = sortModelsByNewest(
+      llmConfigs.filter((config: any) => config.enabled)
+    )
+
+    console.log('📋 可用模型列表:', availableModels.value.map(m => ({
+      model_name: m.model_name,
+      provider: m.provider,
+      enabled: m.enabled
+    })))
+
+    // 2️⃣ 获取后端推荐的默认模型
+    const defaultModels = await configApi.getDefaultModels()
+    let quickModel = defaultModels.quick_analysis_model
+    let deepModel = defaultModels.deep_analysis_model
+
+    // 3️⃣ 如果后端未返回默认模型，或返回的模型不在可用列表中，自动选择第一个可用模型
+    const availableModelNames = new Set(availableModels.value.map(m => m.model_name))
+    if (!quickModel || !availableModelNames.has(quickModel)) {
+      const fallback = availableModels.value[0]?.model_name || ''
+      console.warn(`⚠️ 快速模型 '${quickModel}' 不可用，自动选择第一个可用模型: ${fallback}`)
+      quickModel = fallback
+    }
+    if (!deepModel || !availableModelNames.has(deepModel)) {
+      const fallback = availableModels.value[0]?.model_name || ''
+      console.warn(`⚠️ 深度模型 '${deepModel}' 不可用，自动选择第一个可用模型: ${fallback}`)
+      deepModel = fallback
+    }
+
+    modelSettings.value.quickAnalysisModel = quickModel
+    modelSettings.value.deepAnalysisModel = deepModel
+
+    console.log('✅ 加载模型配置成功:', {
+      quick: modelSettings.value.quickAnalysisModel,
+      deep: modelSettings.value.deepAnalysisModel,
+      available: availableModels.value.length
+    })
   } catch (error) {
-    console.warn('获取模型列表失败:', error)
+    console.error('❌ 加载默认模型配置失败:', error)
+    // 出错时清空模型选择，避免提交不可用模型
+    modelSettings.value.quickAnalysisModel = ''
+    modelSettings.value.deepAnalysisModel = ''
   }
 }
 
 // 页面加载
 onMounted(() => {
-  initFundFromQuery()
-  fetchAvailableModels()
+  const hasQuery = initFundFromQuery()
+  const cached = restoreState()
+
+  // 恢复基金选择和分析配置（但不恢复分析结果）
+  if (hasQuery) {
+    if (cached && cached.selectedFund?.ts_code === selectedFund.value?.ts_code) {
+      if (cached.analysisConfig) {
+        Object.assign(analysisConfig, cached.analysisConfig)
+      }
+      ElMessage.success('已恢复上次的分析配置')
+    } else {
+      ElMessage.info(`已选择基金：${selectedFund.value?.name}`)
+    }
+  } else if (cached && cached.selectedFund) {
+    selectedFund.value = cached.selectedFund
+    if (cached.analysisConfig) {
+      Object.assign(analysisConfig, cached.analysisConfig)
+    }
+    ElMessage.success('已恢复上次分析状态')
+  }
+
+  // 始终重置分析结果，确保每次点击都重新发起分析
+  analysisStatus.value = 'idle'
+  showResults.value = false
+  analysisResult.value = null
+
+  initializeModelSettings()
+})
+
+onBeforeUnmount(() => {
+  clearPollTimer()
+  saveState()
 })
 </script>
 

@@ -213,19 +213,17 @@ export const analysisApi = {
   },
 
   // ==================== 基金分析 ====================
-  // 基金分析（同步执行，直接返回结果）
+  // 基金分析（异步任务模式，返回 task_id）
   analyzeFund(fundRequest: {
     ts_code: string
     fund_name?: string
     parameters?: SingleAnalysisRequest['parameters']
   }): Promise<ApiResponse<{
+    task_id: string
+    status: string
     ts_code: string
     fund_name?: string
-    fund_type?: string
-    summary?: string
-    recommendation?: string
-    comprehensive_report?: string
-    error_message?: string
+    message?: string
   }>> {
     return request.post('/api/analysis/fund', fundRequest)
   },
