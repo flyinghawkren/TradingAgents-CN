@@ -547,34 +547,48 @@ onMounted(() => {
 .operation-logs {
   .page-header {
     margin-bottom: 24px;
+    padding: 20px 24px;
+    background: linear-gradient(135deg, var(--el-color-primary-light-9) 0%, var(--el-fill-color-light) 100%);
+    border: 1px solid var(--el-border-color-lighter);
+    border-radius: 12px;
 
     .page-title {
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 24px;
+      gap: 10px;
+      font-size: 22px;
       font-weight: 600;
       color: var(--el-text-color-primary);
       margin: 0 0 8px 0;
     }
 
     .page-description {
-      color: var(--el-text-color-regular);
+      font-size: 13px;
+      color: var(--el-text-color-secondary);
       margin: 0;
     }
   }
 
+  :deep(.el-card) {
+    --el-card-border-radius: 12px;
+    --el-card-border-color: var(--el-border-color-lighter);
+  }
+
   .stat-card {
+    :deep(.el-card__body) {
+      padding: 20px;
+    }
+
     .stat-content {
       text-align: center;
-      
+
       .stat-value {
         font-size: 24px;
         font-weight: 600;
         color: var(--el-color-primary);
         margin-bottom: 8px;
       }
-      
+
       .stat-label {
         font-size: 14px;
         color: var(--el-text-color-regular);
@@ -583,37 +597,72 @@ onMounted(() => {
   }
 
   .chart-card {
+    :deep(.el-card__body) {
+      padding: 20px;
+    }
+
+    :deep(.el-card__header) {
+      padding: 16px 20px;
+    }
+
     .chart-container {
       height: 250px;
     }
   }
 
   .logs-table {
+    :deep(.el-card__body) {
+      padding: 0;
+    }
+
+    :deep(.el-card__header) {
+      padding: 16px 20px;
+    }
+
     .table-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      
+
       h3 {
         margin: 0;
+        font-size: 16px;
+        font-weight: 500;
       }
-      
+
       .table-actions {
         display: flex;
         gap: 8px;
       }
     }
-    
+
     .action-content {
       .action-title {
         font-weight: 500;
         margin-bottom: 2px;
       }
-      
+
       .action-detail {
         font-size: 12px;
         color: var(--el-text-color-placeholder);
       }
+    }
+
+    :deep(.el-table) {
+      th.el-table__cell {
+        font-weight: 600;
+        font-size: 13px;
+        background-color: var(--el-fill-color-light);
+      }
+
+      td.el-table__cell {
+        padding: 10px 0;
+      }
+    }
+
+    :deep(.el-pagination) {
+      padding: 12px 20px;
+      margin: 0;
     }
   }
 
@@ -621,10 +670,11 @@ onMounted(() => {
     .error-section,
     .details-section {
       margin-top: 16px;
-      
+
       h4 {
         margin: 0 0 8px 0;
         font-size: 14px;
+        font-weight: 500;
         color: var(--el-text-color-primary);
       }
     }
@@ -634,16 +684,16 @@ onMounted(() => {
     .empty-tips {
       margin-top: 16px;
       text-align: left;
-      
+
       h4 {
         margin: 0 0 8px 0;
         color: var(--el-text-color-primary);
       }
-      
+
       ul {
         margin: 0;
         padding-left: 20px;
-        
+
         li {
           margin-bottom: 4px;
           color: var(--el-text-color-regular);

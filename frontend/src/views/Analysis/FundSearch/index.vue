@@ -626,48 +626,42 @@ onBeforeUnmount(() => {
 
   .page-header {
     margin-bottom: 24px;
-
-    .header-content {
-      background: var(--el-bg-color);
-      padding: 28px 32px;
-      border-radius: 16px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    }
+    background: linear-gradient(135deg, var(--el-color-primary-light-9) 0%, var(--el-fill-color-light) 100%);
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-lighter);
+    padding: 20px 24px;
 
     .title-section {
       .page-title {
         display: flex;
         align-items: center;
-        font-size: 28px;
-        font-weight: 700;
-        color: #1a202c;
+        gap: 10px;
+        font-size: 22px;
+        font-weight: 600;
+        color: var(--el-text-color-primary);
         margin: 0 0 8px 0;
 
         .title-icon {
-          margin-right: 12px;
-          color: #8b5cf6;
+          color: var(--el-color-primary);
         }
       }
 
       .page-description {
-        font-size: 15px;
-        color: #64748b;
+        font-size: 13px;
+        color: var(--el-text-color-secondary);
         margin: 0;
       }
     }
   }
 
   .search-card {
-    border-radius: 16px;
-    border: none;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-lighter);
     margin-bottom: 24px;
 
     :deep(.el-card__header) {
-      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-      color: white;
-      border-radius: 16px 16px 0 0;
-      padding: 18px 24px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--el-border-color-lighter);
 
       .card-header {
         display: flex;
@@ -676,37 +670,15 @@ onBeforeUnmount(() => {
 
         h3 {
           margin: 0;
-          font-size: 17px;
+          font-size: 16px;
           font-weight: 600;
+          color: var(--el-text-color-primary);
         }
       }
     }
 
     :deep(.el-card__body) {
-      padding: 24px;
-    }
-
-    .search-box {
-      .search-input {
-        :deep(.el-input__inner) {
-          height: 52px;
-          font-size: 15px;
-          border-radius: 10px 0 0 10px;
-        }
-        :deep(.el-input-group__append) {
-          border-radius: 0 10px 10px 0;
-          background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-          color: white;
-          border: none;
-          padding: 0 24px;
-
-          .el-button {
-            color: white;
-            font-weight: 500;
-            font-size: 15px;
-          }
-        }
-      }
+      padding: 20px;
     }
 
     .search-results {
@@ -726,7 +698,7 @@ onBeforeUnmount(() => {
 
       .hint-text {
         text-align: center;
-        color: #64748b;
+        color: var(--el-text-color-secondary);
         line-height: 2;
         font-size: 14px;
 
@@ -737,14 +709,12 @@ onBeforeUnmount(() => {
     }
   }
 
-  // 详情加载中
   .detail-loading {
     margin-bottom: 24px;
 
     .loading-card {
-      border-radius: 16px;
-      border: none;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      border-radius: 12px;
+      border: 1px solid var(--el-border-color-lighter);
 
       :deep(.el-card__body) {
         padding: 48px 24px;
@@ -758,14 +728,14 @@ onBeforeUnmount(() => {
 
         .loading-icon {
           font-size: 48px;
-          color: #8b5cf6;
+          color: var(--el-color-primary);
           margin-bottom: 16px;
         }
 
         .loading-text {
           font-size: 16px;
           font-weight: 600;
-          color: #1a202c;
+          color: var(--el-text-color-primary);
           margin: 0 0 20px 0;
         }
 
@@ -779,15 +749,15 @@ onBeforeUnmount(() => {
           align-items: center;
           gap: 8px;
           font-size: 13px;
-          color: #64748b;
+          color: var(--el-text-color-secondary);
           margin: 12px 0 8px 0;
           padding: 8px 16px;
-          background: #f0f9ff;
+          background: var(--el-color-primary-light-9);
           border-radius: 8px;
-          border-left: 3px solid #0ea5e9;
+          border-left: 3px solid var(--el-color-primary);
 
           .el-icon {
-            color: #0ea5e9;
+            color: var(--el-color-primary);
             font-size: 14px;
           }
         }
@@ -797,16 +767,16 @@ onBeforeUnmount(() => {
           align-items: center;
           gap: 8px;
           font-size: 13px;
-          color: #92400e;
+          color: var(--el-color-warning);
           margin: 8px 0;
           padding: 8px 16px;
-          background: #fef3c7;
+          background: var(--el-color-warning-light-9);
           border-radius: 8px;
-          border-left: 3px solid #f59e0b;
+          border-left: 3px solid var(--el-color-warning);
           max-width: 400px;
 
           .el-icon {
-            color: #f59e0b;
+            color: var(--el-color-warning);
             font-size: 14px;
             flex-shrink: 0;
           }
@@ -817,16 +787,16 @@ onBeforeUnmount(() => {
           align-items: center;
           gap: 8px;
           font-size: 13px;
-          color: #991b1b;
+          color: var(--el-color-danger);
           margin: 8px 0;
           padding: 8px 16px;
-          background: #fee2e2;
+          background: var(--el-color-danger-light-9);
           border-radius: 8px;
-          border-left: 3px solid #ef4444;
+          border-left: 3px solid var(--el-color-danger);
           max-width: 400px;
 
           .el-icon {
-            color: #ef4444;
+            color: var(--el-color-danger);
             font-size: 14px;
             flex-shrink: 0;
           }
@@ -834,7 +804,7 @@ onBeforeUnmount(() => {
 
         .loading-hint {
           font-size: 13px;
-          color: #9ca3af;
+          color: var(--el-text-color-placeholder);
           margin: 12px 0 0 0;
         }
       }
@@ -853,16 +823,13 @@ onBeforeUnmount(() => {
     margin-bottom: 0 !important;
 
     .detail-card {
-      border-radius: 16px;
-      border: none;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      border-radius: 12px;
+      border: 1px solid var(--el-border-color-lighter);
       margin-bottom: 24px;
 
       :deep(.el-card__header) {
-        background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
-        color: white;
-        border-radius: 16px 16px 0 0;
         padding: 16px 20px;
+        border-bottom: 1px solid var(--el-border-color-lighter);
 
         .card-header {
           display: flex;
@@ -873,6 +840,7 @@ onBeforeUnmount(() => {
             margin: 0;
             font-size: 16px;
             font-weight: 600;
+            color: var(--el-text-color-primary);
           }
         }
       }
@@ -882,12 +850,12 @@ onBeforeUnmount(() => {
       }
 
       .fee-value {
-        color: #f59e0b;
+        color: var(--el-color-warning);
         font-weight: 600;
       }
 
       .scale-value {
-        color: #10b981;
+        color: var(--el-color-success);
         font-weight: 600;
       }
 
@@ -897,14 +865,14 @@ onBeforeUnmount(() => {
           margin-bottom: 16px;
 
           .nav-value {
-            font-size: 36px;
+            font-size: 32px;
             font-weight: 700;
-            color: #1a202c;
+            color: var(--el-text-color-primary);
           }
 
           .nav-date {
             font-size: 13px;
-            color: #64748b;
+            color: var(--el-text-color-secondary);
             margin-top: 4px;
           }
         }
@@ -920,7 +888,7 @@ onBeforeUnmount(() => {
             .label {
               display: block;
               font-size: 12px;
-              color: #9ca3af;
+              color: var(--el-text-color-placeholder);
               margin-bottom: 4px;
             }
 
@@ -929,24 +897,24 @@ onBeforeUnmount(() => {
               font-weight: 600;
 
               &.up {
-                color: #ef4444;
+                color: var(--el-color-danger);
               }
 
               &.down {
-                color: #10b981;
+                color: var(--el-color-success);
               }
             }
           }
         }
 
         .nav-history {
-          border-top: 1px solid #f3f4f6;
+          border-top: 1px solid var(--el-border-color-lighter);
           padding-top: 16px;
 
           .history-title {
             font-size: 13px;
             font-weight: 600;
-            color: #374151;
+            color: var(--el-text-color-regular);
             margin-bottom: 10px;
           }
 
@@ -956,10 +924,10 @@ onBeforeUnmount(() => {
 
             :deep(.el-table__header-wrapper) {
               th {
-                background: #f8fafc;
+                background: var(--el-fill-color-light);
                 font-size: 12px;
                 font-weight: 600;
-                color: #64748b;
+                color: var(--el-text-color-secondary);
                 padding: 6px 0;
               }
             }
@@ -973,18 +941,18 @@ onBeforeUnmount(() => {
 
             .nav-cell {
               font-weight: 600;
-              color: #1a202c;
+              color: var(--el-text-color-primary);
             }
 
             .return-cell {
               font-weight: 600;
 
               &.up {
-                color: #ef4444;
+                color: var(--el-color-danger);
               }
 
               &.down {
-                color: #10b981;
+                color: var(--el-color-success);
               }
             }
           }
@@ -994,7 +962,7 @@ onBeforeUnmount(() => {
       .manager-list {
         .manager-item {
           padding: 14px 0;
-          border-bottom: 1px solid #f3f4f6;
+          border-bottom: 1px solid var(--el-border-color-lighter);
 
           &:last-child {
             border-bottom: none;
@@ -1014,7 +982,7 @@ onBeforeUnmount(() => {
             .manager-name {
               font-size: 16px;
               font-weight: 600;
-              color: #1a202c;
+              color: var(--el-text-color-primary);
             }
 
             .manager-badges {
@@ -1034,14 +1002,14 @@ onBeforeUnmount(() => {
               align-items: center;
               gap: 4px;
               font-size: 13px;
-              color: #64748b;
-              background: #f8fafc;
+              color: var(--el-text-color-secondary);
+              background: var(--el-fill-color-light);
               padding: 3px 10px;
               border-radius: 6px;
 
               .el-icon {
                 font-size: 13px;
-                color: #94a3b8;
+                color: var(--el-text-color-placeholder);
               }
             }
           }
@@ -1051,33 +1019,33 @@ onBeforeUnmount(() => {
             align-items: center;
             gap: 6px;
             font-size: 13px;
-            color: #64748b;
+            color: var(--el-text-color-secondary);
             margin-bottom: 8px;
             padding: 6px 10px;
-            background: #f0fdf4;
+            background: var(--el-color-success-light-9);
             border-radius: 6px;
-            border-left: 3px solid #10b981;
+            border-left: 3px solid var(--el-color-success);
 
             .el-icon {
               font-size: 14px;
-              color: #10b981;
+              color: var(--el-color-success);
             }
 
             .funds-label {
               font-weight: 500;
-              color: #374151;
+              color: var(--el-text-color-regular);
               white-space: nowrap;
             }
 
             .funds-value {
-              color: #059669;
+              color: var(--el-color-success);
               font-weight: 500;
             }
           }
 
           .manager-resume {
             font-size: 12px;
-            color: #9ca3af;
+            color: var(--el-text-color-placeholder);
             line-height: 1.6;
             display: -webkit-box;
             -webkit-line-clamp: 3;
@@ -1093,23 +1061,6 @@ onBeforeUnmount(() => {
     display: flex;
     justify-content: center;
     margin-bottom: 24px;
-
-    .analysis-btn {
-      min-width: 240px;
-      height: 52px;
-      font-size: 17px;
-      font-weight: 700;
-      border-radius: 14px;
-      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-      border: none;
-      box-shadow: 0 4px 15px rgba(139, 92, 246, 0.25);
-      transition: all 0.3s ease;
-
-      &:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 12px 30px rgba(139, 92, 246, 0.4);
-      }
-    }
   }
 }
 </style>

@@ -585,10 +585,11 @@ onMounted(async () => {
 <style lang="scss" scoped>
 .dashboard {
   .welcome-section {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--el-color-primary-light-9) 0%, var(--el-fill-color-light) 100%);
     border-radius: 12px;
-    padding: 40px;
-    color: white;
+    border: 1px solid var(--el-border-color-lighter);
+    padding: 20px 24px;
+    color: var(--el-text-color-primary);
     margin-bottom: 24px;
     display: flex;
     justify-content: space-between;
@@ -596,40 +597,47 @@ onMounted(async () => {
 
     .welcome-content {
       .welcome-title {
-        font-size: 32px;
+        font-size: 22px;
         font-weight: 600;
-        margin: 0 0 12px 0;
+        margin: 0 0 6px 0;
         display: flex;
         align-items: center;
-        gap: 16px;
+        gap: 10px;
+        color: var(--el-text-color-primary);
 
         .version-badge {
-          background: rgba(255, 255, 255, 0.2);
-          padding: 4px 12px;
-          border-radius: 20px;
-          font-size: 14px;
-          font-weight: 400;
+          background: var(--el-color-primary-light-8);
+          color: var(--el-color-primary);
+          padding: 2px 10px;
+          border-radius: 12px;
+          font-size: 12px;
+          font-weight: 500;
         }
       }
 
       .welcome-subtitle {
-        font-size: 16px;
-        opacity: 0.9;
+        font-size: 13px;
+        color: var(--el-text-color-secondary);
         margin: 0;
       }
     }
 
     .welcome-actions {
       display: flex;
-      gap: 16px;
+      gap: 12px;
     }
   }
 
   .learning-highlight-card {
     margin-top: 24px;
     margin-bottom: 24px;
-    border: 2px solid var(--el-color-primary);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-lighter);
+    transition: box-shadow 0.3s ease;
+
+    &:hover {
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    }
 
     .learning-highlight {
       display: flex;
@@ -642,7 +650,7 @@ onMounted(async () => {
         width: 80px;
         height: 80px;
         border-radius: 12px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, var(--el-color-primary) 0%, var(--el-color-primary-light-3) 100%);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -688,6 +696,20 @@ onMounted(async () => {
     }
   }
 
+  .quick-actions-card,
+  .recent-analyses-card,
+  .market-news-card,
+  .favorites-card,
+  .paper-trading-card {
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-lighter);
+    transition: box-shadow 0.3s ease;
+
+    &:hover {
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    }
+  }
+
   .quick-actions-card {
     .quick-actions {
       display: grid;
@@ -697,9 +719,9 @@ onMounted(async () => {
         display: flex;
         align-items: center;
         gap: 16px;
-        padding: 20px;
+        padding: 16px;
         border: 1px solid var(--el-border-color-lighter);
-        border-radius: 8px;
+        border-radius: 12px;
         cursor: pointer;
         transition: all 0.3s ease;
 
@@ -711,7 +733,7 @@ onMounted(async () => {
         .action-icon {
           width: 40px;
           height: 40px;
-          border-radius: 8px;
+          border-radius: 10px;
           background: var(--el-color-primary-light-8);
           display: flex;
           align-items: center;
@@ -725,14 +747,14 @@ onMounted(async () => {
 
           h3 {
             margin: 0 0 4px 0;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 600;
             color: var(--el-text-color-primary);
           }
 
           p {
             margin: 0;
-            font-size: 14px;
+            font-size: 13px;
             color: var(--el-text-color-regular);
           }
         }
@@ -754,6 +776,23 @@ onMounted(async () => {
       text-align: center;
       margin-top: 16px;
     }
+
+    :deep(.el-table) {
+      --el-table-header-bg-color: var(--el-fill-color-light);
+      --el-table-header-text-color: var(--el-text-color-regular);
+      --el-table-row-hover-bg-color: var(--el-fill-color-lighter);
+
+      th.el-table__cell {
+        font-weight: 600;
+        font-size: 12px;
+        padding: 10px 0;
+      }
+
+      td.el-table__cell {
+        font-size: 13px;
+        padding: 10px 0;
+      }
+    }
   }
 
   .system-status-card {
@@ -769,11 +808,13 @@ onMounted(async () => {
 
       .status-label {
         color: var(--el-text-color-regular);
+        font-size: 13px;
       }
 
       .status-value {
         font-weight: 600;
         color: var(--el-text-color-primary);
+        font-size: 14px;
       }
     }
   }
@@ -784,6 +825,7 @@ onMounted(async () => {
         padding: 12px 0;
         cursor: pointer;
         border-bottom: 1px solid var(--el-border-color-lighter);
+        transition: background-color 0.3s ease;
 
         &:last-child {
           border-bottom: none;
@@ -793,7 +835,7 @@ onMounted(async () => {
           background-color: var(--el-fill-color-lighter);
           margin: 0 -16px;
           padding: 12px 16px;
-          border-radius: 4px;
+          border-radius: 8px;
         }
 
         .news-title {
@@ -822,7 +864,7 @@ onMounted(async () => {
       align-items: center;
       gap: 8px;
       padding: 8px 0;
-      font-size: 14px;
+      font-size: 13px;
       color: var(--el-text-color-regular);
 
       .tip-icon {
@@ -857,7 +899,7 @@ onMounted(async () => {
           background-color: var(--el-fill-color-lighter);
           margin: 0 -16px;
           padding: 12px 16px;
-          border-radius: 6px;
+          border-radius: 8px;
         }
 
         &:last-child {
@@ -892,11 +934,11 @@ onMounted(async () => {
             margin-top: 2px;
 
             &.price-up {
-              color: #f56c6c;
+              color: var(--el-color-danger);
             }
 
             &.price-down {
-              color: #67c23a;
+              color: var(--el-color-success);
             }
 
             &.price-neutral {
@@ -929,7 +971,7 @@ onMounted(async () => {
 
       .account-section {
         border: 1px solid var(--el-border-color-lighter);
-        border-radius: 8px;
+        border-radius: 12px;
         padding: 12px;
         background-color: var(--el-fill-color-blank);
 
@@ -965,11 +1007,11 @@ onMounted(async () => {
           }
 
           &.price-up {
-            color: #f56c6c;
+            color: var(--el-color-danger);
           }
 
           &.price-down {
-            color: #67c23a;
+            color: var(--el-color-success);
           }
 
           &.price-neutral {
@@ -1003,7 +1045,7 @@ onMounted(async () => {
     .welcome-section {
       flex-direction: column;
       text-align: center;
-      gap: 24px;
+      gap: 16px;
 
       .welcome-actions {
         justify-content: center;

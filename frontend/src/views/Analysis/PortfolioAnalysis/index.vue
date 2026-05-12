@@ -104,7 +104,7 @@
                     type="text"
                     size="small"
                     @click="removeStock($index)"
-                    style="color: #f56c6c;"
+                    class="delete-btn"
                   >
                     <el-icon><Delete /></el-icon>
                   </el-button>
@@ -121,7 +121,7 @@
             </div>
 
             <!-- 组合统计 -->
-            <div v-if="portfolioStocks.length > 0" class="portfolio-stats" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e2e8f0;">
+            <div v-if="portfolioStocks.length > 0" class="portfolio-stats">
               <el-row :gutter="24">
                 <el-col :span="6">
                   <div class="stat-item">
@@ -234,7 +234,7 @@
 
               <!-- 操作按钮 -->
               <div class="form-section">
-                <div class="action-buttons" style="display: flex; justify-content: center; align-items: center; width: 100%; text-align: center;">
+                <div class="action-buttons">
                   <el-button
                     type="primary"
                     size="large"
@@ -242,7 +242,6 @@
                     :loading="submitting"
                     :disabled="portfolioStocks.length === 0"
                     class="submit-btn large-batch-btn"
-                    style="width: 320px; height: 56px; font-size: 18px; font-weight: 700; border-radius: 16px;"
                   >
                     <el-icon><TrendCharts /></el-icon>
                     开始组合分析 ({{ portfolioStocks.length }}只)
@@ -426,7 +425,7 @@
                             <el-tag :type="getActionTagType(stockResult.decision.action)">
                               {{ stockResult.decision.action }}
                             </el-tag>
-                            <span v-if="stockResult.decision.confidence" style="margin-left: 8px; color: #666;">
+                            <span v-if="stockResult.decision.confidence" class="confidence-text">
                               置信度: {{ (stockResult.decision.confidence * 100).toFixed(1) }}%
                             </span>
                           </div>
@@ -1001,49 +1000,55 @@ onMounted(async () => {
   padding: 24px;
 
   .page-header {
-    margin-bottom: 32px;
+    background: linear-gradient(135deg, var(--el-color-primary-light-9) 0%, var(--el-fill-color-light) 100%);
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-lighter);
+    padding: 20px 24px;
+    margin-bottom: 24px;
 
     .header-content {
-      background: var(--el-bg-color);
-      padding: 32px;
-      border-radius: 16px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      background: transparent;
+      padding: 0;
+      border-radius: 0;
+      box-shadow: none;
     }
 
     .title-section {
       .page-title {
         display: flex;
         align-items: center;
-        font-size: 32px;
-        font-weight: 700;
-        color: #1a202c;
+        gap: 10px;
+        font-size: 22px;
+        font-weight: 600;
+        color: var(--el-text-color-primary);
         margin: 0 0 8px 0;
 
         .title-icon {
-          margin-right: 12px;
-          color: #10b981;
+          color: var(--el-color-primary);
         }
       }
 
       .page-description {
-        font-size: 16px;
-        color: #64748b;
+        font-size: 13px;
+        color: var(--el-text-color-secondary);
         margin: 0;
       }
     }
   }
 
   .analysis-container {
-    .stock-list-card, .config-card {
-      border-radius: 16px;
-      border: none;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    .stock-list-card,
+    .config-card,
+    .advanced-config-card {
+      border-radius: 12px;
+      border: 1px solid var(--el-border-color-lighter);
 
       :deep(.el-card__header) {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        color: white;
-        border-radius: 16px 16px 0 0;
-        padding: 20px 24px;
+        background: var(--el-fill-color-light);
+        color: var(--el-text-color-primary);
+        border-radius: 12px 12px 0 0;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--el-border-color-lighter);
 
         .card-header {
           display: flex;
@@ -1052,35 +1057,52 @@ onMounted(async () => {
 
           h3 {
             margin: 0;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 600;
-          }
-
-          .header-actions {
-            display: flex;
-            align-items: center;
           }
         }
       }
 
       :deep(.el-card__body) {
-        padding: 24px;
+        padding: 20px;
       }
     }
 
     .stock-list-card {
       :deep(.el-card__body) {
-        padding: 16px 24px;
+        padding: 16px 20px;
       }
     }
 
-    .portfolio-table {
-      :deep(.el-input__inner) {
-        font-size: 13px;
+    // Modern compact tables
+    .portfolio-table,
+    .overview-card :deep(.el-table) {
+      :deep(.el-table__cell) {
+        padding: 6px 0;
       }
+
+      :deep(.el-table__header-wrapper th.el-table__cell) {
+        background: var(--el-fill-color-light);
+        font-weight: 600;
+        font-size: 13px;
+        color: var(--el-text-color-primary);
+      }
+
+      :deep(.el-table__body-wrapper td.el-table__cell) {
+        font-size: 13px;
+        color: var(--el-text-color-regular);
+      }
+    }
+
+    .delete-btn {
+      color: var(--el-color-danger);
     }
 
     .portfolio-stats {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--el-border-color-light);
+
       .stat-item {
         text-align: center;
         padding: 8px;
@@ -1094,95 +1116,37 @@ onMounted(async () => {
         }
 
         .stat-value {
-          font-size: 18px;
+          font-size: 16px;
           font-weight: 600;
           color: var(--el-text-color-primary);
         }
       }
     }
 
-    // 右侧高级配置卡片样式
-    .advanced-config-card {
-      border-radius: 16px;
-      border: none;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-
-      :deep(.el-card__header) {
-        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-        color: white;
-        border-radius: 16px 16px 0 0;
-        padding: 20px 24px;
-
-        .card-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-
-          h3 {
-            margin: 0;
-            font-size: 18px;
-            font-weight: 600;
-          }
-        }
-      }
-
-      :deep(.el-card__body) {
-        padding: 24px;
-      }
-
-      .config-content {
-        .config-section {
-          margin-bottom: 24px;
-
-          &:last-child {
-            margin-bottom: 0;
-          }
-
-          .analysis-options {
-            .option-item {
-              display: flex;
-              align-items: center;
-              justify-content: space-between;
-              padding: 12px 0;
-              border-bottom: 1px solid #f3f4f6;
-
-              &:last-child {
-                border-bottom: none;
-                padding-bottom: 0;
-              }
-
-              .option-info {
-                .option-name {
-                  font-size: 14px;
-                  font-weight: 500;
-                  color: #374151;
-                  display: block;
-                  margin-bottom: 2px;
-                }
-
-                .option-desc {
-                  font-size: 12px;
-                  color: #6b7280;
-                }
-              }
-            }
-          }
-        }
-      }
+    .add-stock-row {
+      margin-top: 8px;
     }
 
     .batch-form {
       .form-section {
-        margin-bottom: 32px;
+        margin-bottom: 24px;
 
         .section-title {
-          font-size: 16px;
+          font-size: 15px;
           font-weight: 600;
-          color: #1a202c;
-          margin: 0 0 16px 0;
+          color: var(--el-text-color-primary);
+          margin: 0 0 12px 0;
           padding-bottom: 8px;
-          border-bottom: 2px solid #e2e8f0;
+          border-bottom: 1px solid var(--el-border-color-light);
         }
+      }
+
+      .action-buttons {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        text-align: center;
       }
 
       .analysts-selection {
@@ -1200,12 +1164,12 @@ onMounted(async () => {
               }
 
               :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
-                background-color: #10b981;
-                border-color: #10b981;
+                background-color: var(--el-color-primary);
+                border-color: var(--el-color-primary);
               }
 
               :deep(.el-checkbox__input.is-checked + .el-checkbox__label) {
-                color: #10b981;
+                color: var(--el-color-primary);
               }
 
               .analyst-info {
@@ -1215,12 +1179,61 @@ onMounted(async () => {
 
                 .analyst-name {
                   font-weight: 500;
-                  color: #374151;
+                  color: var(--el-text-color-primary);
                 }
 
                 .analyst-desc {
                   font-size: 12px;
-                  color: #6b7280;
+                  color: var(--el-text-color-secondary);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    .advanced-config-card {
+      .config-content {
+        .config-section {
+          margin-bottom: 20px;
+
+          &:last-child {
+            margin-bottom: 0;
+          }
+
+          .config-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--el-text-color-primary);
+            margin: 0 0 12px 0;
+          }
+
+          .analysis-options {
+            .option-item {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              padding: 12px 0;
+              border-bottom: 1px solid var(--el-border-color-lighter);
+
+              &:last-child {
+                border-bottom: none;
+                padding-bottom: 0;
+              }
+
+              .option-info {
+                .option-name {
+                  font-size: 14px;
+                  font-weight: 500;
+                  color: var(--el-text-color-primary);
+                  display: block;
+                  margin-bottom: 2px;
+                }
+
+                .option-desc {
+                  font-size: 12px;
+                  color: var(--el-text-color-secondary);
                 }
               }
             }
@@ -1230,37 +1243,38 @@ onMounted(async () => {
     }
 
     .weight-high {
-      color: #f56c6c;
+      color: var(--el-color-danger);
       font-weight: 600;
     }
 
     .weight-medium {
-      color: #e6a23c;
+      color: var(--el-color-warning);
       font-weight: 500;
     }
 
     .weight-low {
-      color: #67c23a;
+      color: var(--el-color-success);
     }
+  }
+
+  .empty-state {
+    padding: 24px 0;
   }
 }
 
-.empty-state {
-  padding: 24px 0;
-}
-
-// 进度卡片样式
 .progress-section {
+  margin-top: 24px;
+
   .progress-card {
-    border-radius: 16px;
-    border: none;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-lighter);
 
     :deep(.el-card__header) {
-      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-      color: white;
-      border-radius: 16px 16px 0 0;
-      padding: 16px 24px;
+      background: var(--el-fill-color-light);
+      color: var(--el-text-color-primary);
+      border-radius: 12px 12px 0 0;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--el-border-color-lighter);
 
       .progress-header {
         display: flex;
@@ -1272,13 +1286,14 @@ onMounted(async () => {
           display: flex;
           align-items: center;
           gap: 8px;
-          font-size: 16px;
+          font-size: 15px;
+          font-weight: 600;
         }
       }
     }
 
     :deep(.el-card__body) {
-      padding: 24px;
+      padding: 20px;
     }
 
     .progress-content {
@@ -1292,14 +1307,14 @@ onMounted(async () => {
 
           .stat-label {
             font-size: 12px;
-            color: #6b7280;
+            color: var(--el-text-color-secondary);
             margin-bottom: 4px;
           }
 
           .stat-value {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 600;
-            color: #1a202c;
+            color: var(--el-text-color-primary);
           }
         }
       }
@@ -1310,7 +1325,7 @@ onMounted(async () => {
 
       .current-task-info {
         background: var(--el-fill-color-light);
-        border-radius: 12px;
+        border-radius: 8px;
         padding: 16px;
 
         .task-title {
@@ -1318,44 +1333,48 @@ onMounted(async () => {
           align-items: center;
           gap: 8px;
           font-weight: 600;
-          color: #1a202c;
+          color: var(--el-text-color-primary);
           margin-bottom: 8px;
 
           .task-icon {
-            color: #3b82f6;
+            color: var(--el-color-primary);
           }
         }
 
         .task-description {
-          font-size: 14px;
-          color: #4b5563;
+          font-size: 13px;
+          color: var(--el-text-color-regular);
+          line-height: 1.6;
         }
       }
     }
   }
 }
 
-// 结果卡片样式
 .results-section {
+  margin-top: 24px;
+
   .results-card {
-    border-radius: 16px;
-    border: none;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-lighter);
 
     :deep(.el-card__header) {
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-      color: white;
-      border-radius: 16px 16px 0 0;
-      padding: 20px 24px;
+      background: var(--el-fill-color-light);
+      color: var(--el-text-color-primary);
+      border-radius: 12px 12px 0 0;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--el-border-color-lighter);
 
       .results-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
 
         h3 {
           margin: 0;
-          font-size: 18px;
+          font-size: 16px;
           font-weight: 600;
         }
 
@@ -1367,45 +1386,47 @@ onMounted(async () => {
     }
 
     :deep(.el-card__body) {
-      padding: 24px;
+      padding: 20px;
     }
 
     .results-content {
       .risk-disclaimer {
-        margin-bottom: 24px;
+        margin-bottom: 20px;
       }
 
       .decision-section,
       .overview-section {
-        margin-bottom: 32px;
+        margin-bottom: 24px;
 
         h4 {
-          font-size: 18px;
+          font-size: 16px;
           font-weight: 600;
-          color: #1a202c;
-          margin: 0 0 16px 0;
+          color: var(--el-text-color-primary);
+          margin: 0 0 12px 0;
           padding-bottom: 8px;
-          border-bottom: 2px solid #e2e8f0;
+          border-bottom: 1px solid var(--el-border-color-light);
         }
       }
 
       .decision-card {
         background: var(--el-fill-color-light);
-        border-radius: 12px;
-        padding: 20px;
+        border-radius: 8px;
+        padding: 16px;
 
         .comprehensive-report {
           line-height: 1.8;
-          color: #374151;
+          color: var(--el-text-color-regular);
 
           :deep(h3) {
-            color: #1a202c;
+            color: var(--el-text-color-primary);
             margin-top: 16px;
             margin-bottom: 8px;
+            font-size: 15px;
           }
 
           :deep(p) {
             margin-bottom: 12px;
+            color: var(--el-text-color-regular);
           }
 
           :deep(ul) {
@@ -1415,10 +1436,11 @@ onMounted(async () => {
 
           :deep(li) {
             margin-bottom: 4px;
+            color: var(--el-text-color-regular);
           }
 
           :deep(strong) {
-            color: #1a202c;
+            color: var(--el-text-color-primary);
           }
         }
       }
@@ -1430,13 +1452,13 @@ onMounted(async () => {
           h5 {
             font-size: 14px;
             font-weight: 600;
-            color: #374151;
+            color: var(--el-text-color-primary);
             margin: 12px 0 8px 0;
           }
 
           p {
             font-size: 13px;
-            color: #4b5563;
+            color: var(--el-text-color-regular);
             line-height: 1.6;
             margin: 0;
           }
@@ -1445,20 +1467,24 @@ onMounted(async () => {
             margin-top: 12px;
             display: flex;
             align-items: center;
+
+            .confidence-text {
+              margin-left: 8px;
+              color: var(--el-text-color-secondary);
+            }
           }
         }
       }
 
       .overview-card {
         background: var(--el-fill-color-light);
-        border-radius: 12px;
+        border-radius: 8px;
         padding: 16px;
       }
     }
   }
 }
 
-// 旋转动画
 .rotating-icon {
   animation: rotate 2s linear infinite;
 }
@@ -1474,7 +1500,7 @@ onMounted(async () => {
 </style>
 
 <style>
-/* 全局样式确保按钮样式生效 */
+/* 全局样式 */
 .action-section {
   display: flex !important;
   justify-content: center !important;
@@ -1488,25 +1514,25 @@ onMounted(async () => {
   height: 56px !important;
   font-size: 18px !important;
   font-weight: 700 !important;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  background: linear-gradient(135deg, var(--el-color-primary) 0%, var(--el-color-primary-dark-2) 100%) !important;
   border: none !important;
   border-radius: 16px !important;
   transition: all 0.3s ease !important;
-  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2) !important;
+  box-shadow: var(--el-box-shadow) !important;
   min-width: 320px !important;
   max-width: 320px !important;
 }
 
 .large-batch-btn.el-button:hover {
   transform: translateY(-3px) !important;
-  box-shadow: 0 12px 30px rgba(16, 185, 129, 0.4) !important;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  box-shadow: var(--el-box-shadow-dark) !important;
+  background: linear-gradient(135deg, var(--el-color-primary) 0%, var(--el-color-primary-dark-2) 100%) !important;
 }
 
 .large-batch-btn.el-button:disabled {
   opacity: 0.6 !important;
   transform: none !important;
-  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.1) !important;
+  box-shadow: none !important;
 }
 
 .large-batch-btn.el-button .el-icon {

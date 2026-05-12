@@ -1200,21 +1200,34 @@ onMounted(() => {
 .favorites {
   .page-header {
     margin-bottom: 24px;
+    padding: 20px 24px;
+    background: linear-gradient(135deg, var(--el-color-primary-light-9) 0%, var(--el-fill-color-light) 100%);
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-lighter);
 
     .page-title {
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 24px;
+      gap: 10px;
+      font-size: 22px;
       font-weight: 600;
       color: var(--el-text-color-primary);
       margin: 0 0 8px 0;
     }
 
     .page-description {
-      color: var(--el-text-color-regular);
+      font-size: 13px;
+      color: var(--el-text-color-secondary);
       margin: 0;
     }
+  }
+
+  .action-card,
+  .favorites-list-card {
+    background: var(--el-bg-color);
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-lighter);
+    overflow: hidden;
   }
 
   .action-card {
@@ -1227,45 +1240,64 @@ onMounted(() => {
     }
   }
 
+  .favorites-list-card {
+    :deep(.el-table) {
+      --el-table-header-bg-color: var(--el-fill-color-light);
+      --el-table-header-text-color: var(--el-text-color-regular);
+      --el-table-row-hover-bg-color: var(--el-fill-color-lighter);
+
+      th.el-table__cell {
+        font-weight: 600;
+        font-size: 12px;
+        padding: 10px 0;
+      }
+
+      td.el-table__cell {
+        font-size: 13px;
+        padding: 10px 0;
+      }
+    }
+
+    .empty-state {
+      padding: 32px 0;
+      text-align: center;
+    }
+
+    .text-red {
+      color: var(--el-color-danger);
+    }
+
+    .text-green {
+      color: var(--el-color-success);
+    }
+  }
+
   /* 颜色选项样式 */
   .color-dot {
     display: inline-block;
     width: 12px;
     height: 12px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--el-border-color);
     border-radius: 2px;
     margin-left: 8px;
     vertical-align: middle;
   }
+
   .color-option {
     display: flex;
     align-items: center;
     justify-content: space-between;
     width: 100%;
   }
+
   .color-dot-preview {
     display: inline-block;
     width: 14px;
     height: 14px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--el-border-color);
     border-radius: 2px;
     margin-left: 6px;
     vertical-align: middle;
-  }
-
-  .favorites-list-card {
-    .empty-state {
-      padding: 40px;
-      text-align: center;
-    }
-
-    .text-red {
-      color: #f56c6c;
-    }
-
-    .text-green {
-      color: #67c23a;
-    }
   }
 }
 </style>

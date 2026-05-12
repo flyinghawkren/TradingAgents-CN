@@ -151,21 +151,25 @@ const handleLogin = async () => {
 <style lang="scss" scoped>
 .login-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
+  background: var(--el-bg-color-page);
 }
 
 .login-container {
   width: 100%;
-  max-width: 400px;
+  max-width: 420px;
+  background: linear-gradient(135deg, var(--el-color-primary-light-5) 0%, var(--el-color-primary) 100%);
+  border-radius: 12px;
+  border: 1px solid var(--el-border-color-lighter);
+  padding: 40px 32px;
 }
 
 .login-header {
   text-align: center;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
   color: white;
 
   .logo {
@@ -175,19 +179,22 @@ const handleLogin = async () => {
   }
 
   .title {
-    font-size: 32px;
+    font-size: 22px;
     font-weight: 600;
     margin: 0 0 8px 0;
   }
 
   .subtitle {
-    font-size: 16px;
+    font-size: 13px;
     opacity: 0.9;
     margin: 0;
   }
 }
 
 .login-card {
+  border-radius: 12px;
+  border: 1px solid var(--el-border-color-lighter);
+
   .form-options {
     display: flex;
     justify-content: space-between;
@@ -198,13 +205,13 @@ const handleLogin = async () => {
   .login-tip {
     text-align: center;
     width: 100%;
-    color: var(--el-text-color-regular);
+    color: var(--el-text-color-secondary);
   }
 }
 
 .login-footer {
   text-align: center;
-  margin-top: 32px;
+  margin-top: 24px;
   color: white;
   opacity: 0.9;
 
@@ -220,7 +227,6 @@ const handleLogin = async () => {
     max-width: 800px;
     margin-left: auto;
     margin-right: auto;
-    color: white;
     opacity: 0.85;
   }
 }

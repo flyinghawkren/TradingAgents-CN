@@ -561,14 +561,95 @@ const getStatusText = (status:string) => ({ pending:'等待中', processing:'处
 const formatTime = (t:string) => t ? formatDateTime(t) : '-'
 </script>
 
-<style scoped lang="scss">
+<style lang="scss" scoped>
 .task-center {
-  .page-header { margin-bottom: 24px; }
-  .page-title { display:flex; align-items:center; gap:8px; font-size:24px; font-weight:600; margin:0 0 8px 0; }
-  .page-description { color: var(--el-text-color-regular); margin:0; }
-  .tabs-card { margin-bottom: 16px; }
-  .list-header { display:flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap:8px; }
-  .pagination-wrapper { display:flex; justify-content:center; margin-top: 16px; }
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    padding: 20px 24px;
+    background: linear-gradient(135deg, var(--el-color-primary-light-9) 0%, var(--el-fill-color-light) 100%);
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-lighter);
+  }
+
+  .page-title {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0 0 6px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--el-text-color-primary);
+
+    :deep(.el-icon) {
+      color: var(--el-color-primary);
+      font-size: 26px;
+    }
+  }
+
+  .page-description {
+    color: var(--el-text-color-secondary);
+    margin: 0;
+    font-size: 13px;
+  }
+
+  .el-card {
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-lighter);
+  }
+
+  .tabs-card {
+    margin-bottom: 16px;
+  }
+
+  .filter-card {
+    margin-bottom: 16px;
+  }
+
+  .list-card {
+    margin-top: 16px;
+  }
+
+  .stat {
+    text-align: center;
+    padding: 8px 0;
+
+    .value {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--el-color-primary);
+      line-height: 1.2;
+    }
+
+    .label {
+      font-size: 12px;
+      color: var(--el-text-color-secondary);
+      margin-top: 4px;
+    }
+  }
+
+  .list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    gap: 8px;
+
+    .left,
+    .right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+  }
+
+  .pagination-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-top: 16px;
+  }
 
   .task-name-cell {
     display: flex;
@@ -578,6 +659,26 @@ const formatTime = (t:string) => t ? formatDateTime(t) : '-'
     .task-name {
       font-weight: 500;
       color: var(--el-text-color-primary);
+    }
+  }
+
+  // Modern compact table
+  .list-card {
+    :deep(.el-table) {
+      --el-table-header-bg-color: var(--el-fill-color-light);
+      --el-table-header-text-color: var(--el-text-color-regular);
+      --el-table-row-hover-bg-color: var(--el-fill-color-lighter);
+
+      th.el-table__cell {
+        font-weight: 600;
+        font-size: 12px;
+        padding: 10px 0;
+      }
+
+      td.el-table__cell {
+        font-size: 13px;
+        padding: 10px 0;
+      }
     }
   }
 }

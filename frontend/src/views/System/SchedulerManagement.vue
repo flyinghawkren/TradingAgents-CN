@@ -19,12 +19,12 @@
           </el-statistic>
           <el-statistic title="运行中" :value="stats.running_jobs">
             <template #prefix>
-              <el-icon color="#67C23A"><VideoPlay /></el-icon>
+              <el-icon color="var(--el-color-success)"><VideoPlay /></el-icon>
             </template>
           </el-statistic>
           <el-statistic title="已暂停" :value="stats.paused_jobs">
             <template #prefix>
-              <el-icon color="#E6A23C"><VideoPause /></el-icon>
+              <el-icon color="var(--el-color-warning)"><VideoPause /></el-icon>
             </template>
           </el-statistic>
         </div>
@@ -562,7 +562,7 @@
           <el-text type="danger">{{ currentExecution.error_message }}</el-text>
         </el-descriptions-item>
         <el-descriptions-item label="错误堆栈" v-if="currentExecution.traceback">
-          <pre style="max-height: 300px; overflow-y: auto; background: #f5f5f5; padding: 12px; border-radius: 4px;">{{ currentExecution.traceback }}</pre>
+          <pre style="max-height: 300px; overflow-y: auto; background: var(--el-fill-color-light); padding: 12px; border-radius: 4px;">{{ currentExecution.traceback }}</pre>
         </el-descriptions-item>
       </el-descriptions>
 
@@ -1106,8 +1106,19 @@ onMounted(() => {
 .scheduler-management {
   padding: 20px;
 
+  :deep(.el-card) {
+    --el-card-border-radius: 12px;
+    --el-card-border-color: var(--el-border-color-lighter);
+  }
+
   .header-card {
     margin-bottom: 16px;
+    background: linear-gradient(135deg, var(--el-color-primary-light-9) 0%, var(--el-fill-color-light) 100%);
+    border: 1px solid var(--el-border-color-lighter);
+
+    :deep(.el-card__body) {
+      padding: 20px 24px;
+    }
 
     .header-content {
       display: flex;
@@ -1119,16 +1130,17 @@ onMounted(() => {
         h2 {
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 10px;
           margin: 0 0 8px 0;
-          font-size: 24px;
+          font-size: 22px;
           font-weight: 600;
+          color: var(--el-text-color-primary);
         }
 
         .subtitle {
           margin: 0;
+          font-size: 13px;
           color: var(--el-text-color-secondary);
-          font-size: 14px;
         }
       }
 
@@ -1147,6 +1159,10 @@ onMounted(() => {
   .filter-card {
     margin-bottom: 16px;
 
+    :deep(.el-card__body) {
+      padding: 20px;
+    }
+
     .filter-form {
       margin-bottom: 0;
 
@@ -1157,6 +1173,26 @@ onMounted(() => {
   }
 
   .table-card {
+    :deep(.el-card__body) {
+      padding: 0;
+    }
+
+    :deep(.el-card__header) {
+      padding: 16px 20px;
+    }
+
+    :deep(.el-table) {
+      th.el-table__cell {
+        font-weight: 600;
+        font-size: 13px;
+        background-color: var(--el-fill-color-light);
+      }
+
+      td.el-table__cell {
+        padding: 10px 0;
+      }
+    }
+
     .job-name {
       display: flex;
       align-items: center;

@@ -70,15 +70,15 @@
                       >
                         <el-option label="🇨🇳 A股市场" value="A股">
                           <span>🇨🇳 A股市场</span>
-                          <span style="color: #909399; font-size: 12px; margin-left: 8px;">（6位数字）</span>
+                          <span style="color: var(--el-text-color-secondary); font-size: 12px; margin-left: 8px;">（6位数字）</span>
                         </el-option>
                         <el-option label="🇺🇸 美股市场" value="美股">
                           <span>🇺🇸 美股市场</span>
-                          <span style="color: #909399; font-size: 12px; margin-left: 8px;">（1-5个字母）</span>
+                          <span style="color: var(--el-text-color-secondary); font-size: 12px; margin-left: 8px;">（1-5个字母）</span>
                         </el-option>
                         <el-option label="🇭🇰 港股市场" value="港股">
                           <span>🇭🇰 港股市场</span>
-                          <span style="color: #909399; font-size: 12px; margin-left: 8px;">（1-5位数字）</span>
+                          <span style="color: var(--el-text-color-secondary); font-size: 12px; margin-left: 8px;">（1-5位数字）</span>
                         </el-option>
                       </el-select>
                     </el-form-item>
@@ -172,7 +172,6 @@
                     :loading="submitting"
                     :disabled="!analysisForm.stockCode.trim()"
                     class="submit-btn large-analysis-btn"
-                    style="width: 280px; height: 56px; font-size: 18px; font-weight: 700; border-radius: 16px;"
                   >
                     <el-icon><TrendCharts /></el-icon>
                     开始智能分析
@@ -184,7 +183,6 @@
                     size="large"
                     disabled
                     class="submit-btn large-analysis-btn"
-                    style="width: 280px; height: 56px; font-size: 18px; font-weight: 700; border-radius: 16px;"
                   >
                     <el-icon><Loading /></el-icon>
                     分析进行中...
@@ -195,8 +193,7 @@
                       type="success"
                       size="large"
                       @click="showResults = !showResults"
-                      class="submit-btn"
-                      style="width: 180px; height: 56px; font-size: 16px; font-weight: 700; border-radius: 16px;"
+class="submit-btn"
                     >
                       <el-icon><Document /></el-icon>
                       {{ showResults ? '隐藏结果' : '查看结果' }}
@@ -206,8 +203,7 @@
                       type="primary"
                       size="large"
                       @click="restartAnalysis"
-                      class="submit-btn"
-                      style="width: 180px; height: 56px; font-size: 16px; font-weight: 700; border-radius: 16px;"
+class="submit-btn"
                     >
                       <el-icon><Refresh /></el-icon>
                       重新分析
@@ -220,7 +216,6 @@
                     size="large"
                     @click="restartAnalysis"
                     class="submit-btn large-analysis-btn"
-                    style="width: 280px; height: 56px; font-size: 18px; font-weight: 700; border-radius: 16px;"
                   >
                     <el-icon><Refresh /></el-icon>
                     重新分析
@@ -395,7 +390,7 @@
                             >
                               ⚡快速
                             </el-tag>
-                            <span style="font-size: 12px; color: #909399;">{{ model.provider }}</span>
+                            <span style="font-size: 12px; color: var(--el-text-color-secondary);">{{ model.provider }}</span>
                           </div>
                         </div>
                       </el-option>
@@ -1615,7 +1610,7 @@ const goSimOrder = async () => {
 
     // 显示可编辑的确认对话框
     const actionText = recommendation.action === 'buy' ? '买入' : '卖出'
-    const actionColor = recommendation.action === 'buy' ? '#67C23A' : '#F56C6C'
+    const actionColor = recommendation.action === 'buy' ? 'var(--el-color-success)' : 'var(--el-color-danger)'
 
     // 创建一个响应式的消息组件
     const MessageComponent = {
@@ -1641,7 +1636,7 @@ const goSimOrder = async () => {
           h('div', { style: 'margin: 16px 0;' }, [
             h('p', { style: 'margin-bottom: 8px;' }, [
               h('strong', '交易价格：'),
-              h('span', { style: 'color: #909399; font-size: 12px; margin-left: 8px;' }, '(可修改)')
+              h('span', { style: 'color: var(--el-text-color-secondary); font-size: 12px; margin-left: 8px;' }, '(可修改)')
             ]),
             h(ElInputNumber, {
               modelValue: tradeForm.price,
@@ -1657,7 +1652,7 @@ const goSimOrder = async () => {
           h('div', { style: 'margin: 16px 0;' }, [
             h('p', { style: 'margin-bottom: 8px;' }, [
               h('strong', '交易数量：'),
-              h('span', { style: 'color: #909399; font-size: 12px; margin-left: 8px;' }, '(可修改，100股为单位)')
+              h('span', { style: 'color: var(--el-text-color-secondary); font-size: 12px; margin-left: 8px;' }, '(可修改，100股为单位)')
             ]),
             h(ElInputNumber, {
               modelValue: tradeForm.quantity,
@@ -1671,7 +1666,7 @@ const goSimOrder = async () => {
           ]),
           h('p', [
             h('strong', '预计金额：'),
-            h('span', { style: 'color: #409EFF; font-weight: bold;' }, `${estimatedAmount.value}元`)
+            h('span', { style: 'color: var(--el-color-primary); font-weight: bold;' }, `${estimatedAmount.value}元`)
           ]),
           h('p', [
             h('strong', '置信度：'),
@@ -1681,10 +1676,10 @@ const goSimOrder = async () => {
             h('strong', '风险等级：'),
             h('span', recommendation.riskLevel)
           ]),
-          recommendation.action === 'buy' ? h('p', { style: 'color: #909399; font-size: 12px; margin-top: 12px;' },
+          recommendation.action === 'buy' ? h('p', { style: 'color: var(--el-text-color-secondary); font-size: 12px; margin-top: 12px;' },
             `可用资金：${typeof account.cash === 'number' ? account.cash.toFixed(2) : account.cash}元，最大可买：${maxQuantity}股`
           ) : null,
-          recommendation.action === 'sell' ? h('p', { style: 'color: #909399; font-size: 12px; margin-top: 12px;' },
+          recommendation.action === 'sell' ? h('p', { style: 'color: var(--el-text-color-secondary); font-size: 12px; margin-top: 12px;' },
             `当前持仓：${maxQuantity}股`
           ) : null
         ])
@@ -2280,33 +2275,36 @@ onMounted(async () => {
   padding: 24px;
 
   .page-header {
-    margin-bottom: 32px;
+    margin-bottom: 24px;
+    background: linear-gradient(135deg, var(--el-color-primary-light-9) 0%, var(--el-fill-color-light) 100%);
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-lighter);
+    padding: 20px 24px;
 
     .header-content {
-      background: var(--el-bg-color);
-      padding: 32px;
-      border-radius: 16px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
     .title-section {
       .page-title {
         display: flex;
         align-items: center;
-        font-size: 32px;
-        font-weight: 700;
-        color: #1a202c;
-        margin: 0 0 8px 0;
+        gap: 10px;
+        font-size: 22px;
+        font-weight: 600;
+        color: var(--el-text-color-primary);
+        margin: 0 0 4px 0;
 
         .title-icon {
-          margin-right: 12px;
-          color: #3b82f6;
+          color: var(--el-color-primary);
         }
       }
 
       .page-description {
-        font-size: 16px;
-        color: #64748b;
+        font-size: 13px;
+        color: var(--el-text-color-secondary);
         margin: 0;
       }
     }
@@ -2314,15 +2312,14 @@ onMounted(async () => {
 
   .analysis-container {
     .main-form-card, .config-card {
-      border-radius: 16px;
-      border: none;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      border-radius: 12px;
+      border: 1px solid var(--el-border-color-lighter);
 
       :deep(.el-card__header) {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border-radius: 16px 16px 0 0;
-        padding: 20px 24px;
+        background: var(--el-fill-color-light);
+        color: var(--el-text-color-primary);
+        border-bottom: 1px solid var(--el-border-color-lighter);
+        padding: 16px 20px;
 
         .card-header {
           display: flex;
@@ -2331,31 +2328,31 @@ onMounted(async () => {
 
           h3 {
             margin: 0;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 600;
           }
         }
       }
 
       :deep(.el-card__body) {
-        padding: 24px;
+        padding: 20px;
       }
     }
 
     .analysis-form {
       .form-section {
-        margin-bottom: 32px;
+        margin-bottom: 24px;
         width: 100%;
         display: flex;
         flex-direction: column;
 
         .section-title {
-          font-size: 16px;
+          font-size: 14px;
           font-weight: 600;
-          color: #1a202c;
-          margin: 0 0 16px 0;
+          color: var(--el-text-color-primary);
+          margin: 0 0 12px 0;
           padding-bottom: 8px;
-          border-bottom: 2px solid #e2e8f0;
+          border-bottom: 1px solid var(--el-border-color-lighter);
         }
       }
 
@@ -2367,7 +2364,7 @@ onMounted(async () => {
 
         &.is-error {
           :deep(.el-input__inner) {
-            border-color: #f56c6c;
+            border-color: var(--el-color-danger);
           }
         }
       }
@@ -2378,7 +2375,7 @@ onMounted(async () => {
         gap: 4px;
         margin-top: 8px;
         font-size: 12px;
-        color: #f56c6c;
+        color: var(--el-color-danger);
 
         .el-icon {
           font-size: 14px;
@@ -2391,7 +2388,7 @@ onMounted(async () => {
         gap: 4px;
         margin-top: 8px;
         font-size: 12px;
-        color: #67c23a;
+        color: var(--el-color-success);
 
         .el-icon {
           font-size: 14px;
@@ -2407,23 +2404,24 @@ onMounted(async () => {
           display: flex;
           align-items: center;
           padding: 16px;
-          border: 2px solid #e2e8f0;
+          border: 1px solid var(--el-border-color-lighter);
           border-radius: 12px;
           cursor: pointer;
           transition: all 0.3s ease;
+          background: var(--el-bg-color);
 
           &:hover {
-            border-color: #3b82f6;
+            border-color: var(--el-color-primary);
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+            box-shadow: var(--el-box-shadow-light);
           }
 
           &.active {
-            border-color: #3b82f6;
-            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-            color: #1e40af;
+            border-color: var(--el-color-primary);
+            background: var(--el-color-primary-light-9);
+            color: var(--el-color-primary);
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.15);
+            box-shadow: var(--el-box-shadow-light);
           }
 
           .depth-icon {
@@ -2460,23 +2458,24 @@ onMounted(async () => {
           display: flex;
           align-items: center;
           padding: 16px;
-          border: 2px solid #e2e8f0;
+          border: 1px solid var(--el-border-color-lighter);
           border-radius: 12px;
           cursor: pointer;
           transition: all 0.3s ease;
+          background: var(--el-bg-color);
 
           &:hover {
-            border-color: #3b82f6;
+            border-color: var(--el-color-primary);
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+            box-shadow: var(--el-box-shadow-light);
           }
 
           &.active {
-            border-color: #3b82f6;
-            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-            color: #1e40af;
+            border-color: var(--el-color-primary);
+            background: var(--el-color-primary-light-9);
+            color: var(--el-color-primary);
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.15);
+            box-shadow: var(--el-box-shadow-light);
           }
 
           &.disabled {
@@ -2486,7 +2485,7 @@ onMounted(async () => {
             &:hover {
               transform: none;
               box-shadow: none;
-              border-color: #e2e8f0;
+              border-color: var(--el-border-color-lighter);
             }
           }
 
@@ -2494,7 +2493,7 @@ onMounted(async () => {
             width: 48px;
             height: 48px;
             border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
+            background: var(--el-fill-color);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -2519,12 +2518,12 @@ onMounted(async () => {
           .analyst-check {
             .check-icon {
               font-size: 20px;
-              color: #3b82f6;
+              color: var(--el-color-primary);
             }
           }
 
           &.active .analyst-check .check-icon {
-            color: #1e40af;
+            color: var(--el-color-primary);
           }
         }
       }
@@ -2533,12 +2532,12 @@ onMounted(async () => {
     .config-card {
       .config-content {
         .config-section {
-          margin-bottom: 24px;
+          margin-bottom: 20px;
 
           .config-title {
             font-size: 14px;
             font-weight: 600;
-            color: #1a202c;
+            color: var(--el-text-color-primary);
             margin: 0 0 12px 0;
             display: flex;
             align-items: center;
@@ -2547,7 +2546,7 @@ onMounted(async () => {
 
           .model-config {
             .model-item {
-              margin-bottom: 16px;
+              margin-bottom: 12px;
 
               .model-label {
                 display: flex;
@@ -2555,10 +2554,10 @@ onMounted(async () => {
                 justify-content: space-between;
                 margin-bottom: 8px;
                 font-size: 13px;
-                color: #374151;
+                color: var(--el-text-color-regular);
 
                 .help-icon {
-                  color: #9ca3af;
+                  color: var(--el-text-color-placeholder);
                   cursor: help;
                 }
               }
@@ -2571,7 +2570,7 @@ onMounted(async () => {
               align-items: center;
               justify-content: space-between;
               padding: 12px 0;
-              border-bottom: 1px solid #f3f4f6;
+              border-bottom: 1px solid var(--el-border-color-lighter);
 
               &:last-child {
                 border-bottom: none;
@@ -2581,14 +2580,14 @@ onMounted(async () => {
                 .option-name {
                   font-size: 14px;
                   font-weight: 500;
-                  color: #374151;
+                  color: var(--el-text-color-regular);
                   display: block;
                   margin-bottom: 2px;
                 }
 
                 .option-desc {
                   font-size: 12px;
-                  color: #6b7280;
+                  color: var(--el-text-color-secondary);
                 }
               }
             }
@@ -2597,18 +2596,18 @@ onMounted(async () => {
           .custom-input {
             :deep(.el-textarea__inner) {
               border-radius: 8px;
-              border: 1px solid #d1d5db;
+              border: 1px solid var(--el-border-color);
 
               &:focus {
-                border-color: #3b82f6;
-                box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+                border-color: var(--el-color-primary);
+                box-shadow: 0 0 0 1px var(--el-color-primary-light-8);
               }
             }
           }
 
           .input-help {
             font-size: 12px;
-            color: #6b7280;
+            color: var(--el-text-color-secondary);
             margin-top: 8px;
           }
 
@@ -2619,41 +2618,10 @@ onMounted(async () => {
             margin-top: 24px !important;
             width: 100% !important;
             text-align: center !important;
+            gap: 12px;
 
             .submit-btn.el-button {
-              width: 280px !important;
-              height: 56px !important;
-              font-size: 18px !important;
-              font-weight: 700 !important;
-              background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
-              border: none !important;
-              border-radius: 16px !important;
               transition: all 0.3s ease !important;
-              box-shadow: 0 4px 15px rgba(59, 130, 246, 0.2) !important;
-              min-width: 280px !important;
-              max-width: 280px !important;
-
-              &:hover {
-                transform: translateY(-3px) !important;
-                box-shadow: 0 12px 30px rgba(59, 130, 246, 0.4) !important;
-                background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
-              }
-
-              &:disabled {
-                opacity: 0.6 !important;
-                transform: none !important;
-                box-shadow: 0 4px 15px rgba(59, 130, 246, 0.1) !important;
-              }
-
-              .el-icon {
-                margin-right: 8px !important;
-                font-size: 20px !important;
-              }
-
-              span {
-                font-size: 18px !important;
-                font-weight: 700 !important;
-              }
             }
           }
         }
@@ -2667,39 +2635,12 @@ onMounted(async () => {
 
       .submit-btn {
         flex: 1;
-        height: 48px;
-        font-size: 16px;
-        font-weight: 600;
-        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-        border: none;
-        border-radius: 12px;
-        transition: all 0.3s ease;
-
-        &:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
-        }
-
-        &:disabled {
-          opacity: 0.6;
-          transform: none;
-          box-shadow: none;
-        }
       }
 
       .reset-btn {
         height: 48px;
         font-size: 16px;
-        border-radius: 12px;
-        border: 2px solid #e5e7eb;
-        color: #6b7280;
-        transition: all 0.3s ease;
-
-        &:hover {
-          border-color: #d1d5db;
-          color: #374151;
-          transform: translateY(-1px);
-        }
+        border-radius: 8px;
       }
     }
   }
@@ -2710,64 +2651,64 @@ onMounted(async () => {
   display: flex;
   align-items: flex-start;
   padding: 12px 0;
-  border-left: 3px solid #e5e7eb;
+  border-left: 3px solid var(--el-border-color);
   margin-left: 15px;
   position: relative;
   transition: all 0.3s ease;
 
   &.step-completed {
-    border-left-color: #10b981;
+    border-left-color: var(--el-color-success);
 
     .step-icon {
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      background: var(--el-color-success);
       color: white;
-      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+      box-shadow: var(--el-box-shadow-light);
     }
 
     .step-title {
-      color: #10b981;
+      color: var(--el-color-success);
       font-weight: 600;
     }
 
     .step-description {
-      color: #059669;
+      color: var(--el-color-success);
     }
   }
 
   &.step-current {
-    border-left-color: #3b82f6;
-    background: linear-gradient(90deg, rgba(59, 130, 246, 0.05) 0%, transparent 100%);
+    border-left-color: var(--el-color-primary);
+    background: var(--el-color-primary-light-9);
 
     .step-icon {
-      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      background: var(--el-color-primary);
       color: white;
-      box-shadow: 0 2px 12px rgba(59, 130, 246, 0.4);
+      box-shadow: var(--el-box-shadow-light);
     }
 
     .step-title {
-      color: #3b82f6;
+      color: var(--el-color-primary);
       font-weight: 700;
     }
 
     .step-description {
-      color: #1d4ed8;
+      color: var(--el-color-primary);
       font-weight: 500;
     }
   }
 
   &.step-pending {
     .step-icon {
-      background: #f3f4f6;
-      color: #9ca3af;
-      border: 2px solid #e5e7eb;
+      background: var(--el-fill-color-light);
+      color: var(--el-text-color-placeholder);
+      border: 2px solid var(--el-border-color);
     }
 
     .step-title {
-      color: #6b7280;
+      color: var(--el-text-color-secondary);
     }
 
     .step-description {
-      color: #9ca3af;
+      color: var(--el-text-color-placeholder);
     }
   }
 }
@@ -2796,7 +2737,7 @@ onMounted(async () => {
 }
 
 .pending-icon {
-  color: #9ca3af;
+  color: var(--el-text-color-placeholder);
 }
 
 .step-content {
@@ -2847,39 +2788,7 @@ onMounted(async () => {
 }
 
 .large-analysis-btn.el-button {
-  width: 280px !important;
-  height: 56px !important;
-  font-size: 18px !important;
-  font-weight: 700 !important;
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
-  border: none !important;
-  border-radius: 16px !important;
   transition: all 0.3s ease !important;
-  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.2) !important;
-  min-width: 280px !important;
-  max-width: 280px !important;
-}
-
-.large-analysis-btn.el-button:hover {
-  transform: translateY(-3px) !important;
-  box-shadow: 0 12px 30px rgba(59, 130, 246, 0.4) !important;
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
-}
-
-.large-analysis-btn.el-button:disabled {
-  opacity: 0.6 !important;
-  transform: none !important;
-  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.1) !important;
-}
-
-.large-analysis-btn.el-button .el-icon {
-  margin-right: 8px !important;
-  font-size: 20px !important;
-}
-
-.large-analysis-btn.el-button span {
-  font-size: 18px !important;
-  font-weight: 700 !important;
 }
 
 /* 进度显示样式 */
@@ -2895,7 +2804,7 @@ onMounted(async () => {
 
 .progress-card .progress-header h4 {
   margin: 0;
-  color: #1f2937;
+  color: var(--el-text-color-primary);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -2932,7 +2841,7 @@ onMounted(async () => {
   padding: 12px;
   background: var(--el-fill-color-light);
   border-radius: 8px;
-  border: 1px solid var(--el-border-color);
+  border: 1px solid var(--el-border-color-lighter);
 }
 
 .stat-label {
@@ -2960,7 +2869,7 @@ onMounted(async () => {
   }
 
   :deep(.el-progress-bar__inner) {
-    background: linear-gradient(90deg, #3b82f6 0%, #1d4ed8 100%);
+    background: var(--el-color-primary);
     border-radius: 8px;
     transition: width 0.6s ease;
   }
@@ -2974,7 +2883,7 @@ onMounted(async () => {
 /* 当前任务信息 */
 .current-task-info {
   background: var(--el-fill-color-light);
-  border: 1px solid #3b82f6;
+  border: 1px solid var(--el-color-primary-light-7);
   border-radius: 12px;
   padding: 16px;
   margin-bottom: 24px;
@@ -2986,31 +2895,31 @@ onMounted(async () => {
   gap: 8px;
   font-size: 16px;
   font-weight: 600;
-  color: #1e40af;
+  color: var(--el-color-primary);
   margin-bottom: 8px;
 }
 
 .task-icon {
-  color: #3b82f6;
+  color: var(--el-color-primary);
 }
 
 .task-description {
   font-size: 14px;
-  color: #1e40af;
+  color: var(--el-text-color-regular);
   line-height: 1.5;
 }
 
 /* 分析步骤 */
 .analysis-steps {
   background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color);
+  border: 1px solid var(--el-border-color-lighter);
   border-radius: 12px;
   padding: 20px;
 }
 
 .steps-title {
   margin: 0 0 16px 0;
-  color: #1e293b;
+  color: var(--el-text-color-primary);
   font-size: 16px;
   font-weight: 600;
 }
@@ -3033,7 +2942,7 @@ onMounted(async () => {
 
 .results-card .results-header h3 {
   margin: 0;
-  color: #1f2937;
+  color: var(--el-text-color-primary);
 }
 
 .results-card .result-meta {
@@ -3048,16 +2957,15 @@ onMounted(async () => {
 }
 
 .risk-disclaimer :deep(.el-alert) {
-  background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%);
-  border: 2px solid #ffc107;
+  background: var(--el-color-warning-light-9);
+  border: 1px solid var(--el-color-warning-light-7);
   border-radius: 12px;
   padding: 16px 20px;
-  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.2);
 }
 
 .risk-disclaimer :deep(.el-alert__icon) {
   font-size: 24px;
-  color: #ff6b00;
+  color: var(--el-color-warning);
 }
 
 .disclaimer-content {
@@ -3070,18 +2978,18 @@ onMounted(async () => {
 
 .disclaimer-icon {
   font-size: 24px;
-  color: #ff6b00;
+  color: var(--el-color-warning);
   flex-shrink: 0;
   animation: pulse 2s ease-in-out infinite;
 }
 
 .disclaimer-text {
-  color: #856404;
+  color: var(--el-text-color-primary);
   flex: 1;
 }
 
 .disclaimer-text strong {
-  color: #d63031;
+  color: var(--el-color-danger);
   font-size: 16px;
   font-weight: 700;
 }
@@ -3113,13 +3021,13 @@ onMounted(async () => {
 }
 
 .decision-section h4 {
-  color: #1f2937;
+  color: var(--el-text-color-primary);
   margin-bottom: 16px;
 }
 
 .decision-card {
   background: var(--el-fill-color-light);
-  border: 1px solid var(--el-border-color);
+  border: 1px solid var(--el-border-color-lighter);
   border-radius: 12px;
   padding: 20px;
 }
@@ -3139,7 +3047,7 @@ onMounted(async () => {
 
 .decision-action .label {
   font-weight: 600;
-  color: #374151;
+  color: var(--el-text-color-regular);
 }
 
 .decision-metrics {
@@ -3155,25 +3063,25 @@ onMounted(async () => {
 
 .metric-item .label {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--el-text-color-secondary);
   margin-bottom: 4px;
 }
 
 .metric-item .value {
   font-size: 16px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--el-text-color-primary);
 }
 
 .decision-reasoning h5 {
   margin: 0 0 8px 0;
-  color: #374151;
+  color: var(--el-text-color-regular);
   font-size: 14px;
 }
 
 .decision-reasoning p {
   margin: 0;
-  color: #6b7280;
+  color: var(--el-text-color-secondary);
   line-height: 1.6;
 }
 
@@ -3182,24 +3090,24 @@ onMounted(async () => {
 }
 
 .reports-section h4 {
-  color: #1f2937;
+  color: var(--el-text-color-primary);
   margin-bottom: 16px;
 }
 
 .report-content {
   line-height: 1.6;
-  color: #374151;
+  color: var(--el-text-color-regular);
 }
 
 .report-content h1,
 .report-content h2,
 .report-content h3 {
-  color: #1f2937;
+  color: var(--el-text-color-primary);
   margin: 16px 0 8px 0;
 }
 
 .report-content strong {
-  color: #1f2937;
+  color: var(--el-text-color-primary);
 }
 
 .result-actions {
@@ -3207,7 +3115,7 @@ onMounted(async () => {
   gap: 12px;
   justify-content: center;
   padding-top: 24px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--el-border-color-lighter);
 }
 
 /* 分析报告标签页样式 */
@@ -3221,9 +3129,8 @@ onMounted(async () => {
     margin: 0 0 20px 0;
     background: var(--el-fill-color-light);
     padding: 12px;
-    border-radius: 15px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    border: 1px solid var(--el-border-color);
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-lighter);
   }
 
   /* 标签页导航 */
@@ -3235,35 +3142,34 @@ onMounted(async () => {
 
   /* 单个标签页样式 */
   :deep(.el-tabs__item) {
-    height: 55px !important;
-    line-height: 55px !important;
-    padding: 0 20px !important;
+    height: 48px !important;
+    line-height: 48px !important;
+    padding: 0 16px !important;
     margin-right: 8px !important;
     background: var(--el-bg-color) !important;
-    border: 2px solid var(--el-border-color) !important;
-    border-radius: 12px !important;
+    border: 1px solid var(--el-border-color-lighter) !important;
+    border-radius: 8px !important;
     color: var(--el-text-color-regular) !important;
-    font-weight: 600 !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+    font-weight: 500 !important;
+    transition: all 0.3s ease !important;
+    box-shadow: var(--el-box-shadow-light) !important;
     position: relative !important;
     overflow: hidden !important;
-    border-bottom: 2px solid var(--el-border-color) !important; /* 确保底部边框存在 */
 
     &:hover {
       background: var(--el-fill-color-light) !important;
-      border-color: #2196f3 !important;
-      transform: translateY(-2px) scale(1.02) !important;
-      box-shadow: 0 4px 15px rgba(33,150,243,0.3) !important;
-      color: #1976d2 !important;
+      border-color: var(--el-color-primary) !important;
+      transform: translateY(-1px) !important;
+      box-shadow: var(--el-box-shadow) !important;
+      color: var(--el-color-primary) !important;
     }
 
     &.is-active {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+      background: var(--el-color-primary) !important;
       color: white !important;
-      border-color: #667eea !important;
-      box-shadow: 0 6px 20px rgba(102,126,234,0.4) !important;
-      transform: translateY(-3px) scale(1.05) !important;
+      border-color: var(--el-color-primary) !important;
+      box-shadow: var(--el-box-shadow) !important;
+      transform: translateY(-1px) !important;
 
       &::before {
         content: '';
@@ -3273,7 +3179,7 @@ onMounted(async () => {
         right: 0;
         bottom: 0;
         background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.1) 100%);
-        border-radius: 10px;
+        border-radius: 7px;
         pointer-events: none;
       }
     }
@@ -3285,23 +3191,22 @@ onMounted(async () => {
   }
 
   :deep(.el-tab-pane) {
-    padding: 25px;
+    padding: 20px;
     background: var(--el-bg-color);
-    border-radius: 15px;
-    border: 1px solid var(--el-border-color);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-lighter);
+    box-shadow: var(--el-box-shadow-light);
     margin-top: 10px;
   }
 }
 
 /* 报告头部样式 */
 .report-header {
-  margin-bottom: 25px;
-  padding: 20px;
+  margin-bottom: 20px;
+  padding: 16px;
   background: var(--el-fill-color-light);
-  border-radius: 15px;
-  border-left: 5px solid #667eea;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  border-radius: 12px;
+  border-left: 4px solid var(--el-color-primary);
 
   .report-title {
     display: flex;
@@ -3314,15 +3219,15 @@ onMounted(async () => {
     }
 
     .report-name {
-      font-size: 20px;
-      font-weight: 700;
-      color: #495057;
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--el-text-color-primary);
     }
   }
 
   .report-description {
-    color: #6c757d;
-    font-size: 16px;
+    color: var(--el-text-color-secondary);
+    font-size: 14px;
     line-height: 1.5;
     margin-left: 36px; /* 对齐图标后的文字 */
   }
@@ -3331,21 +3236,21 @@ onMounted(async () => {
 /* 报告内容包装器 */
 .report-content-wrapper {
   background: var(--el-bg-color);
-  padding: 25px;
+  padding: 20px;
   border-radius: 12px;
-  border: 1px solid var(--el-border-color);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  border: 1px solid var(--el-border-color-lighter);
+  box-shadow: var(--el-box-shadow-light);
 }
 
 /* 报告内容样式增强 */
 .report-content {
   line-height: 1.7;
-  color: #495057;
-  font-size: 16px;
+  color: var(--el-text-color-regular);
+  font-size: 15px;
 
   /* 标题样式 */
   h1, h2, h3, h4, h5, h6 {
-    color: #1f2937 !important;
+    color: var(--el-text-color-primary) !important;
     margin: 20px 0 12px 0 !important;
     font-weight: 600 !important;
   }
@@ -3363,13 +3268,13 @@ onMounted(async () => {
 
   /* 强调文本 */
   strong, b {
-    color: #1f2937 !important;
+    color: var(--el-text-color-primary) !important;
     font-weight: 600 !important;
   }
 
   /* 斜体文本 */
   em, i {
-    color: #4b5563 !important;
+    color: var(--el-text-color-secondary) !important;
     font-style: italic !important;
   }
 
@@ -3391,12 +3296,12 @@ onMounted(async () => {
     border-radius: 4px !important;
     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace !important;
     font-size: 14px !important;
-    color: #e11d48 !important;
+    color: var(--el-color-danger) !important;
   }
 
   /* 引用样式 */
   blockquote {
-    border-left: 4px solid #3b82f6 !important;
+    border-left: 4px solid var(--el-color-primary) !important;
     padding-left: 16px !important;
     margin: 16px 0 !important;
     background: var(--el-fill-color-light) !important;
@@ -3419,7 +3324,7 @@ onMounted(async () => {
   :deep(.el-alert__title) {
     font-size: 14px;
     line-height: 1.6;
-    color: #e6a23c;
+    color: var(--el-color-warning);
   }
 }
 </style>

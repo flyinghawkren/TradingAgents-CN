@@ -588,9 +588,34 @@ onMounted(() => {
 })
 </script>
 
-<style scoped>
-.paper-trading { padding: 16px; }
-.header { display:flex; align-items:center; justify-content:space-between; margin-bottom: 12px; }
-.title { display:flex; align-items:center; font-weight: 600; font-size: 16px; }
-.card-hd { font-weight: 600; }
+<style lang="scss" scoped>
+.paper-trading {
+  padding: 16px;
+
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+
+    .title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--el-text-color-primary);
+    }
+  }
+
+  .card-hd {
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+  }
+
+  :deep(.el-card) {
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-lighter);
+  }
+}
 </style>

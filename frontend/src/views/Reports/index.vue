@@ -492,26 +492,45 @@ onMounted(() => {
 <style lang="scss" scoped>
 .reports {
   .page-header {
-    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 28px;
+    padding: 20px 24px;
+    background: linear-gradient(135deg, var(--el-color-primary-light-9) 0%, var(--el-fill-color-light) 100%);
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-lighter);
 
     .page-title {
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 24px;
+      gap: 10px;
+      font-size: 22px;
       font-weight: 600;
       color: var(--el-text-color-primary);
-      margin: 0 0 8px 0;
+      margin: 0;
+
+      :deep(.el-icon) {
+        color: var(--el-color-primary);
+      }
     }
 
     .page-description {
-      color: var(--el-text-color-regular);
+      color: var(--el-text-color-secondary);
       margin: 0;
+      font-size: 13px;
     }
   }
 
   .filter-card {
-    margin-bottom: 24px;
+    margin-bottom: 20px;
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-lighter);
+    transition: box-shadow 0.3s ease;
+
+    &:hover {
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    }
 
     .action-buttons {
       display: flex;
@@ -521,6 +540,31 @@ onMounted(() => {
   }
 
   .reports-list-card {
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-lighter);
+    transition: box-shadow 0.3s ease;
+
+    &:hover {
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    }
+
+    :deep(.el-table) {
+      --el-table-header-bg-color: var(--el-fill-color-light);
+      --el-table-header-text-color: var(--el-text-color-regular);
+      --el-table-row-hover-bg-color: var(--el-fill-color-lighter);
+
+      th.el-table__cell {
+        font-weight: 600;
+        font-size: 12px;
+        padding: 10px 0;
+      }
+
+      td.el-table__cell {
+        font-size: 13px;
+        padding: 10px 0;
+      }
+    }
+
     .report-title {
       .report-subtitle {
         font-size: 12px;
@@ -532,7 +576,7 @@ onMounted(() => {
     .pagination-wrapper {
       display: flex;
       justify-content: center;
-      margin-top: 24px;
+      margin-top: 20px;
     }
   }
 }

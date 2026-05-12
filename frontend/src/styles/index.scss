@@ -1,6 +1,11 @@
-// 全局样式文件
+// ============================================================
+// TradingAgents-CN 全局样式
+// 统一全站字体、配色、组件视觉
+// ============================================================
+@import './variables.scss';
+@import './mixins.scss';
 
-// 重置样式
+// ---------------------- 基础重置 ----------------------
 * {
   box-sizing: border-box;
 }
@@ -8,93 +13,251 @@
 html, body {
   margin: 0;
   padding: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: $font-family-base;
+  font-size: $font-size-base;
+  color: $text-primary;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-// 优化标题样式（浅色主题）
+// ---------------------- 标题体系 ----------------------
 h1, h2, h3, h4, h5, h6 {
-  color: #1a202c;
-  font-weight: 600;
+  color: $text-primary;
+  font-weight: $font-weight-semibold;
+  line-height: $line-height-tight;
+  margin: 0;
 }
 
-h1 {
-  font-size: 32px;
-}
+h1 { font-size: $font-size-4xl; }
+h2 { font-size: $font-size-3xl; }
+h3 { font-size: $font-size-2xl; }
+h4 { font-size: $font-size-xl; }
+h5 { font-size: $font-size-lg; }
+h6 { font-size: $font-size-md; }
 
-h2 {
-  font-size: 28px;
-}
+// ---------------------- Element Plus 全局覆盖 ----------------------
 
-h3 {
-  font-size: 24px;
-}
+// 卡片
+.el-card {
+  border-radius: $radius-xl !important;
+  border: 1px solid $border-lighter !important;
 
-h4 {
-  font-size: 20px;
-}
+  &.is-always-shadow,
+  &.is-hover-shadow:hover {
+    box-shadow: $shadow-md !important;
+  }
 
-h5 {
-  font-size: 18px;
-}
+  .el-card__header {
+    padding: $space-4 $space-5 !important;
+    border-bottom: 1px solid $border-lighter !important;
+    background: $bg-fill-light;
+    border-radius: $radius-xl $radius-xl 0 0 !important;
 
-h6 {
-  font-size: 16px;
-}
+    h1, h2, h3, h4, h5, h6 {
+      color: $text-primary;
+      font-weight: $font-weight-semibold;
+      margin: 0;
+      font-size: $font-size-lg;
+    }
+  }
 
-// 优化卡片标题
-.el-card__header {
-  h1, h2, h3, h4, h5, h6 {
-    color: #1a202c;
-    font-weight: 600;
-    margin: 0;
+  .el-card__body {
+    padding: $space-5 !important;
   }
 }
 
-// 优化页面标题
-.page-title,
-.section-title,
-.card-title {
-  color: #1a202c !important;
-  font-weight: 600 !important;
+// 表格
+.el-table {
+  --el-table-header-bg-color: #{$bg-fill-light};
+  --el-table-header-text-color: #{$text-regular};
+  --el-table-row-hover-bg-color: #{$bg-fill-lighter};
+  --el-table-border-color: #{$border-extra-light};
+  font-size: $font-size-sm;
+
+  th.el-table__cell {
+    font-weight: $font-weight-semibold !important;
+    font-size: $font-size-xs !important;
+    padding: $space-3 $space-2 !important;
+    color: $text-regular !important;
+    background: $bg-fill-light !important;
+  }
+
+  td.el-table__cell {
+    font-size: $font-size-sm !important;
+    padding: $space-3 $space-2 !important;
+    color: $text-primary !important;
+  }
+
+  .el-table__empty-block {
+    padding: $space-8 0;
+  }
 }
 
-// 全局工具类
-.text-center {
-  text-align: center;
+// 按钮
+.el-button {
+  border-radius: $radius-md !important;
+  font-weight: $font-weight-medium;
+  transition: all $transition-fast;
+
+  &--primary {
+    box-shadow: 0 2px 8px rgba(64, 158, 255, 0.25);
+
+    &:hover {
+      box-shadow: 0 4px 12px rgba(64, 158, 255, 0.35);
+      transform: translateY(-1px);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+  }
 }
 
-.text-left {
-  text-align: left;
+// 输入框
+.el-input {
+  .el-input__wrapper {
+    border-radius: $radius-md !important;
+    box-shadow: 0 0 0 1px $border-light inset !important;
+    transition: box-shadow $transition-fast;
+
+    &:hover,
+    &.is-focus {
+      box-shadow: 0 0 0 1px var(--el-color-primary) inset !important;
+    }
+  }
 }
 
-.text-right {
-  text-align: right;
+// 标签
+.el-tag {
+  border-radius: $radius-sm !important;
+  font-weight: $font-weight-medium;
 }
 
-.flex {
-  display: flex;
+// 分页
+.el-pagination {
+  justify-content: center;
+  padding-top: $space-5 !important;
+
+  .el-pagination__sizes .el-input__wrapper {
+    border-radius: $radius-sm !important;
+  }
 }
 
-.flex-center {
+// 对话框
+.el-dialog {
+  border-radius: $radius-xl !important;
+  overflow: hidden;
+
+  .el-dialog__header {
+    padding: $space-5 $space-6 !important;
+    border-bottom: 1px solid $border-lighter;
+    background: $bg-fill-light;
+    margin-right: 0 !important;
+
+    .el-dialog__title {
+      font-size: $font-size-lg;
+      font-weight: $font-weight-semibold;
+      color: $text-primary;
+    }
+  }
+
+  .el-dialog__body {
+    padding: $space-5 $space-6 !important;
+  }
+
+  .el-dialog__footer {
+    padding: $space-4 $space-6 !important;
+    border-top: 1px solid $border-lighter;
+  }
+}
+
+// 消息提示
+.el-message {
+  border-radius: $radius-lg !important;
+  box-shadow: $shadow-lg !important;
+}
+
+// ---------------------- 全局工具类 ----------------------
+
+// 页面布局
+.page-header-modern {
+  @include page-header;
+  @include page-header-content;
+}
+
+.page-header-stats {
+  @include page-header-stats;
+}
+
+// 内容区块
+.block-card-modern {
+  @include block-card;
+}
+
+.block-header-modern {
+  @include block-card-header;
+}
+
+.block-title-group-modern {
+  @include block-title-group;
+}
+
+// 表格
+.table-modern {
+  @include modern-table;
+}
+
+// 操作按钮
+.action-buttons-modern {
+  @include action-buttons;
+}
+
+// 空状态
+.empty-state-modern {
+  @include empty-state;
+}
+
+// 文本工具
+.text-primary { color: $text-primary !important; }
+.text-regular { color: $text-regular !important; }
+.text-secondary { color: $text-secondary !important; }
+.text-placeholder { color: $text-placeholder !important; }
+
+.font-medium { font-weight: $font-weight-medium !important; }
+.font-semibold { font-weight: $font-weight-semibold !important; }
+.font-bold { font-weight: $font-weight-bold !important; }
+
+// 渐变图标背景工具类
+.icon-gradient-stock { background: $icon-stock; color: #fff; }
+.icon-gradient-fund { background: $icon-fund; color: #fff; }
+.icon-gradient-wealth { background: $icon-wealth; color: #fff; }
+.icon-gradient-futures { background: $icon-futures; color: #fff; }
+.icon-gradient-spot { background: $icon-spot; color: #fff; }
+.icon-gradient-analysis { background: $icon-analysis; color: #fff; }
+.icon-gradient-report { background: $icon-report; color: #fff; }
+.icon-gradient-task { background: $icon-task; color: #fff; }
+.icon-gradient-setting { background: $icon-setting; color: #fff; }
+
+// ---------------------- 通用图标样式 ----------------------
+.icon-box {
+  width: 40px;
+  height: 40px;
+  border-radius: $radius-lg;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
 }
 
-.flex-between {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-// 响应式工具类
-@media (max-width: 768px) {
+// ---------------------- 响应式工具 ----------------------
+@media (max-width: $screen-md) {
   .mobile-hidden {
     display: none !important;
   }
 }
 
-@media (min-width: 769px) {
+@media (min-width: $screen-md) {
   .desktop-hidden {
     display: none !important;
   }

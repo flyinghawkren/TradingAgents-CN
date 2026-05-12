@@ -589,7 +589,7 @@ const applyToTrading = async () => {
 
     // 显示可编辑的确认对话框
     const actionText = recommendation.action === 'buy' ? '买入' : '卖出'
-    const actionColor = recommendation.action === 'buy' ? '#67C23A' : '#F56C6C'
+    const actionColor = recommendation.action === 'buy' ? 'var(--el-color-success)' : 'var(--el-color-danger)'
 
     // 创建一个响应式的消息组件
     const MessageComponent = {
@@ -602,13 +602,13 @@ const applyToTrading = async () => {
         return () => h('div', { style: 'line-height: 2;' }, [
           // 风险提示横幅
           h('div', {
-            style: 'background-color: #FEF0F0; border: 1px solid #F56C6C; border-radius: 4px; padding: 12px; margin-bottom: 16px;'
+            style: 'background-color: var(--el-color-danger-light-9); border: 1px solid var(--el-color-danger); border-radius: 4px; padding: 12px; margin-bottom: 16px;'
           }, [
-            h('div', { style: 'color: #F56C6C; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center;' }, [
+            h('div', { style: 'color: var(--el-color-danger); font-weight: 600; margin-bottom: 8px; display: flex; align-items: center;' }, [
               h('span', { style: 'font-size: 16px; margin-right: 6px;' }, '⚠️'),
               h('span', '风险提示')
             ]),
-            h('div', { style: 'color: #606266; font-size: 12px; line-height: 1.6;' }, [
+            h('div', { style: 'color: var(--el-text-color-regular); font-size: 12px; line-height: 1.6;' }, [
               h('p', { style: 'margin: 4px 0;' }, '• 本交易基于AI分析结果，仅供参考，不构成投资建议'),
               h('p', { style: 'margin: 4px 0;' }, '• 模拟交易使用虚拟资金，与实盘存在显著差异'),
               h('p', { style: 'margin: 4px 0;' }, '• 股票投资存在市场风险，可能导致本金损失'),
@@ -625,8 +625,8 @@ const applyToTrading = async () => {
           ]),
           recommendation.targetPrice ? h('p', [
             h('strong', '目标价格：'),
-            h('span', { style: 'color: #E6A23C;' }, `${recommendation.targetPrice.toFixed(2)}元`),
-            h('span', { style: 'color: #909399; font-size: 12px; margin-left: 8px;' }, '(仅供参考)')
+            h('span', { style: 'color: var(--el-color-warning);' }, `${recommendation.targetPrice.toFixed(2)}元`),
+            h('span', { style: 'color: var(--el-text-color-secondary); font-size: 12px; margin-left: 8px;' }, '(仅供参考)')
           ]) : null,
           h('p', [
             h('strong', '当前价格：'),
@@ -635,7 +635,7 @@ const applyToTrading = async () => {
           h('div', { style: 'margin: 16px 0;' }, [
             h('p', { style: 'margin-bottom: 8px;' }, [
               h('strong', '交易价格：'),
-              h('span', { style: 'color: #909399; font-size: 12px; margin-left: 8px;' }, '(可修改)')
+              h('span', { style: 'color: var(--el-text-color-secondary); font-size: 12px; margin-left: 8px;' }, '(可修改)')
             ]),
             h(ElInputNumber, {
               modelValue: tradeForm.price,
@@ -651,7 +651,7 @@ const applyToTrading = async () => {
           h('div', { style: 'margin: 16px 0;' }, [
             h('p', { style: 'margin-bottom: 8px;' }, [
               h('strong', '交易数量：'),
-              h('span', { style: 'color: #909399; font-size: 12px; margin-left: 8px;' }, '(可修改，100股为单位)')
+              h('span', { style: 'color: var(--el-text-color-secondary); font-size: 12px; margin-left: 8px;' }, '(可修改，100股为单位)')
             ]),
             h(ElInputNumber, {
               modelValue: tradeForm.quantity,
@@ -665,22 +665,22 @@ const applyToTrading = async () => {
           ]),
           h('p', [
             h('strong', '预计金额：'),
-            h('span', { style: 'color: #409EFF; font-weight: bold;' }, `${estimatedAmount.value}元`)
+            h('span', { style: 'color: var(--el-color-primary); font-weight: bold;' }, `${estimatedAmount.value}元`)
           ]),
           h('p', [
             h('strong', '模型置信度：'),
             h('span', `${(recommendation.confidence * 100).toFixed(1)}%`),
-            h('span', { style: 'color: #909399; font-size: 12px; margin-left: 8px;' }, '(不代表实际成功率)')
+            h('span', { style: 'color: var(--el-text-color-secondary); font-size: 12px; margin-left: 8px;' }, '(不代表实际成功率)')
           ]),
           h('p', [
             h('strong', '风险评估：'),
             h('span', recommendation.riskLevel),
-            h('span', { style: 'color: #909399; font-size: 12px; margin-left: 8px;' }, '(实际风险可能更高)')
+            h('span', { style: 'color: var(--el-text-color-secondary); font-size: 12px; margin-left: 8px;' }, '(实际风险可能更高)')
           ]),
-          recommendation.action === 'buy' ? h('p', { style: 'color: #909399; font-size: 12px; margin-top: 12px;' },
+          recommendation.action === 'buy' ? h('p', { style: 'color: var(--el-text-color-secondary); font-size: 12px; margin-top: 12px;' },
             `可用资金：${availableCash.toFixed(2)}元，最大可买：${maxQuantity}股`
           ) : null,
-          recommendation.action === 'sell' ? h('p', { style: 'color: #909399; font-size: 12px; margin-top: 12px;' },
+          recommendation.action === 'sell' ? h('p', { style: 'color: var(--el-text-color-secondary); font-size: 12px; margin-top: 12px;' },
             `当前持仓：${maxQuantity}股`
           ) : null
         ])
@@ -885,10 +885,10 @@ const normalizeConfidenceScore = (score: number) => {
 }
 
 const getConfidenceColor = (score: number) => {
-  if (score >= 80) return '#67C23A' // 较高 - 绿色
-  if (score >= 60) return '#409EFF' // 中上 - 蓝色
-  if (score >= 40) return '#E6A23C' // 中等 - 橙色
-  return '#F56C6C' // 较低 - 红色
+  if (score >= 80) return 'var(--el-color-success)' // 较高 - 绿色
+  if (score >= 60) return 'var(--el-color-primary)' // 中上 - 蓝色
+  if (score >= 40) return 'var(--el-color-warning)' // 中等 - 橙色
+  return 'var(--el-color-danger)' // 较低 - 红色
 }
 
 const getConfidenceLabel = (score: number) => {
@@ -912,13 +912,13 @@ const getRiskStars = (riskLevel: string) => {
 
 const getRiskColor = (riskLevel: string) => {
   const colorMap: Record<string, string> = {
-    '低': '#67C23A',      // 绿色
-    '中低': '#95D475',    // 浅绿色
-    '中等': '#E6A23C',    // 橙色
-    '中高': '#F56C6C',    // 红色
-    '高': '#F56C6C'       // 深红色
+    '低': 'var(--el-color-success)',      // 绿色
+    '中低': 'var(--el-color-success-light-3)',    // 浅绿色
+    '中等': 'var(--el-color-warning)',    // 橙色
+    '中高': 'var(--el-color-danger)',    // 红色
+    '高': 'var(--el-color-danger)'       // 深红色
   }
-  return colorMap[riskLevel] || '#E6A23C'
+  return colorMap[riskLevel] || 'var(--el-color-warning)'
 }
 
 watch(
@@ -942,6 +942,10 @@ watch(
   .report-content {
     .report-header {
       margin-bottom: 24px;
+      background: linear-gradient(135deg, var(--el-color-primary-light-9) 0%, var(--el-fill-color-light) 100%);
+      border-radius: 12px;
+      border: 1px solid var(--el-border-color-lighter);
+      overflow: hidden;
 
       .header-content {
         display: flex;
@@ -953,7 +957,7 @@ watch(
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 24px;
+            font-size: 22px;
             font-weight: 600;
             color: var(--el-text-color-primary);
             margin: 0 0 12px 0;
@@ -989,16 +993,16 @@ watch(
     }
 
     .risk-disclaimer :deep(.el-alert) {
-      background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%);
-      border: 2px solid #ffc107;
+      background: linear-gradient(135deg, var(--el-color-warning-light-9) 0%, var(--el-color-warning-light-8) 100%);
+      border: 1px solid var(--el-color-warning-light-5);
       border-radius: 12px;
       padding: 16px 20px;
-      box-shadow: 0 4px 12px rgba(255, 193, 7, 0.2);
+      box-shadow: var(--el-box-shadow-lighter);
     }
 
     .risk-disclaimer :deep(.el-alert__icon) {
       font-size: 24px;
-      color: #ff6b00;
+      color: var(--el-color-warning);
     }
 
     .disclaimer-content {
@@ -1011,18 +1015,18 @@ watch(
 
     .disclaimer-icon {
       font-size: 24px;
-      color: #ff6b00;
+      color: var(--el-color-warning);
       flex-shrink: 0;
       animation: pulse 2s ease-in-out infinite;
     }
 
     .disclaimer-text {
-      color: #856404;
+      color: var(--el-color-warning-dark-2);
       flex: 1;
     }
 
     .disclaimer-text strong {
-      color: #d63031;
+      color: var(--el-color-danger);
       font-size: 16px;
       font-weight: 700;
     }
@@ -1053,6 +1057,14 @@ watch(
     .metrics-card,
     .modules-card {
       margin-bottom: 24px;
+      border-radius: 12px;
+      border: 1px solid var(--el-border-color-lighter);
+      overflow: hidden;
+      transition: box-shadow 0.3s ease;
+
+      &:hover {
+        box-shadow: var(--el-box-shadow-light);
+      }
 
       .card-header {
         display: flex;
@@ -1071,13 +1083,13 @@ watch(
       .metric-item {
         text-align: center;
         padding: 24px;
-        border: 1px solid var(--el-border-color-light);
+        border: 1px solid var(--el-border-color-lighter);
         border-radius: 12px;
         background: var(--el-fill-color-blank);
         transition: all 0.3s ease;
 
         &:hover {
-          box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+          box-shadow: var(--el-box-shadow-light);
           transform: translateY(-2px);
         }
 
@@ -1161,11 +1173,11 @@ watch(
             font-size: 28px;
 
             .star-icon {
-              color: #DCDFE6;
+              color: var(--el-border-color);
               transition: all 0.3s ease;
 
               &.active {
-                color: #F7BA2A;
+                color: var(--el-color-warning);
                 animation: starPulse 0.6s ease-in-out;
               }
             }
@@ -1251,7 +1263,7 @@ watch(
     .module-content {
       .markdown-content {
         line-height: 1.6;
-        
+
         :deep(h1), :deep(h2), :deep(h3) {
           margin: 16px 0 8px 0;
           color: var(--el-text-color-primary);

@@ -179,7 +179,7 @@
               <el-checkbox v-model="importOverwrite">
                 覆盖现有数据
               </el-checkbox>
-              <div style="font-size: 12px; color: #909399; margin-top: 4px;">
+              <div style="font-size: 12px; color: var(--el-text-color-secondary); margin-top: 4px;">
                 ⚠️ 勾选后将删除现有数据再导入
               </div>
             </el-form-item>
@@ -210,17 +210,17 @@
               <template #default>
                 <div style="line-height: 1.8;">
                   <p style="margin: 8px 0;">由于数据量较大，Web 界面备份体验较差，建议使用 MongoDB 原生工具：</p>
-                  <div style="background: #f5f7fa; padding: 12px; border-radius: 4px; margin: 8px 0;">
+                  <div style="background: var(--el-fill-color-light); padding: 12px; border-radius: 4px; margin: 8px 0;">
                     <p style="margin: 4px 0; font-weight: bold;">📦 备份命令：</p>
-                    <code style="display: block; margin: 4px 0; color: #409eff;">
+                    <code style="display: block; margin: 4px 0; color: var(--el-color-primary);">
                       mongodump --uri="mongodb://localhost:27017" --db=tradingagents --out=./backup --gzip
                     </code>
                     <p style="margin: 12px 0 4px 0; font-weight: bold;">🔄 还原命令：</p>
-                    <code style="display: block; margin: 4px 0; color: #409eff;">
+                    <code style="display: block; margin: 4px 0; color: var(--el-color-primary);">
                       mongorestore --uri="mongodb://localhost:27017" --db=tradingagents --gzip ./backup/tradingagents
                     </code>
                   </div>
-                  <p style="margin: 8px 0; font-size: 12px; color: #909399;">
+                  <p style="margin: 8px 0; font-size: 12px; color: var(--el-text-color-secondary);">
                     💡 提示：请根据实际的 MongoDB 连接信息修改命令中的 URI
                   </p>
                 </div>
@@ -630,39 +630,57 @@ onMounted(async () => {
 .database-management {
   .page-header {
     margin-bottom: 24px;
+    padding: 20px 24px;
+    background: linear-gradient(135deg, var(--el-color-primary-light-9) 0%, var(--el-fill-color-light) 100%);
+    border: 1px solid var(--el-border-color-lighter);
+    border-radius: 12px;
 
     .page-title {
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 24px;
+      gap: 10px;
+      font-size: 22px;
       font-weight: 600;
       color: var(--el-text-color-primary);
       margin: 0 0 8px 0;
     }
 
     .page-description {
-      color: var(--el-text-color-regular);
+      font-size: 13px;
+      color: var(--el-text-color-secondary);
       margin: 0;
     }
   }
 
+  :deep(.el-card) {
+    --el-card-border-radius: 12px;
+    --el-card-border-color: var(--el-border-color-lighter);
+  }
+
   .connection-card {
+    :deep(.el-card__header) {
+      padding: 16px 20px;
+    }
+
+    :deep(.el-card__body) {
+      padding: 20px;
+    }
+
     .connection-status {
       .status-indicator {
         text-align: center;
         margin-bottom: 16px;
       }
-      
+
       .connection-info {
         margin-bottom: 16px;
-        
+
         p {
           margin: 4px 0;
           font-size: 14px;
         }
       }
-      
+
       .connection-actions {
         display: flex;
         gap: 8px;
@@ -672,16 +690,20 @@ onMounted(async () => {
   }
 
   .stat-card {
+    :deep(.el-card__body) {
+      padding: 20px;
+    }
+
     .stat-content {
       text-align: center;
-      
+
       .stat-value {
         font-size: 24px;
         font-weight: 600;
         color: var(--el-color-primary);
         margin-bottom: 8px;
       }
-      
+
       .stat-label {
         font-size: 14px;
         color: var(--el-text-color-regular);
@@ -690,21 +712,30 @@ onMounted(async () => {
   }
 
   .operations-card {
+    :deep(.el-card__header) {
+      padding: 16px 20px;
+    }
+
+    :deep(.el-card__body) {
+      padding: 20px;
+    }
+
     .operation-section {
       h4 {
         margin: 0 0 8px 0;
         font-size: 16px;
+        font-weight: 500;
       }
-      
+
       p {
         margin: 0 0 16px 0;
         font-size: 14px;
         color: var(--el-text-color-regular);
       }
-      
+
       .file-info {
         margin-top: 12px;
-        
+
         p {
           margin: 0 0 8px 0;
           font-size: 14px;
@@ -713,15 +744,22 @@ onMounted(async () => {
     }
   }
 
-
-
   .cleanup-card {
+    :deep(.el-card__header) {
+      padding: 16px 20px;
+    }
+
+    :deep(.el-card__body) {
+      padding: 20px;
+    }
+
     .cleanup-section {
       h4 {
         margin: 0 0 8px 0;
         font-size: 16px;
+        font-weight: 500;
       }
-      
+
       p {
         margin: 0 0 12px 0;
         font-size: 14px;

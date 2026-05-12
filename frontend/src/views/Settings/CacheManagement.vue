@@ -399,48 +399,68 @@ onMounted(() => {
 <style lang="scss" scoped>
 .cache-management {
   .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 24px;
+    padding: 20px 24px;
+    background: linear-gradient(135deg, var(--el-color-primary-light-9) 0%, var(--el-fill-color-light) 100%);
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-lighter);
 
     .page-title {
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 24px;
+      gap: 10px;
+      font-size: 22px;
       font-weight: 600;
       color: var(--el-text-color-primary);
       margin: 0 0 8px 0;
+
+      .el-icon {
+        color: var(--el-color-primary);
+      }
     }
 
     .page-description {
-      color: var(--el-text-color-regular);
+      font-size: 13px;
+      color: var(--el-text-color-secondary);
       margin: 0;
     }
+  }
+
+  .stats-card,
+  .operations-card,
+  .details-card {
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-lighter);
   }
 
   .stats-card {
     .stats-content {
       .stat-item {
         text-align: center;
-        
+
         .stat-value {
           font-size: 24px;
           font-weight: 600;
           color: var(--el-color-primary);
           margin-bottom: 4px;
         }
-        
+
         .stat-label {
           font-size: 14px;
           color: var(--el-text-color-regular);
         }
       }
-      
+
       .cache-usage {
         h4 {
           margin: 0 0 12px 0;
           font-size: 16px;
+          color: var(--el-text-color-primary);
         }
-        
+
         .usage-text {
           margin: 8px 0 0 0;
           font-size: 14px;
@@ -457,18 +477,19 @@ onMounted(() => {
         h4 {
           margin: 0 0 8px 0;
           font-size: 16px;
+          color: var(--el-text-color-primary);
         }
-        
+
         p {
           margin: 0 0 16px 0;
           font-size: 14px;
           color: var(--el-text-color-regular);
-          
+
           &.warning-text {
             color: var(--el-color-warning);
           }
         }
-        
+
         .cleanup-description {
           font-size: 12px;
           color: var(--el-text-color-placeholder);
@@ -483,9 +504,25 @@ onMounted(() => {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      
+
       h3 {
         margin: 0;
+        color: var(--el-text-color-primary);
+      }
+    }
+
+    :deep(.el-table) {
+      --el-table-header-bg-color: var(--el-fill-color-light);
+      font-size: 13px;
+
+      .el-table__header-wrapper th.el-table__cell {
+        font-size: 12px;
+        font-weight: 600;
+        padding: 10px;
+      }
+
+      .el-table__cell {
+        padding: 10px;
       }
     }
   }

@@ -465,26 +465,15 @@ const viewDocumentation = () => {
   margin: 0 auto;
   padding: 0 24px;
 
-  // Hero Section
   .hero-section {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 16px;
-    padding: 60px 40px;
+    background: linear-gradient(135deg, var(--el-color-primary-light-5) 0%, var(--el-color-primary) 100%);
+    border-radius: 12px;
+    padding: 48px 32px;
     margin-bottom: 48px;
     color: white;
     position: relative;
     overflow: hidden;
-
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="0.5" fill="white" opacity="0.1"/><circle cx="10" cy="60" r="0.5" fill="white" opacity="0.1"/><circle cx="90" cy="40" r="0.5" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
-      pointer-events: none;
-    }
+    border: 1px solid var(--el-border-color-lighter);
 
     .hero-content {
       display: flex;
@@ -498,14 +487,14 @@ const viewDocumentation = () => {
       flex: 1;
 
       .hero-title {
-        font-size: 48px;
+        font-size: 42px;
         font-weight: 700;
         margin: 0 0 16px 0;
         line-height: 1.2;
 
         .version-badge {
           display: inline-block;
-          background: rgba(255, 255, 255, 0.2);
+          background: var(--el-mask-color-extra-light);
           padding: 4px 12px;
           border-radius: 20px;
           font-size: 14px;
@@ -516,7 +505,7 @@ const viewDocumentation = () => {
       }
 
       .hero-subtitle {
-        font-size: 24px;
+        font-size: 20px;
         font-weight: 500;
         margin: 0 0 16px 0;
         opacity: 0.9;
@@ -538,22 +527,22 @@ const viewDocumentation = () => {
         opacity: 0.9;
         margin-bottom: 32px;
         padding: 12px 16px;
-        background: rgba(255, 255, 255, 0.1);
+        background: var(--el-mask-color-extra-light);
         border-radius: 8px;
         backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        border: 1px solid var(--el-border-color-light);
         max-width: 600px;
 
         .el-icon {
           font-size: 16px;
-          color: #ffd700;
+          color: var(--el-color-warning);
         }
 
         a {
           color: white;
           text-decoration: none;
           font-weight: 500;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+          border-bottom: 1px solid var(--el-border-color-light);
           transition: all 0.3s ease;
 
           &:hover {
@@ -565,45 +554,16 @@ const viewDocumentation = () => {
       .hero-actions {
         display: flex;
         gap: 16px;
-
-        .el-button {
-          padding: 12px 24px;
-          font-size: 16px;
-          border-radius: 8px;
-
-          &.el-button--primary {
-            background: white;
-            color: #667eea;
-            border: none;
-
-            &:hover {
-              background: rgba(255, 255, 255, 0.9);
-              transform: translateY(-2px);
-            }
-          }
-
-          &:not(.el-button--primary) {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            backdrop-filter: blur(10px);
-
-            &:hover {
-              background: rgba(255, 255, 255, 0.2);
-              transform: translateY(-2px);
-            }
-          }
-        }
       }
     }
 
     .hero-visual {
       .hero-card {
-        background: rgba(255, 255, 255, 0.1);
+        background: var(--el-mask-color-extra-light);
         backdrop-filter: blur(20px);
-        border-radius: 16px;
+        border-radius: 12px;
         padding: 32px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        border: 1px solid var(--el-border-color-light);
 
         .hero-stats {
           display: flex;
@@ -628,20 +588,19 @@ const viewDocumentation = () => {
     }
   }
 
-  // Section Headers
   .section-header {
     text-align: center;
     margin-bottom: 48px;
 
     .section-title {
-      font-size: 36px;
+      font-size: 32px;
       font-weight: 700;
       color: var(--el-text-color-primary);
       margin: 0 0 16px 0;
     }
 
     .section-subtitle {
-      font-size: 18px;
+      font-size: 16px;
       color: var(--el-text-color-regular);
       margin: 0;
       max-width: 600px;
@@ -650,7 +609,6 @@ const viewDocumentation = () => {
     }
   }
 
-  // Features Section
   .features-section {
     margin-bottom: 80px;
 
@@ -661,9 +619,9 @@ const viewDocumentation = () => {
 
       .feature-card {
         background: var(--el-bg-color);
-        border-radius: 16px;
+        border-radius: 12px;
         padding: 32px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        box-shadow: var(--el-box-shadow-light);
         border: 1px solid var(--el-border-color-lighter);
         transition: all 0.3s ease;
         position: relative;
@@ -680,8 +638,8 @@ const viewDocumentation = () => {
         }
 
         &:hover {
-          transform: translateY(-8px);
-          box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+          transform: translateY(-4px);
+          box-shadow: var(--el-box-shadow);
         }
 
         .feature-header {
@@ -701,23 +659,23 @@ const viewDocumentation = () => {
             color: white;
 
             &.primary {
-              background: linear-gradient(135deg, var(--el-color-primary), #667eea);
+              background: linear-gradient(135deg, var(--el-color-primary), var(--el-color-primary-light-3));
             }
 
             &.success {
-              background: linear-gradient(135deg, var(--el-color-success), #52c41a);
+              background: linear-gradient(135deg, var(--el-color-success), var(--el-color-success-light-3));
             }
 
             &.warning {
-              background: linear-gradient(135deg, var(--el-color-warning), #faad14);
+              background: linear-gradient(135deg, var(--el-color-warning), var(--el-color-warning-light-3));
             }
 
             &.info {
-              background: linear-gradient(135deg, var(--el-color-info), #1890ff);
+              background: linear-gradient(135deg, var(--el-color-info), var(--el-color-info-light-3));
             }
 
             &.danger {
-              background: linear-gradient(135deg, var(--el-color-danger), #ff4d4f);
+              background: linear-gradient(135deg, var(--el-color-danger), var(--el-color-danger-light-3));
             }
           }
 
@@ -725,7 +683,7 @@ const viewDocumentation = () => {
             margin: 0;
             font-size: 20px;
             font-weight: 600;
-            color: #1a202c;
+            color: var(--el-text-color-primary);
           }
         }
 
@@ -750,7 +708,6 @@ const viewDocumentation = () => {
     }
   }
 
-  // Origin Section
   .origin-section {
     margin-bottom: 80px;
 
@@ -760,9 +717,9 @@ const viewDocumentation = () => {
 
       .origin-card {
         background: var(--el-bg-color);
-        border-radius: 16px;
+        border-radius: 12px;
         padding: 40px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        box-shadow: var(--el-box-shadow-light);
         border: 1px solid var(--el-border-color-lighter);
         position: relative;
         overflow: hidden;
@@ -774,7 +731,7 @@ const viewDocumentation = () => {
           left: 0;
           right: 0;
           height: 4px;
-          background: linear-gradient(90deg, #667eea, #764ba2);
+          background: linear-gradient(90deg, var(--el-color-primary), var(--el-color-primary-light-3));
         }
 
         .origin-header {
@@ -789,7 +746,7 @@ const viewDocumentation = () => {
             width: 64px;
             height: 64px;
             border-radius: 16px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, var(--el-color-primary), var(--el-color-primary-light-3));
             display: flex;
             align-items: center;
             justify-content: center;
@@ -823,7 +780,7 @@ const viewDocumentation = () => {
               }
 
               &:hover {
-                color: #667eea;
+                color: var(--el-color-primary);
                 text-decoration: underline;
               }
             }
@@ -877,14 +834,14 @@ const viewDocumentation = () => {
             gap: 8px;
             margin-top: 32px;
             padding: 20px;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            background: linear-gradient(135deg, var(--el-color-primary-light-9), var(--el-color-primary-light-8));
             border-radius: 12px;
-            border-left: 4px solid #667eea;
+            border-left: 4px solid var(--el-color-primary);
             font-size: 15px;
             color: var(--el-text-color-regular);
 
             .el-icon {
-              color: #ffd700;
+              color: var(--el-color-warning);
               font-size: 20px;
               flex-shrink: 0;
             }
@@ -899,7 +856,6 @@ const viewDocumentation = () => {
     }
   }
 
-  // Tech Section
   .tech-section {
     margin-bottom: 80px;
 
@@ -910,15 +866,15 @@ const viewDocumentation = () => {
 
       .tech-category {
         background: var(--el-bg-color);
-        border-radius: 16px;
+        border-radius: 12px;
         padding: 32px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        box-shadow: var(--el-box-shadow-light);
         border: 1px solid var(--el-border-color-lighter);
         transition: all 0.3s ease;
 
         &:hover {
           transform: translateY(-4px);
-          box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+          box-shadow: var(--el-box-shadow);
         }
 
         .tech-header {
@@ -938,15 +894,15 @@ const viewDocumentation = () => {
             color: white;
 
             &.frontend {
-              background: linear-gradient(135deg, #42b883, #35495e);
+              background: linear-gradient(135deg, var(--el-color-success), var(--el-color-primary));
             }
 
             &.backend {
-              background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+              background: linear-gradient(135deg, var(--el-color-danger), var(--el-color-warning));
             }
 
             &.ai {
-              background: linear-gradient(135deg, #a55eea, #26de81);
+              background: linear-gradient(135deg, var(--el-color-primary), var(--el-color-success));
             }
           }
 
@@ -954,7 +910,7 @@ const viewDocumentation = () => {
             margin: 0;
             font-size: 20px;
             font-weight: 600;
-            color: #1a202c;
+            color: var(--el-text-color-primary);
           }
         }
 
@@ -972,7 +928,7 @@ const viewDocumentation = () => {
 
             .tech-name {
               font-weight: 500;
-              color: #1a202c;
+              color: var(--el-text-color-primary);
             }
 
             .tech-desc {
@@ -985,7 +941,6 @@ const viewDocumentation = () => {
     }
   }
 
-  // Version Section
   .version-section {
     margin-bottom: 80px;
 
@@ -995,8 +950,8 @@ const viewDocumentation = () => {
       gap: 32px;
 
       .version-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 16px;
+        background: linear-gradient(135deg, var(--el-color-primary-light-5) 0%, var(--el-color-primary) 100%);
+        border-radius: 12px;
         padding: 32px;
         color: white;
         position: relative;
@@ -1009,7 +964,7 @@ const viewDocumentation = () => {
           right: -50%;
           width: 100%;
           height: 100%;
-          background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+          background: radial-gradient(circle, var(--el-mask-color-extra-light) 0%, transparent 70%);
           pointer-events: none;
         }
 
@@ -1026,7 +981,7 @@ const viewDocumentation = () => {
           }
 
           .version-status {
-            background: rgba(255, 255, 255, 0.2);
+            background: var(--el-mask-color-extra-light);
             padding: 4px 16px;
             border-radius: 20px;
             font-size: 14px;
@@ -1043,7 +998,7 @@ const viewDocumentation = () => {
             display: flex;
             justify-content: space-between;
             padding: 8px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid var(--el-border-color-light);
 
             &:last-child {
               border-bottom: none;
@@ -1062,16 +1017,16 @@ const viewDocumentation = () => {
 
       .framework-info {
         background: var(--el-bg-color);
-        border-radius: 16px;
+        border-radius: 12px;
         padding: 32px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        box-shadow: var(--el-box-shadow-light);
         border: 1px solid var(--el-border-color-lighter);
 
         h4 {
           margin: 0 0 24px 0;
           font-size: 20px;
           font-weight: 600;
-          color: #1a202c;
+          color: var(--el-text-color-primary);
         }
 
         .framework-list {
@@ -1088,7 +1043,7 @@ const viewDocumentation = () => {
 
             .name {
               font-weight: 500;
-              color: #1a202c;
+              color: var(--el-text-color-primary);
             }
 
             .version {
@@ -1104,7 +1059,7 @@ const viewDocumentation = () => {
       }
     }
   }
-  // Contact Section
+
   .contact-section {
     margin-bottom: 80px;
 
@@ -1115,16 +1070,16 @@ const viewDocumentation = () => {
 
       .contact-card {
         background: var(--el-bg-color);
-        border-radius: 16px;
+        border-radius: 12px;
         padding: 32px;
         text-align: center;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        box-shadow: var(--el-box-shadow-light);
         border: 1px solid var(--el-border-color-lighter);
         transition: all 0.3s ease;
 
         &:hover {
           transform: translateY(-4px);
-          box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+          box-shadow: var(--el-box-shadow);
         }
 
         .contact-icon {
@@ -1139,19 +1094,19 @@ const viewDocumentation = () => {
           color: white;
 
           &.email {
-            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            background: linear-gradient(135deg, var(--el-color-danger), var(--el-color-warning));
           }
 
           &.qq {
-            background: linear-gradient(135deg, #12c2e9, #c471ed);
+            background: linear-gradient(135deg, var(--el-color-info), var(--el-color-primary));
           }
 
           &.wechat {
-            background: linear-gradient(135deg, #07c160, #00d4aa);
+            background: linear-gradient(135deg, var(--el-color-success), var(--el-color-info));
           }
 
           &.docs {
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, var(--el-color-primary), var(--el-color-primary-light-3));
           }
         }
 
@@ -1159,14 +1114,14 @@ const viewDocumentation = () => {
           margin: 0 0 12px 0;
           font-size: 18px;
           font-weight: 600;
-          color: #1a202c;
+          color: var(--el-text-color-primary);
         }
 
         p {
           margin: 0 0 8px 0;
           font-size: 16px;
           font-weight: 500;
-          color: #1a202c;
+          color: var(--el-text-color-primary);
 
           .doc-link {
             color: var(--el-color-primary);
@@ -1187,7 +1142,6 @@ const viewDocumentation = () => {
     }
   }
 
-  // Footer Section
   .footer-section {
     text-align: center;
     padding: 40px 0;
@@ -1203,7 +1157,6 @@ const viewDocumentation = () => {
   }
 }
 
-// 响应式设计
 @media (max-width: 1024px) {
   .about {
     .version-section .version-info {

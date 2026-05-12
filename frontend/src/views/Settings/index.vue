@@ -820,25 +820,40 @@ onMounted(() => {
 <style lang="scss" scoped>
 .settings {
   .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 24px;
+    padding: 20px 24px;
+    background: linear-gradient(135deg, var(--el-color-primary-light-9) 0%, var(--el-fill-color-light) 100%);
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-lighter);
 
     .page-title {
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 24px;
+      gap: 10px;
+      font-size: 22px;
       font-weight: 600;
       color: var(--el-text-color-primary);
       margin: 0 0 8px 0;
+
+      .el-icon {
+        color: var(--el-color-primary);
+      }
     }
 
     .page-description {
-      color: var(--el-text-color-regular);
+      font-size: 13px;
+      color: var(--el-text-color-secondary);
       margin: 0;
     }
   }
 
   .settings-menu {
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-lighter);
+
     .settings-nav {
       border: none;
     }
@@ -846,6 +861,8 @@ onMounted(() => {
 
   .settings-content {
     min-height: 500px;
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-lighter);
 
     .setting-description {
       margin-left: 8px;

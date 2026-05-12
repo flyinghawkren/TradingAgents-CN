@@ -578,49 +578,56 @@ const submitBatchAnalysis = async () => {
   padding: 24px;
 
   .page-header {
-    margin-bottom: 32px;
+    margin-bottom: 24px;
 
     .header-content {
-      background: var(--el-bg-color);
-      padding: 32px;
-      border-radius: 16px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      background: linear-gradient(135deg, var(--el-color-primary-light-9) 0%, var(--el-fill-color-light) 100%);
+      padding: 20px 24px;
+      border-radius: 12px;
+      border: 1px solid var(--el-border-color-lighter);
+      box-shadow: var(--el-box-shadow-lighter);
     }
 
     .title-section {
       .page-title {
         display: flex;
         align-items: center;
-        font-size: 32px;
-        font-weight: 700;
-        color: #1a202c;
+        gap: 10px;
+        font-size: 22px;
+        font-weight: 600;
+        color: var(--el-text-color-primary);
         margin: 0 0 8px 0;
 
         .title-icon {
-          margin-right: 12px;
-          color: #3b82f6;
+          color: var(--el-color-primary);
         }
       }
 
       .page-description {
-        font-size: 16px;
-        color: #64748b;
+        font-size: 13px;
+        color: var(--el-text-color-secondary);
         margin: 0;
       }
     }
   }
 
   .analysis-container {
-    .stock-list-card, .config-card {
-      border-radius: 16px;
-      border: none;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    .stock-list-card,
+    .config-card,
+    .advanced-config-card {
+      border-radius: 12px;
+      border: 1px solid var(--el-border-color-lighter);
+      transition: box-shadow 0.3s ease;
+
+      &:hover {
+        box-shadow: var(--el-box-shadow-light);
+      }
 
       :deep(.el-card__header) {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border-radius: 16px 16px 0 0;
-        padding: 20px 24px;
+        background: var(--el-fill-color-light);
+        color: var(--el-text-color-primary);
+        border-bottom: 1px solid var(--el-border-color-lighter);
+        padding: 16px 20px;
 
         .card-header {
           display: flex;
@@ -629,52 +636,34 @@ const submitBatchAnalysis = async () => {
 
           h3 {
             margin: 0;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 600;
+            color: var(--el-text-color-primary);
           }
         }
       }
 
       :deep(.el-card__body) {
-        padding: 24px;
+        padding: 20px;
       }
     }
 
-    // 右侧高级配置卡片样式
     .advanced-config-card {
-      border-radius: 16px;
-      border: none;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-
-      :deep(.el-card__header) {
-        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-        color: white;
-        border-radius: 16px 16px 0 0;
-        padding: 20px 24px;
-
-        .card-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-
-          h3 {
-            margin: 0;
-            font-size: 18px;
-            font-weight: 600;
-          }
-        }
-      }
-
-      :deep(.el-card__body) {
-        padding: 24px;
-      }
-
       .config-content {
         .config-section {
-          margin-bottom: 24px;
+          margin-bottom: 20px;
 
           &:last-child {
             margin-bottom: 0;
+          }
+
+          .config-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--el-text-color-primary);
+            margin: 0 0 12px 0;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--el-border-color-lighter);
           }
 
           .analysis-options {
@@ -682,8 +671,8 @@ const submitBatchAnalysis = async () => {
               display: flex;
               align-items: center;
               justify-content: space-between;
-              padding: 12px 0;
-              border-bottom: 1px solid #f3f4f6;
+              padding: 10px 0;
+              border-bottom: 1px solid var(--el-border-color-lighter);
 
               &:last-child {
                 border-bottom: none;
@@ -694,14 +683,14 @@ const submitBatchAnalysis = async () => {
                 .option-name {
                   font-size: 14px;
                   font-weight: 500;
-                  color: #374151;
+                  color: var(--el-text-color-primary);
                   display: block;
                   margin-bottom: 2px;
                 }
 
                 .option-desc {
                   font-size: 12px;
-                  color: #6b7280;
+                  color: var(--el-text-color-secondary);
                 }
               }
             }
@@ -712,19 +701,19 @@ const submitBatchAnalysis = async () => {
 
     .stock-input-section {
       .input-area {
-        margin-bottom: 24px;
+        margin-bottom: 20px;
 
         .stock-textarea {
           :deep(.el-textarea__inner) {
-            border-radius: 12px;
-            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            border: 1px solid var(--el-border-color);
             font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
             font-size: 14px;
             line-height: 1.6;
 
             &:focus {
-              border-color: #3b82f6;
-              box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+              border-color: var(--el-color-primary);
+              box-shadow: 0 0 0 2px var(--el-color-primary-light-8);
             }
           }
         }
@@ -732,15 +721,15 @@ const submitBatchAnalysis = async () => {
         .input-actions {
           margin-top: 12px;
           display: flex;
-          gap: 12px;
+          gap: 10px;
         }
       }
 
       .stock-preview {
         h4 {
-          font-size: 16px;
+          font-size: 14px;
           font-weight: 600;
-          color: #1a202c;
+          color: var(--el-text-color-primary);
           margin: 0 0 12px 0;
         }
 
@@ -751,7 +740,7 @@ const submitBatchAnalysis = async () => {
 
           .stock-tag {
             font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-            font-weight: 600;
+            font-weight: 500;
           }
         }
       }
@@ -770,15 +759,15 @@ const submitBatchAnalysis = async () => {
 
     .batch-form {
       .form-section {
-        margin-bottom: 32px;
+        margin-bottom: 24px;
 
         .section-title {
-          font-size: 16px;
+          font-size: 14px;
           font-weight: 600;
-          color: #1a202c;
+          color: var(--el-text-color-primary);
           margin: 0 0 16px 0;
           padding-bottom: 8px;
-          border-bottom: 2px solid #e2e8f0;
+          border-bottom: 1px solid var(--el-border-color-lighter);
         }
       }
 
@@ -786,7 +775,7 @@ const submitBatchAnalysis = async () => {
         .analysts-group {
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 10px;
 
           .analyst-option {
             .analyst-checkbox {
@@ -797,12 +786,12 @@ const submitBatchAnalysis = async () => {
               }
 
               :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
-                background-color: #3b82f6;
-                border-color: #3b82f6;
+                background-color: var(--el-color-primary);
+                border-color: var(--el-color-primary);
               }
 
               :deep(.el-checkbox__input.is-checked + .el-checkbox__label) {
-                color: #3b82f6;
+                color: var(--el-color-primary);
               }
 
               .analyst-info {
@@ -812,12 +801,12 @@ const submitBatchAnalysis = async () => {
 
                 .analyst-name {
                   font-weight: 500;
-                  color: #374151;
+                  color: var(--el-text-color-primary);
                 }
 
                 .analyst-desc {
                   font-size: 12px;
-                  color: #6b7280;
+                  color: var(--el-text-color-secondary);
                 }
               }
             }
@@ -827,48 +816,125 @@ const submitBatchAnalysis = async () => {
     }
 
     .action-section {
-      margin-top: 24px !important;
-      display: flex !important;
-      justify-content: center !important;
-      align-items: center !important;
-      width: 100% !important;
-      text-align: center !important;
+      margin-top: 24px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      text-align: center;
 
       .submit-btn.el-button {
-        width: 320px !important;
-        height: 56px !important;
-        font-size: 18px !important;
-        font-weight: 700 !important;
-        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
-        border: none !important;
-        border-radius: 16px !important;
-        transition: all 0.3s ease !important;
-        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.2) !important;
-        min-width: 320px !important;
-        max-width: 320px !important;
+        width: 320px;
+        height: 56px;
+        font-size: 18px;
+        font-weight: 600 !important;
+        background: var(--el-color-primary);
+        border: none;
+        border-radius: 12px !important;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px color-mix(in srgb, var(--el-color-primary) 20%, transparent);
+        min-width: 320px;
+        max-width: 320px;
 
         &:hover {
-          transform: translateY(-3px) !important;
-          box-shadow: 0 12px 30px rgba(59, 130, 246, 0.4) !important;
-          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px color-mix(in srgb, var(--el-color-primary) 30%, transparent);
+          background: var(--el-color-primary-light-3);
         }
 
         &:disabled {
-          opacity: 0.6 !important;
-          transform: none !important;
-          box-shadow: 0 4px 15px rgba(59, 130, 246, 0.1) !important;
+          opacity: 0.6;
+          transform: none;
+          box-shadow: none;
         }
 
         .el-icon {
-          margin-right: 8px !important;
-          font-size: 20px !important;
+          margin-right: 8px;
+          font-size: 20px;
         }
 
         span {
-          font-size: 18px !important;
-          font-weight: 700 !important;
+          font-size: 18px;
+          font-weight: 600;
         }
       }
+    }
+  }
+
+  .stock-preview-card {
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-lighter);
+    margin-top: 24px;
+    transition: box-shadow 0.3s ease;
+
+    &:hover {
+      box-shadow: var(--el-box-shadow-light);
+    }
+
+    :deep(.el-card__header) {
+      background: var(--el-fill-color-light);
+      color: var(--el-text-color-primary);
+      border-bottom: 1px solid var(--el-border-color-lighter);
+      padding: 16px 20px;
+
+      .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+
+        h3 {
+          margin: 0;
+          font-size: 16px;
+          font-weight: 600;
+          color: var(--el-text-color-primary);
+        }
+      }
+    }
+
+    :deep(.el-card__body) {
+      padding: 20px;
+    }
+
+    .stock-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+
+      .stock-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 12px;
+        background: var(--el-fill-color-light);
+        border: 1px solid var(--el-border-color-lighter);
+        border-radius: 8px;
+        transition: all 0.2s ease;
+
+        &.invalid {
+          border-color: var(--el-color-danger-light-5);
+          background: var(--el-color-danger-light-9);
+        }
+
+        .stock-code {
+          font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+          font-size: 14px;
+          color: var(--el-text-color-primary);
+        }
+
+        .remove-btn {
+          padding: 2px;
+          color: var(--el-text-color-secondary);
+
+          &:hover {
+            color: var(--el-color-danger);
+          }
+        }
+      }
+    }
+
+    .invalid-notice {
+      margin-top: 16px;
     }
   }
 }
@@ -877,46 +943,46 @@ const submitBatchAnalysis = async () => {
 <style>
 /* 全局样式确保按钮样式生效 */
 .action-section {
-  display: flex !important;
-  justify-content: center !important;
-  align-items: center !important;
-  width: 100% !important;
-  text-align: center !important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  text-align: center;
 }
 
 .large-batch-btn.el-button {
-  width: 320px !important;
-  height: 56px !important;
-  font-size: 18px !important;
-  font-weight: 700 !important;
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
-  border: none !important;
-  border-radius: 16px !important;
-  transition: all 0.3s ease !important;
-  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.2) !important;
-  min-width: 320px !important;
-  max-width: 320px !important;
+  width: 320px;
+  height: 56px;
+  font-size: 18px;
+  font-weight: 600 !important;
+  background: var(--el-color-primary);
+  border: none;
+  border-radius: 12px !important;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--el-color-primary) 20%, transparent);
+  min-width: 320px;
+  max-width: 320px;
 }
 
 .large-batch-btn.el-button:hover {
-  transform: translateY(-3px) !important;
-  box-shadow: 0 12px 30px rgba(59, 130, 246, 0.4) !important;
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--el-color-primary) 30%, transparent);
+  background: var(--el-color-primary-light-3);
 }
 
 .large-batch-btn.el-button:disabled {
-  opacity: 0.6 !important;
-  transform: none !important;
-  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.1) !important;
+  opacity: 0.6;
+  transform: none;
+  box-shadow: none;
 }
 
 .large-batch-btn.el-button .el-icon {
-  margin-right: 8px !important;
-  font-size: 20px !important;
+  margin-right: 8px;
+  font-size: 20px;
 }
 
 .large-batch-btn.el-button span {
-  font-size: 18px !important;
-  font-weight: 700 !important;
+  font-size: 18px;
+  font-weight: 600;
 }
 </style>

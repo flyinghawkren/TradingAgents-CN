@@ -1,0 +1,254 @@
+// ============================================================
+// TradingAgents-CN SCSS Mixins —— 统一全站组件视觉
+// ============================================================
+@import './variables.scss';
+
+// ---------------------- 页面头部 ----------------------
+@mixin page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $space-6;
+  padding: $space-5 $space-6;
+  background: linear-gradient(135deg, var(--el-color-primary-light-9) 0%, var(--el-fill-color-light) 100%);
+  border-radius: $radius-xl;
+  border: 1px solid $border-lighter;
+}
+
+@mixin page-header-content {
+  .page-title {
+    font-size: $font-size-3xl;
+    font-weight: $font-weight-semibold;
+    margin: 0 0 $space-2 0;
+    display: flex;
+    align-items: center;
+    gap: $space-3;
+    color: $text-primary;
+
+    .el-icon, .title-icon {
+      color: $color-primary;
+      font-size: 26px;
+    }
+  }
+
+  .page-description {
+    color: $text-secondary;
+    margin: 0;
+    font-size: $font-size-sm;
+  }
+}
+
+@mixin page-header-stats {
+  display: flex;
+  gap: $space-6;
+
+  .stat-item {
+    text-align: center;
+    padding: 0 $space-4;
+    position: relative;
+
+    &:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 1px;
+      height: 24px;
+      background: $border-lighter;
+    }
+
+    &.highlight {
+      .stat-value {
+        font-size: 28px;
+        color: $color-danger;
+      }
+    }
+
+    .stat-value {
+      font-size: 22px;
+      font-weight: $font-weight-bold;
+      color: $color-primary;
+      line-height: 1.2;
+    }
+
+    .stat-label {
+      font-size: $font-size-xs;
+      color: $text-secondary;
+      margin-top: $space-1;
+    }
+  }
+}
+
+// ---------------------- 内容卡片 ----------------------
+@mixin block-card {
+  background: $bg-base;
+  border-radius: $radius-xl;
+  border: 1px solid $border-lighter;
+  overflow: hidden;
+  transition: box-shadow $transition-slow, transform $transition-base;
+
+  &:hover {
+    box-shadow: $shadow-hover;
+  }
+}
+
+@mixin block-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $space-4 $space-5;
+  border-bottom: 1px solid $border-lighter;
+  background: $bg-fill-light;
+}
+
+@mixin block-title-group {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+
+  .block-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: $radius-lg;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .block-title-info {
+    .block-title {
+      font-size: $font-size-lg;
+      font-weight: $font-weight-semibold;
+      margin: 0;
+      color: $text-primary;
+    }
+
+    .block-subtitle {
+      font-size: $font-size-xs;
+      color: $text-secondary;
+    }
+  }
+}
+
+// ---------------------- 现代表格 ----------------------
+@mixin modern-table {
+  --el-table-header-bg-color: #{$bg-fill-light};
+  --el-table-header-text-color: #{$text-regular};
+  --el-table-row-hover-bg-color: #{$bg-fill-lighter};
+
+  :deep(th.el-table__cell) {
+    font-weight: $font-weight-semibold;
+    font-size: $font-size-xs;
+    padding: $space-3 0;
+  }
+
+  :deep(td.el-table__cell) {
+    font-size: $font-size-sm;
+    padding: $space-3 0;
+  }
+}
+
+// ---------------------- 渐变图标 ----------------------
+@mixin gradient-icon($from, $to) {
+  background: linear-gradient(135deg, $from 0%, $to 100%);
+  color: #fff;
+}
+
+// 常用渐变组合
+$icon-stock: linear-gradient(135deg, #409eff 0%, #67c23a 100%);
+$icon-fund: linear-gradient(135deg, #e6a23c 0%, #f89898 100%);
+$icon-wealth: linear-gradient(135deg, #67c23a 0%, #95d475 100%);
+$icon-futures: linear-gradient(135deg, #f56c6c 0%, #fab6b6 100%);
+$icon-spot: linear-gradient(135deg, #909399 0%, #c8c9cc 100%);
+$icon-analysis: linear-gradient(135deg, #409eff 0%, #36cfc9 100%);
+$icon-report: linear-gradient(135deg, #722ed1 0%, #b37feb 100%);
+$icon-task: linear-gradient(135deg, #fa8c16 0%, #ffc53d 100%);
+$icon-setting: linear-gradient(135deg, #595959 0%, #8c8c8c 100%);
+
+// ---------------------- 操作按钮组 ----------------------
+@mixin action-buttons {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+}
+
+// ---------------------- 空状态 ----------------------
+@mixin empty-state {
+  padding: $space-8 0;
+  text-align: center;
+}
+
+// ---------------------- 占位区块 ----------------------
+@mixin placeholder-content {
+  text-align: center;
+
+  .placeholder-icon {
+    color: $border-color;
+    margin-bottom: $space-3;
+  }
+
+  .placeholder-title {
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: $text-primary;
+    margin: 0 0 $space-2 0;
+  }
+
+  .placeholder-desc {
+    font-size: $font-size-sm;
+    color: $text-secondary;
+    margin: 0 0 $space-5 0;
+    line-height: $line-height-relaxed;
+    max-width: 320px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+// ---------------------- 分析报告卡片 ----------------------
+@mixin insight-card {
+  background: linear-gradient(135deg, var(--el-color-primary-light-9) 0%, var(--el-fill-color-light) 100%);
+  border-radius: $radius-xl;
+  border: 1px solid var(--el-color-primary-light-8);
+  padding: $space-5;
+  margin-bottom: $space-5;
+
+  .insight-title {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    color: $text-primary;
+    margin-bottom: $space-3;
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+  }
+}
+
+// ---------------------- 步骤/进度条 ----------------------
+@mixin step-timeline {
+  .step-item {
+    display: flex;
+    align-items: flex-start;
+    gap: $space-3;
+    padding: $space-3 0;
+
+    &:not(:last-child) {
+      border-bottom: 1px dashed $border-lighter;
+    }
+
+    .step-index {
+      width: 28px;
+      height: 28px;
+      border-radius: $radius-full;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: $font-size-xs;
+      font-weight: $font-weight-bold;
+      flex-shrink: 0;
+    }
+  }
+}

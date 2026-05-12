@@ -179,26 +179,27 @@ const openArticle = (articleId: string) => {
 
   .learning-header {
     text-align: center;
-    margin-bottom: 48px;
-    padding: 40px 20px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 16px;
+    margin-bottom: 32px;
+    padding: 32px 24px;
+    background: linear-gradient(135deg, var(--el-color-primary-light-5) 0%, var(--el-color-primary) 100%);
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-lighter);
     color: white;
 
     h1 {
-      font-size: 36px;
-      margin-bottom: 12px;
+      font-size: 22px;
       font-weight: 600;
+      margin-bottom: 8px;
     }
 
     .subtitle {
-      font-size: 18px;
+      font-size: 13px;
       opacity: 0.9;
     }
   }
 
   .learning-categories {
-    margin-bottom: 48px;
+    margin-bottom: 32px;
 
     .category-card {
       cursor: pointer;
@@ -206,11 +207,12 @@ const openArticle = (articleId: string) => {
       height: 220px;
       margin-bottom: 20px;
       background: var(--el-fill-color-blank);
-      border-color: var(--el-border-color);
+      border-color: var(--el-border-color-lighter);
+      border-radius: 12px;
 
       &:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+        transform: translateY(-4px);
+        box-shadow: var(--el-box-shadow-dark);
       }
 
       .card-icon {
@@ -240,10 +242,11 @@ const openArticle = (articleId: string) => {
   }
 
   .recommended-section {
-    margin-top: 48px;
+    margin-top: 32px;
 
     h2 {
-      font-size: 24px;
+      font-size: 20px;
+      font-weight: 600;
       margin-bottom: 24px;
       color: var(--el-text-color-primary);
     }
@@ -254,11 +257,12 @@ const openArticle = (articleId: string) => {
       margin-bottom: 20px;
       height: 180px;
       background: var(--el-fill-color-blank);
-      border-color: var(--el-border-color);
+      border-color: var(--el-border-color-lighter);
+      border-radius: 12px;
 
       &:hover {
         transform: translateY(-4px);
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        box-shadow: var(--el-box-shadow);
       }
 
       .article-meta {
@@ -289,41 +293,6 @@ const openArticle = (articleId: string) => {
   }
 }
 
-// 暗黑模式样式
-:global(html.dark) {
-  .learning-center {
-    background: #000000 !important;
-
-    .learning-header {
-      background: #000000 !important;
-      border: 1px solid var(--el-border-color-light);
-      color: var(--el-text-color-primary);
-      h1 { color: var(--el-text-color-primary); }
-      .subtitle { color: var(--el-text-color-regular); }
-    }
-
-    .learning-categories .category-card,
-    .recommended-section .article-card {
-      background: #000000 !important;
-      border-color: var(--el-border-color) !important;
-    }
-
-    .learning-categories .category-card h3,
-    .recommended-section h2,
-    .recommended-section .article-card h4,
-    .recommended-section .article-card p,
-    .recommended-section .article-card .read-time {
-      color: var(--el-text-color-primary) !important;
-    }
-
-    .recommended-section .article-card p,
-    .learning-categories .category-card p,
-    .recommended-section .article-card .read-time {
-      color: var(--el-text-color-regular) !important;
-    }
-  }
-}
-
 @media (max-width: 768px) {
   .learning-center {
     padding: 16px;
@@ -332,11 +301,11 @@ const openArticle = (articleId: string) => {
       padding: 24px 16px;
 
       h1 {
-        font-size: 28px;
+        font-size: 20px;
       }
 
       .subtitle {
-        font-size: 16px;
+        font-size: 13px;
       }
     }
   }

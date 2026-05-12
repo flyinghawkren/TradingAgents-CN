@@ -2237,6 +2237,10 @@ onMounted(async () => {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 24px;
+    padding: 20px 24px;
+    background: linear-gradient(135deg, var(--el-color-primary-light-9) 0%, var(--el-fill-color-light) 100%);
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-lighter);
 
     .header-left {
       flex: 1;
@@ -2244,17 +2248,21 @@ onMounted(async () => {
       .page-title {
         display: flex;
         align-items: center;
-        gap: 8px;
-        font-size: 24px;
+        gap: 10px;
+        font-size: 22px;
         font-weight: 600;
         color: var(--el-text-color-primary);
         margin: 0 0 8px 0;
+
+        .el-icon {
+          color: var(--el-color-primary);
+        }
       }
 
       .page-description {
         margin: 0;
         color: var(--el-text-color-secondary);
-        font-size: 14px;
+        font-size: 13px;
       }
     }
 
@@ -2265,6 +2273,9 @@ onMounted(async () => {
   }
 
   .config-menu {
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-lighter);
+
     .config-nav {
       border: none;
     }
@@ -2272,6 +2283,8 @@ onMounted(async () => {
 
   .config-content {
     min-height: 500px;
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-lighter);
 
     .card-header {
       display: flex;
@@ -2303,7 +2316,7 @@ onMounted(async () => {
 
           h4 {
             margin: 0;
-            color: #303133;
+            color: var(--el-text-color-primary);
             font-size: 14px;
           }
         }
@@ -2314,7 +2327,7 @@ onMounted(async () => {
             justify-content: space-between;
             align-items: center;
             padding: 12px 0;
-            border-bottom: 1px solid #f0f0f0;
+            border-bottom: 1px solid var(--el-border-color-lighter);
 
             &:last-child {
               border-bottom: none;
@@ -2328,11 +2341,11 @@ onMounted(async () => {
 
               .item-name {
                 font-weight: 500;
-                color: #303133;
+                color: var(--el-text-color-primary);
               }
 
               .item-type {
-                color: #909399;
+                color: var(--el-text-color-secondary);
                 font-size: 12px;
               }
             }
@@ -2386,9 +2399,9 @@ onMounted(async () => {
         gap: 12px;
         padding: 12px;
         margin-bottom: 8px;
-        border-radius: 6px;
+        border-radius: 8px;
         background: var(--el-fill-color-lighter);
-        border: 1px solid var(--el-border-color-light);
+        border: 1px solid var(--el-border-color-lighter);
 
         .key-name {
           flex: 1;
@@ -2414,7 +2427,7 @@ onMounted(async () => {
         padding: 16px;
         background: var(--el-fill-color-lighter);
         border-radius: 8px;
-        border: 1px solid var(--el-border-color-light);
+        border: 1px solid var(--el-border-color-lighter);
 
         .stat-number {
           font-size: 24px;
@@ -2470,10 +2483,18 @@ onMounted(async () => {
   .provider-table {
     :deep(.el-table__cell) {
       vertical-align: top;
+      padding: 10px;
     }
 
     :deep(.provider-description-column .cell) {
       white-space: normal;
+    }
+
+    :deep(.el-table__header-wrapper th.el-table__cell) {
+      font-size: 12px;
+      font-weight: 600;
+      background-color: var(--el-fill-color-light);
+      padding: 10px;
     }
   }
 
@@ -2546,8 +2567,8 @@ onMounted(async () => {
   }
 
   .provider-group {
-    border: 1px solid var(--el-border-color-light);
-    border-radius: 8px;
+    border: 1px solid var(--el-border-color-lighter);
+    border-radius: 12px;
     overflow: hidden;
     background: var(--el-bg-color);
   }
@@ -2558,7 +2579,7 @@ onMounted(async () => {
     align-items: center;
     padding: 16px 20px;
     background: var(--el-fill-color-lighter);
-    border-bottom: 1px solid var(--el-border-color-light);
+    border-bottom: 1px solid var(--el-border-color-lighter);
 
     .provider-info {
       display: flex;
@@ -2637,6 +2658,22 @@ onMounted(async () => {
     color: var(--el-text-color-placeholder);
   }
 
+  // Modern compact table
+  :deep(.el-table) {
+    --el-table-header-bg-color: var(--el-fill-color-light);
+    font-size: 13px;
+
+    .el-table__header-wrapper th.el-table__cell {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 10px;
+    }
+
+    .el-table__cell {
+      padding: 10px;
+    }
+  }
+
   // 保留旧的卡片样式（如果其他地方还在使用）
   .model-header {
     display: flex;
@@ -2665,7 +2702,7 @@ onMounted(async () => {
 
         .model-code {
           font-size: 12px;
-          color: #909399;
+          color: var(--el-text-color-placeholder);
           font-family: 'Courier New', monospace;
         }
       }
@@ -2735,7 +2772,7 @@ onMounted(async () => {
     }
   }
 
-  // 🆕 模型能力信息样式
+  // 模型能力信息样式
   .model-capability {
     margin-bottom: 12px;
     padding: 8px;

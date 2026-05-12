@@ -249,25 +249,38 @@ const openArticle = (articleId: string) => {
 
   :deep(.el-page-header) {
     margin-bottom: 32px;
-    border-bottom: 1px solid var(--el-border-color);
-    background: var(--el-fill-color-blank);
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-lighter);
+    background: linear-gradient(135deg, var(--el-color-primary-light-9) 0%, var(--el-fill-color-light) 100%);
+    padding: 20px 24px;
+
+    .el-page-header__left {
+      align-items: center;
+      gap: 10px;
+    }
+
+    .el-page-header__content {
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--el-text-color-primary);
+    }
 
     .category-icon {
       font-size: 24px;
-      margin-right: 8px;
     }
   }
 
   .category-content {
     .category-description {
       margin-bottom: 32px;
-      padding: 20px;
-      background: var(--el-fill-color-light);
-      border-radius: 8px;
+      padding: 20px 24px;
+      background: linear-gradient(135deg, var(--el-color-primary-light-9) 0%, var(--el-fill-color-light) 100%);
+      border-radius: 12px;
+      border: 1px solid var(--el-border-color-lighter);
 
       p {
-        font-size: 16px;
-        color: var(--el-text-color-regular);
+        font-size: 14px;
+        color: var(--el-text-color-secondary);
         line-height: 1.6;
         margin: 0;
       }
@@ -279,14 +292,14 @@ const openArticle = (articleId: string) => {
       margin-bottom: 20px;
       min-height: 200px;
       background: var(--el-fill-color-blank);
-      border: 1px solid var(--el-border-color);
+      border-radius: 12px;
+      border: 1px solid var(--el-border-color-lighter);
 
       &:hover {
         transform: translateY(-4px);
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        box-shadow: var(--el-box-shadow-light);
       }
 
-      // 让卡片内容垂直排布并撑满高度，避免底部信息被裁剪
       :deep(.el-card__body) {
         display: flex;
         flex-direction: column;
@@ -322,7 +335,7 @@ const openArticle = (articleId: string) => {
         justify-content: space-between;
         align-items: center;
         padding-top: 12px;
-        border-top: 1px solid var(--el-border-color);
+        border-top: 1px solid var(--el-border-color-lighter);
         margin-top: auto;
 
         span {
@@ -340,32 +353,28 @@ const openArticle = (articleId: string) => {
   }
 }
 
-// 暗黑模式覆盖
 :global(html.dark) {
   .learning-category {
-    background: #000000 !important;
-
     :deep(.el-page-header) {
-      background: #000000 !important;
-      border-bottom-color: var(--el-border-color);
+      background: var(--el-bg-color-overlay);
+      border-color: var(--el-border-color-lighter);
     }
 
     .category-content {
       .category-description {
-        background: #000000 !important;
-        border: 1px solid var(--el-border-color);
+        background: var(--el-bg-color-overlay);
+        border-color: var(--el-border-color-lighter);
       }
 
       .article-card {
-        background: #000000 !important;
-        border-color: var(--el-border-color) !important;
+        background: var(--el-bg-color-overlay);
+        border-color: var(--el-border-color-lighter);
       }
     }
 
     .article-footer {
-      border-top-color: var(--el-border-color);
+      border-top-color: var(--el-border-color-lighter);
     }
   }
 }
 </style>
-
