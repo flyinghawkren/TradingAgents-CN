@@ -69,3 +69,68 @@ export const portfolioApi = {
     return ApiClient.get(`/api/portfolio/${holdingId}`)
   },
 }
+
+// ==================== 基金持仓 ====================
+
+export interface FundHolding {
+  id: string
+  fund_code: string
+  fund_name: string
+  fund_type: string
+  quantity: number
+  avg_nav: number
+  buy_date: string
+  notes: string
+  created_at?: string
+  updated_at?: string
+}
+
+export interface AddFundHoldingRequest {
+  fund_code: string
+  fund_name: string
+  fund_type?: string
+  quantity: number
+  avg_nav: number
+  buy_date: string
+  notes?: string
+}
+
+export interface UpdateFundHoldingRequest {
+  quantity?: number
+  avg_nav?: number
+  buy_date?: string
+  notes?: string
+}
+
+export const fundPortfolioApi = {
+  /**
+   * 获取基金持仓列表
+   */
+  list(): Promise<{ success: boolean; data: FundHolding[]; message?: string }> {
+    return ApiClient.get('/api/portfolio/fund/')
+  },
+
+  /**
+   * 添加基金持仓
+   */
+  add(request: AddFundHoldingRequest): Promise<{ success: boolean; data: FundHolding; message?: string }> {
+    return ApiClient.post('/api/portfolio/fund/', request)
+  },
+
+  /**
+   * 更新基金持仓
+   */
+  update(
+    holdingId: string,
+    request: UpdateFundHoldingRequest
+  ): Promise<{ success: boolean; data: FundHolding; message?: string }> {
+    return ApiClient.put(`/api/portfolio/fund/${holdingId}`, request)
+  },
+
+  /**
+   * 删除基金持仓
+   */
+  remove(holdingId: string): Promise<{ success: boolean; data: { id: string }; message?: string }> {
+    return ApiClient.delete(`/api/portfolio/fund/${holdingId}`)
+  },
+}

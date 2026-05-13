@@ -21,7 +21,7 @@
           <div class="stat-label">持仓股票</div>
         </div>
         <div class="stat-item">
-          <div class="stat-value">0</div>
+          <div class="stat-value">{{ fundHoldings.length }}</div>
           <div class="stat-label">持仓基金</div>
         </div>
         <div class="stat-item">
@@ -134,17 +134,89 @@
             </div>
             <div class="block-title-info">
               <h2 class="block-title">基金</h2>
-              <span class="block-subtitle">公募基金 / ETF / 私募基金</span>
+              <span class="block-subtitle">{{ fundHoldings.length }} 只持仓，{{ formatWan(fundTotalValue) }}万元</span>
             </div>
           </div>
-          <el-tag type="info" effect="plain" size="small">开发中</el-tag>
+          <div class="block-actions">
+            <el-input
+              v-model="fundSearchKeyword"
+              placeholder="搜索基金代码或名称"
+              clearable
+              size="small"
+              class="search-input"
+            >
+              <template #prefix>
+                <el-icon><Search /></el-icon>
+              </template>
+            </el-input>
+            <el-button size="small" @click="refreshFundData">
+              <el-icon><Refresh /></el-icon>
+            </el-button>
+            <el-button type="primary" size="small" @click="showAddFundDialog">
+              <el-icon><Plus /></el-icon>
+              添加
+            </el-button>
+          </div>
         </div>
-        <div class="block-body compact">
-          <div class="placeholder-content">
-            <el-icon :size="48" class="placeholder-icon"><Money /></el-icon>
-            <p class="placeholder-title">基金持仓管理</p>
-            <p class="placeholder-desc">即将支持管理您的公募基金、ETF、私募基金等持仓，自动同步净值与收益分析</p>
-            <el-button type="primary" plain size="small" disabled>敬请期待</el-button>
+        <div class="block-body">
+          <el-table
+            :data="filteredFundHoldings"
+            v-loading="fundLoading"
+            size="small"
+            class="modern-table"
+          >
+            <el-table-column prop="fund_code" label="基金代码" width="110">
+              <template #default="{ row }">
+                <el-link type="primary" @click="viewFundDetail(row)">
+                  {{ row.fund_code }}
+                </el-link>
+              </template>
+            </el-table-column>
+            <el-table-column prop="fund_name" label="基金名称" width="150" />
+            <el-table-column prop="fund_type" label="类型" width="90">
+              <template #default="{ row }">
+                <el-tag size="small" effect="plain">{{ row.fund_type || '混合型' }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="quantity" label="持有份额" width="110" align="right">
+              <template #default="{ row }">
+                {{ formatShares(row.quantity) }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="avg_nav" label="买入净值" width="110" align="right">
+              <template #default="{ row }">
+                <span v-if="row.avg_nav !== null && row.avg_nav !== undefined">
+                  ¥{{ formatPrice(row.avg_nav) }}
+                </span>
+                <span v-else>-</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="buy_date" label="买进时间" width="110">
+              <template #default="{ row }">
+                {{ formatDate(row.buy_date) }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="notes" label="备注" min-width="120" show-overflow-tooltip />
+            <el-table-column label="操作" width="160" fixed="right">
+              <template #default="{ row }">
+                <el-button link type="primary" size="small" @click="editFundHolding(row)">
+                  编辑
+                </el-button>
+                <el-button link type="primary" size="small" @click="analyzeFundHolding(row)">
+                  分析
+                </el-button>
+                <el-button link type="danger" size="small" @click="removeFundHolding(row)">
+                  移除
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <div v-if="!fundLoading && fundHoldings.length === 0" class="empty-state">
+            <el-empty description="暂无持仓基金" :image-size="80">
+              <el-button type="primary" size="small" @click="showAddFundDialog">
+                添加第一只持仓基金
+              </el-button>
+            </el-empty>
           </div>
         </div>
       </div>
@@ -209,6 +281,70 @@
         <el-button type="primary" @click="handleEditHolding" :loading="editLoading">保存</el-button>
       </template>
     </el-dialog>
+
+    <!-- 添加基金持仓对话框 -->
+    <el-dialog v-model="addFundDialogVisible" title="添加基金持仓" width="500px">
+      <el-form :model="addFundForm" :rules="addFundRules" ref="addFundFormRef" label-width="100px">
+        <el-form-item label="基金代码" prop="fund_code">
+          <el-input v-model="addFundForm.fund_code" placeholder="输入基金代码，如 000001" />
+        </el-form-item>
+        <el-form-item label="基金名称" prop="fund_name">
+          <el-input v-model="addFundForm.fund_name" placeholder="基金名称" />
+        </el-form-item>
+        <el-form-item label="基金类型" prop="fund_type">
+          <el-select v-model="addFundForm.fund_type" style="width: 100%;">
+            <el-option label="混合型" value="混合型" />
+            <el-option label="股票型" value="股票型" />
+            <el-option label="债券型" value="债券型" />
+            <el-option label="指数型" value="指数型" />
+            <el-option label="QDII" value="QDII" />
+            <el-option label="FOF" value="FOF" />
+            <el-option label="货币型" value="货币型" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="持有份额" prop="quantity">
+          <el-input-number v-model="addFundForm.quantity" :min="0" :precision="2" controls-position="right" style="width: 100%;" />
+        </el-form-item>
+        <el-form-item label="买入净值" prop="avg_nav">
+          <el-input-number v-model="addFundForm.avg_nav" :min="0" :precision="4" controls-position="right" style="width: 100%;" />
+        </el-form-item>
+        <el-form-item label="买进时间" prop="buy_date">
+          <el-date-picker v-model="addFundForm.buy_date" type="date" placeholder="选择买进日期" style="width: 100%;" value-format="YYYY-MM-DD" />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="addFundForm.notes" type="textarea" :rows="2" placeholder="可选：添加备注信息" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="addFundDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleAddFundHolding" :loading="addFundLoading">添加</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 编辑基金持仓对话框 -->
+    <el-dialog v-model="editFundDialogVisible" title="编辑基金持仓" width="500px">
+      <el-form :model="editFundForm" ref="editFundFormRef" label-width="100px">
+        <el-form-item label="基金">
+          <div>{{ editFundForm.fund_code }}｜{{ editFundForm.fund_name }}</div>
+        </el-form-item>
+        <el-form-item label="持有份额">
+          <el-input-number v-model="editFundForm.quantity" :min="0" :precision="2" controls-position="right" style="width: 100%;" />
+        </el-form-item>
+        <el-form-item label="买入净值">
+          <el-input-number v-model="editFundForm.avg_nav" :min="0" :precision="4" controls-position="right" style="width: 100%;" />
+        </el-form-item>
+        <el-form-item label="买进时间">
+          <el-date-picker v-model="editFundForm.buy_date" type="date" placeholder="选择买进日期" style="width: 100%;" value-format="YYYY-MM-DD" />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="editFundForm.notes" type="textarea" :rows="2" placeholder="可选：添加备注信息" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="editFundDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleEditFundHolding" :loading="editFundLoading">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -221,14 +357,14 @@ import {
   Refresh,
   Plus,
   TrendCharts,
-  Money,
+  Money
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { portfolioApi, type PortfolioHolding } from '@/api/portfolio'
+import { portfolioApi, fundPortfolioApi, type PortfolioHolding, type FundHolding } from '@/api/portfolio'
 
 const router = useRouter()
 
-// 响应式数据
+// ==================== 股票持仓 ====================
 const loading = ref(false)
 const searchKeyword = ref('')
 const holdings = ref<PortfolioHolding[]>([])
@@ -270,20 +406,6 @@ const editForm = ref({
   notes: ''
 })
 
-// 股票总资产（元）
-const stockTotalValue = computed(() => {
-  return holdings.value.reduce((sum, h) => {
-    const price = h.avg_price || 0
-    return sum + h.quantity * price
-  }, 0)
-})
-
-// 总资产（仅统计已有数据的渠道）
-const totalAssets = computed(() => {
-  // 目前仅股票有数据，其他渠道后续接入
-  return stockTotalValue.value
-})
-
 // 过滤后的持仓列表
 const filteredHoldings = computed(() => {
   let result = holdings.value
@@ -298,7 +420,85 @@ const filteredHoldings = computed(() => {
   return result
 })
 
-// 加载持仓列表
+// 股票总资产（元）
+const stockTotalValue = computed(() => {
+  return holdings.value.reduce((sum, h) => {
+    const price = h.avg_price || 0
+    return sum + h.quantity * price
+  }, 0)
+})
+
+// ==================== 基金持仓 ====================
+const fundLoading = ref(false)
+const fundSearchKeyword = ref('')
+const fundHoldings = ref<FundHolding[]>([])
+
+// 基金添加对话框
+const addFundDialogVisible = ref(false)
+const addFundLoading = ref(false)
+const addFundFormRef = ref()
+const addFundForm = ref({
+  fund_code: '',
+  fund_name: '',
+  fund_type: '混合型',
+  quantity: 100,
+  avg_nav: undefined as number | undefined,
+  buy_date: '',
+  notes: ''
+})
+
+const addFundRules = {
+  fund_code: [{ required: true, message: '请输入基金代码', trigger: 'blur' }],
+  fund_name: [{ required: true, message: '请输入基金名称', trigger: 'blur' }],
+  fund_type: [{ required: true, message: '请选择基金类型', trigger: 'change' }],
+  quantity: [{ required: true, message: '请输入持有份额', trigger: 'blur' }],
+  avg_nav: [{ required: true, message: '请输入买入净值', trigger: 'blur' }],
+  buy_date: [{ required: true, message: '请选择买进时间', trigger: 'change' }]
+}
+
+// 基金编辑对话框
+const editFundDialogVisible = ref(false)
+const editFundLoading = ref(false)
+const editFundFormRef = ref()
+const editFundForm = ref({
+  id: '',
+  fund_code: '',
+  fund_name: '',
+  quantity: 100,
+  avg_nav: undefined as number | undefined,
+  buy_date: '',
+  notes: ''
+})
+
+// 过滤后的基金持仓列表
+const filteredFundHoldings = computed(() => {
+  let result = fundHoldings.value
+  if (fundSearchKeyword.value) {
+    const keyword = fundSearchKeyword.value.toLowerCase()
+    result = result.filter(
+      h =>
+        h.fund_code.toLowerCase().includes(keyword) ||
+        h.fund_name.toLowerCase().includes(keyword)
+    )
+  }
+  return result
+})
+
+// 基金总资产（元）
+const fundTotalValue = computed(() => {
+  return fundHoldings.value.reduce((sum, h) => {
+    const nav = h.avg_nav || 0
+    return sum + h.quantity * nav
+  }, 0)
+})
+
+// 总资产
+const totalAssets = computed(() => {
+  return stockTotalValue.value + fundTotalValue.value
+})
+
+// ==================== 股票 CRUD ====================
+
 const loadHoldings = async () => {
   loading.value = true
   try {
@@ -321,7 +521,6 @@ const refreshData = () => {
   loadHoldings()
 }
 
-// 添加持仓
 const showAddDialog = () => {
   addForm.value = {
     market: 'A股',
@@ -372,7 +571,6 @@ const handleAddHolding = async () => {
   }
 }
 
-// 编辑持仓
 const editHolding = (row: PortfolioHolding) => {
   editForm.value = {
     id: row.id,
@@ -411,7 +609,6 @@ const handleEditHolding = async () => {
   }
 }
 
-// 移除持仓
 const removeHolding = async (row: PortfolioHolding) => {
   try {
     await ElMessageBox.confirm(
@@ -439,19 +636,163 @@ const removeHolding = async (row: PortfolioHolding) => {
   }
 }
 
-// 分析持仓股票
 const analyzeHolding = (row: PortfolioHolding) => {
   router.push(`/analysis/single?stock_code=${row.stock_code}`)
 }
 
-// 查看股票详情
 const viewStockDetail = (row: PortfolioHolding) => {
   router.push(`/analysis/single?stock_code=${row.stock_code}`)
 }
 
-// 格式化
+// ==================== 基金 CRUD ====================
+
+const loadFundHoldings = async () => {
+  fundLoading.value = true
+  try {
+    const res = await fundPortfolioApi.list()
+    if (res.success && res.data) {
+      fundHoldings.value = res.data
+    } else {
+      fundHoldings.value = []
+    }
+  } catch (error) {
+    console.error('加载基金持仓失败:', error)
+    ElMessage.error('加载基金持仓数据失败')
+    fundHoldings.value = []
+  } finally {
+    fundLoading.value = false
+  }
+}
+
+const refreshFundData = () => {
+  loadFundHoldings()
+}
+
+const showAddFundDialog = () => {
+  addFundForm.value = {
+    fund_code: '',
+    fund_name: '',
+    fund_type: '混合型',
+    quantity: 100,
+    avg_nav: undefined,
+    buy_date: '',
+    notes: ''
+  }
+  addFundDialogVisible.value = true
+}
+
+const handleAddFundHolding = async () => {
+  const valid = await addFundFormRef.value?.validate().catch(() => false)
+  if (!valid) return
+
+  addFundLoading.value = true
+  try {
+    const res = await fundPortfolioApi.add({
+      fund_code: addFundForm.value.fund_code,
+      fund_name: addFundForm.value.fund_name,
+      fund_type: addFundForm.value.fund_type,
+      quantity: addFundForm.value.quantity,
+      avg_nav: addFundForm.value.avg_nav || 0,
+      buy_date: addFundForm.value.buy_date,
+      notes: addFundForm.value.notes
+    })
+
+    if (res.success) {
+      ElMessage.success('添加基金持仓成功')
+      addFundDialogVisible.value = false
+      await loadFundHoldings()
+    } else {
+      ElMessage.error(res.message || '添加基金持仓失败')
+    }
+  } catch (error: any) {
+    console.error('添加基金持仓失败:', error)
+    ElMessage.error(error?.response?.data?.detail || '添加基金持仓失败')
+  } finally {
+    addFundLoading.value = false
+  }
+}
+
+const editFundHolding = (row: FundHolding) => {
+  editFundForm.value = {
+    id: row.id,
+    fund_code: row.fund_code,
+    fund_name: row.fund_name,
+    quantity: row.quantity,
+    avg_nav: row.avg_nav,
+    buy_date: row.buy_date,
+    notes: row.notes
+  }
+  editFundDialogVisible.value = true
+}
+
+const handleEditFundHolding = async () => {
+  editFundLoading.value = true
+  try {
+    const res = await fundPortfolioApi.update(editFundForm.value.id, {
+      quantity: editFundForm.value.quantity,
+      avg_nav: editFundForm.value.avg_nav,
+      buy_date: editFundForm.value.buy_date,
+      notes: editFundForm.value.notes
+    })
+
+    if (res.success) {
+      ElMessage.success('更新基金持仓成功')
+      editFundDialogVisible.value = false
+      await loadFundHoldings()
+    } else {
+      ElMessage.error(res.message || '更新基金持仓失败')
+    }
+  } catch (error: any) {
+    console.error('更新基金持仓失败:', error)
+    ElMessage.error(error?.response?.data?.detail || '更新基金持仓失败')
+  } finally {
+    editFundLoading.value = false
+  }
+}
+
+const removeFundHolding = async (row: FundHolding) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要移除 ${row.fund_name}(${row.fund_code}) 的基金持仓记录吗？`,
+      '确认移除',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    const res = await fundPortfolioApi.remove(row.id)
+    if (res.success) {
+      ElMessage.success('移除基金持仓成功')
+      await loadFundHoldings()
+    } else {
+      ElMessage.error(res.message || '移除基金持仓失败')
+    }
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('移除基金持仓失败:', error)
+      ElMessage.error(error?.response?.data?.detail || '移除基金持仓失败')
+    }
+  }
+}
+
+const analyzeFundHolding = (row: FundHolding) => {
+  router.push(`/analysis/fund?ts_code=${row.fund_code}&name=${encodeURIComponent(row.fund_name)}`)
+}
+
+const viewFundDetail = (row: FundHolding) => {
+  router.push(`/analysis/fund?ts_code=${row.fund_code}&name=${encodeURIComponent(row.fund_name)}`)
+}
+
+// ==================== 格式化 ====================
+
 const formatPrice = (price: number) => {
   return price.toFixed(3)
+}
+
+const formatShares = (shares: number) => {
+  return shares.toFixed(2)
 }
 
 const formatDate = (date: string) => {
@@ -462,7 +803,6 @@ const formatDate = (date: string) => {
 const formatWan = (value: number) => {
   if (value === 0) return '0'
   const wan = value / 10000
-  // 小于1万显示小数点后两位，大于等于1万显示一位
   if (wan < 1) {
     return wan.toFixed(2)
   }
@@ -475,6 +815,7 @@ const formatWan = (value: number) => {
 // 生命周期
 onMounted(() => {
   loadHoldings()
+  loadFundHoldings()
 })
 </script>
 
@@ -610,24 +951,10 @@ onMounted(() => {
             align-items: center;
             justify-content: center;
             font-size: 20px;
+            flex-shrink: 0;
 
             &.fund-icon {
               background: linear-gradient(135deg, #e6a23c 0%, #f89898 100%);
-              color: #fff;
-            }
-
-            &.wealth-icon {
-              background: linear-gradient(135deg, #67c23a 0%, #95d475 100%);
-              color: #fff;
-            }
-
-            &.futures-icon {
-              background: linear-gradient(135deg, #f56c6c 0%, #fab6b6 100%);
-              color: #fff;
-            }
-
-            &.spot-icon {
-              background: linear-gradient(135deg, #909399 0%, #c8c9cc 100%);
               color: #fff;
             }
           }
