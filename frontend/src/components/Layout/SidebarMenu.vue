@@ -34,7 +34,7 @@
 
     <el-menu-item index="/reports">
       <el-icon><Document /></el-icon>
-      <template #title>分析报告</template>
+      <template #title>报告中心</template>
     </el-menu-item>
 
     <el-menu-item index="/tasks">

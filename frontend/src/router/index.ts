@@ -249,7 +249,7 @@ const routes: RouteRecordRaw[] = [
     name: 'Reports',
     component: () => import('@/layouts/BasicLayout.vue'),
     meta: {
-      title: '分析报告',
+      title: '报告中心',
       icon: 'Document',
       requiresAuth: true,
       transition: 'fade'
@@ -260,7 +260,7 @@ const routes: RouteRecordRaw[] = [
         name: 'ReportsHome',
         component: () => import('@/views/Reports/index.vue'),
         meta: {
-          title: '分析报告',
+          title: '报告中心',
           requiresAuth: true
         }
       },
