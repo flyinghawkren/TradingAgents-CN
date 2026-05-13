@@ -731,7 +731,7 @@ class SimpleAnalysisService:
                 parameters=request.parameters.model_dump() if request.parameters else {},
                 stock_name=stock_name,
                 task_type="single",
-                task_name=f"股票个股分析【{stock_code}{'-' + stock_name if stock_name else ''}】",
+                task_name=f"股票分析【{stock_code}{'-' + stock_name if stock_name else ''}】",
             )
 
             logger.info(f"✅ 任务状态已创建: {task_state.task_id}")
@@ -757,7 +757,7 @@ class SimpleAnalysisService:
                         "stock_code": code,
                         "stock_symbol": code,
                         "stock_name": name,
-                        "task_name": f"股票个股分析【{code}{'-' + name if name else ''}】",
+                        "task_name": f"股票分析【{code}{'-' + name if name else ''}】",
                         "status": "pending",
                         "progress": 0,
                         "created_at": datetime.utcnow(),

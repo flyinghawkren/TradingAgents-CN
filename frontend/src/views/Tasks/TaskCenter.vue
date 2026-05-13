@@ -554,10 +554,10 @@ const getTaskName = (row: any): string => {
     return `股票组合分析【${name}】`
   }
 
-  // 单股/批量分析：股票个股分析【<个股ID>-<个股名称>】
+  // 单股/批量分析：股票分析【<个股ID>-<个股名称>】
   const code = row.stock_code || row.symbol || row.stock_symbol || ''
   const name = row.stock_name || ''
-  return `股票个股分析【${code}${name ? '-' + name : ''}】`
+  return `股票分析【${code}${name ? '-' + name : ''}】`
 }
 
 const getStatusType = (status:string): 'success' | 'info' | 'warning' | 'danger' => {
