@@ -25,7 +25,7 @@
           <div class="stat-label">持仓基金</div>
         </div>
         <div class="stat-item">
-          <div class="stat-value">5</div>
+          <div class="stat-value">2</div>
           <div class="stat-label">投资渠道</div>
         </div>
       </div>
@@ -125,100 +125,26 @@
         </div>
       </div>
 
-      <!-- 第二行：基金 + 理财 -->
-      <div class="investment-row">
-        <div class="investment-block">
-          <div class="block-header">
-            <div class="block-title-group">
-              <div class="block-icon fund-icon">
-                <el-icon><Money /></el-icon>
-              </div>
-              <div class="block-title-info">
-                <h2 class="block-title">基金</h2>
-                <span class="block-subtitle">公募基金 / ETF / 私募基金</span>
-              </div>
+      <!-- 基金板块 — 全宽 -->
+      <div class="investment-block">
+        <div class="block-header">
+          <div class="block-title-group">
+            <div class="block-icon fund-icon">
+              <el-icon><Money /></el-icon>
             </div>
-            <el-tag type="info" effect="plain" size="small">开发中</el-tag>
-          </div>
-          <div class="block-body compact">
-            <div class="placeholder-content">
-              <el-icon :size="48" class="placeholder-icon"><Money /></el-icon>
-              <p class="placeholder-title">基金持仓管理</p>
-              <p class="placeholder-desc">即将支持管理您的公募基金、ETF、私募基金等持仓，自动同步净值与收益分析</p>
-              <el-button type="primary" plain size="small" disabled>敬请期待</el-button>
+            <div class="block-title-info">
+              <h2 class="block-title">基金</h2>
+              <span class="block-subtitle">公募基金 / ETF / 私募基金</span>
             </div>
           </div>
+          <el-tag type="info" effect="plain" size="small">开发中</el-tag>
         </div>
-
-        <div class="investment-block">
-          <div class="block-header">
-            <div class="block-title-group">
-              <div class="block-icon wealth-icon">
-                <el-icon><Coin /></el-icon>
-              </div>
-              <div class="block-title-info">
-                <h2 class="block-title">理财</h2>
-                <span class="block-subtitle">银行理财 / 国债 / 定期存款</span>
-              </div>
-            </div>
-            <el-tag type="info" effect="plain" size="small">开发中</el-tag>
-          </div>
-          <div class="block-body compact">
-            <div class="placeholder-content">
-              <el-icon :size="48" class="placeholder-icon"><Coin /></el-icon>
-              <p class="placeholder-title">理财资产管理</p>
-              <p class="placeholder-desc">即将支持管理您的银行理财、国债、定期存款等固收类资产，到期提醒与收益追踪</p>
-              <el-button type="primary" plain size="small" disabled>敬请期待</el-button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 第三行：期货 + 现货 -->
-      <div class="investment-row">
-        <div class="investment-block">
-          <div class="block-header">
-            <div class="block-title-group">
-              <div class="block-icon futures-icon">
-                <el-icon><DocumentChecked /></el-icon>
-              </div>
-              <div class="block-title-info">
-                <h2 class="block-title">期货</h2>
-                <span class="block-subtitle">商品期货 / 股指期货</span>
-              </div>
-            </div>
-            <el-tag type="info" effect="plain" size="small">开发中</el-tag>
-          </div>
-          <div class="block-body compact">
-            <div class="placeholder-content">
-              <el-icon :size="48" class="placeholder-icon"><DocumentChecked /></el-icon>
-              <p class="placeholder-title">期货持仓管理</p>
-              <p class="placeholder-desc">即将支持管理您的商品期货、股指期货等衍生品持仓，保证金监控与风险预警</p>
-              <el-button type="primary" plain size="small" disabled>敬请期待</el-button>
-            </div>
-          </div>
-        </div>
-
-        <div class="investment-block">
-          <div class="block-header">
-            <div class="block-title-group">
-              <div class="block-icon spot-icon">
-                <el-icon><Goods /></el-icon>
-              </div>
-              <div class="block-title-info">
-                <h2 class="block-title">现货</h2>
-                <span class="block-subtitle">黄金 / 外汇 / 数字货币</span>
-              </div>
-            </div>
-            <el-tag type="info" effect="plain" size="small">开发中</el-tag>
-          </div>
-          <div class="block-body compact">
-            <div class="placeholder-content">
-              <el-icon :size="48" class="placeholder-icon"><Goods /></el-icon>
-              <p class="placeholder-title">现货资产管理</p>
-              <p class="placeholder-desc">即将支持管理您的黄金、外汇、数字货币等现货类资产，实时行情与资产估值</p>
-              <el-button type="primary" plain size="small" disabled>敬请期待</el-button>
-            </div>
+        <div class="block-body compact">
+          <div class="placeholder-content">
+            <el-icon :size="48" class="placeholder-icon"><Money /></el-icon>
+            <p class="placeholder-title">基金持仓管理</p>
+            <p class="placeholder-desc">即将支持管理您的公募基金、ETF、私募基金等持仓，自动同步净值与收益分析</p>
+            <el-button type="primary" plain size="small" disabled>敬请期待</el-button>
           </div>
         </div>
       </div>
@@ -296,9 +222,6 @@ import {
   Plus,
   TrendCharts,
   Money,
-  Coin,
-  DocumentChecked,
-  Goods
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { portfolioApi, type PortfolioHolding } from '@/api/portfolio'
