@@ -135,6 +135,95 @@
       </el-col>
     </el-row>
 
+    <!-- 基础信息同步 -->
+    <el-row :gutter="24" style="margin-top: 24px">
+      <el-col :span="24">
+        <el-card class="basics-sync-card" shadow="never">
+          <template #header>
+            <div class="card-header">
+              <h3>📊 基础信息同步</h3>
+              <el-button size="small" @click="refreshBasicsStatus">
+                <el-icon><Refresh /></el-icon>
+                刷新状态
+              </el-button>
+            </div>
+          </template>
+
+          <div v-loading="basicsLoading">
+            <el-row :gutter="24">
+              <!-- 状态展示 -->
+              <el-col :span="16">
+                <div class="basics-status">
+                  <el-row :gutter="16">
+                    <el-col :span="6">
+                      <div class="stat-item">
+                        <div class="stat-value">{{ basicsStatus.stock_count || 0 }}</div>
+                        <div class="stat-label">股票基础信息</div>
+                      </div>
+                    </el-col>
+                    <el-col :span="6">
+                      <div class="stat-item">
+                        <div class="stat-value">{{ basicsStatus.fund_count || 0 }}</div>
+                        <div class="stat-label">基金基础信息</div>
+                      </div>
+                    </el-col>
+                    <el-col :span="6">
+                      <div class="stat-item">
+                        <div class="stat-value">
+                          <el-tag v-if="basicsStatus.is_running" type="warning" size="small">同步中</el-tag>
+                          <el-tag v-else type="success" size="small">空闲</el-tag>
+                        </div>
+                        <div class="stat-label">同步状态</div>
+                      </div>
+                    </el-col>
+                    <el-col :span="6">
+                      <div class="stat-item">
+                        <div class="stat-value" style="font-size: 14px; color: var(--el-text-color-secondary);">
+                          {{ basicsStatus.last_sync_time ? formatDate(basicsStatus.last_sync_time) : '从未同步' }}
+                        </div>
+                        <div class="stat-label">上次同步</div>
+                      </div>
+                    </el-col>
+                  </el-row>
+
+                  <!-- 上次同步结果 -->
+                  <div v-if="basicsStatus.last_result" class="last-result" style="margin-top: 16px;">
+                    <el-alert
+                      :type="basicsStatus.last_result.success ? 'success' : 'error'"
+                      :title="basicsStatus.last_result.message || ''"
+                      :closable="false"
+                      show-icon
+                    />
+                  </div>
+                </div>
+              </el-col>
+
+              <!-- 操作按钮 -->
+              <el-col :span="8">
+                <div class="basics-actions">
+                  <h4>🔄 手动同步</h4>
+                  <p>从数据源批量获取股票和基金基础信息</p>
+                  <p class="warning-text" style="font-size: 12px; margin-top: 4px;">
+                    💡 每日凌晨 03:00 自动同步一次
+                  </p>
+                  <el-button
+                    type="primary"
+                    @click="triggerBasicsSync"
+                    :loading="basicsSyncLoading"
+                    :disabled="basicsStatus.is_running"
+                    style="margin-top: 12px; width: 100%;"
+                  >
+                    <el-icon><Refresh /></el-icon>
+                    {{ basicsStatus.is_running ? '同步进行中...' : '立即同步基础信息' }}
+                  </el-button>
+                </div>
+              </el-col>
+            </el-row>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
     <!-- 缓存详情 -->
     <el-card class="details-card" shadow="never" style="margin-top: 24px">
       <template #header>
@@ -219,11 +308,28 @@ const statsLoading = ref(false)
 const cleanupLoading = ref(false)
 const clearAllLoading = ref(false)
 const detailsLoading = ref(false)
+const basicsLoading = ref(false)
+const basicsSyncLoading = ref(false)
 
 const cleanupDays = ref(7)
 const currentPage = ref(1)
 const pageSize = ref(20)
 const totalItems = ref(0)
+
+// 基础信息同步状态
+const basicsStatus = ref<{
+  is_running: boolean
+  last_sync_time: string | null
+  last_result: any
+  stock_count: number
+  fund_count: number
+}>({
+  is_running: false,
+  last_sync_time: null,
+  last_result: null,
+  stock_count: 0,
+  fund_count: 0
+})
 
 // 缓存统计数据
 const cacheStats = ref<CacheStats>({
@@ -389,10 +495,59 @@ const deleteCacheItem = async (item: any) => {
   }
 }
 
+// 基础信息同步
+const refreshBasicsStatus = async () => {
+  basicsLoading.value = true
+  try {
+    const response = await cacheApi.getBasicsSyncStatus()
+    const data = response.data || response
+    basicsStatus.value = {
+      is_running: data.is_running || false,
+      last_sync_time: data.last_sync_time || null,
+      last_result: data.last_result || null,
+      stock_count: data.stock_count || 0,
+      fund_count: data.fund_count || 0
+    }
+  } catch (error: any) {
+    console.error('获取基础信息同步状态失败:', error)
+    ElMessage.error(error.message || '获取同步状态失败')
+  } finally {
+    basicsLoading.value = false
+  }
+}
+
+const triggerBasicsSync = async () => {
+  if (basicsStatus.value.is_running) {
+    ElMessage.warning('基础信息同步正在执行中，请稍后再试')
+    return
+  }
+
+  try {
+    basicsSyncLoading.value = true
+    const response = await cacheApi.triggerBasicsSync()
+    const data = response.data || response
+
+    if (data.already_running) {
+      ElMessage.warning(data.message || '同步正在执行中')
+    } else {
+      ElMessage.success(data.message || '同步已启动')
+    }
+
+    // 刷新状态
+    await refreshBasicsStatus()
+  } catch (error: any) {
+    console.error('触发基础信息同步失败:', error)
+    ElMessage.error(error.message || '触发同步失败')
+  } finally {
+    basicsSyncLoading.value = false
+  }
+}
+
 // 生命周期
 onMounted(() => {
   refreshStats()
   loadCacheDetails()
+  refreshBasicsStatus()
 })
 </script>
 
@@ -495,6 +650,55 @@ onMounted(() => {
           color: var(--el-text-color-placeholder);
           margin-left: 12px;
         }
+      }
+    }
+  }
+
+  .basics-sync-card {
+    border-radius: 12px;
+    border: 1px solid var(--el-border-color-lighter);
+
+    .basics-status {
+      .stat-item {
+        text-align: center;
+        padding: 12px;
+        background: var(--el-fill-color-light);
+        border-radius: 8px;
+
+        .stat-value {
+          font-size: 24px;
+          font-weight: 600;
+          color: var(--el-color-primary);
+          margin-bottom: 4px;
+        }
+
+        .stat-label {
+          font-size: 12px;
+          color: var(--el-text-color-secondary);
+        }
+      }
+    }
+
+    .basics-actions {
+      padding: 16px;
+      background: var(--el-fill-color-light);
+      border-radius: 8px;
+      height: 100%;
+
+      h4 {
+        margin: 0 0 8px 0;
+        font-size: 16px;
+        color: var(--el-text-color-primary);
+      }
+
+      p {
+        margin: 0 0 4px 0;
+        font-size: 13px;
+        color: var(--el-text-color-regular);
+      }
+
+      .warning-text {
+        color: var(--el-text-color-secondary);
       }
     }
   }

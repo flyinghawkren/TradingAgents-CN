@@ -103,3 +103,38 @@ export function getCacheBackendInfo() {
   })
 }
 
+// ==================== 基础信息同步 ====================
+
+export interface BasicsSyncStatus {
+  is_running: boolean
+  last_sync_time: string | null
+  last_result: {
+    success: boolean
+    message: string
+    stock: { count: number; message: string }
+    fund: { count: number; message: string }
+  } | null
+  stock_count: number
+  fund_count: number
+}
+
+/**
+ * 获取基础信息同步状态
+ */
+export function getBasicsSyncStatus() {
+  return request<BasicsSyncStatus>({
+    url: '/api/basics/status',
+    method: 'get'
+  })
+}
+
+/**
+ * 手动触发基础信息同步
+ */
+export function triggerBasicsSync() {
+  return request<{ success: boolean; already_running: boolean; message: string }>({
+    url: '/api/basics/sync',
+    method: 'post'
+  })
+}
+

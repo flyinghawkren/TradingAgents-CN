@@ -37,7 +37,8 @@ from app.routers import multi_market_stocks as multi_market_stocks_router
 from app.routers import notifications as notifications_router
 from app.routers import websocket_notifications as websocket_notifications_router
 from app.routers import scheduler as scheduler_router
-from app.services.basics_sync_service import get_basics_sync_service
+from app.routers import basics as basics_router
+from app.services.basics_info_sync_service import get_basics_info_sync_service
 from app.services.multi_source_basics_sync_service import MultiSourceBasicsSyncService
 from app.services.scheduler_service import set_scheduler_instance
 from app.worker.tushare_sync_service import (
@@ -569,6 +570,29 @@ async def lifespan(app: FastAPI):
         else:
             logger.info(f"📰 新闻数据同步已配置（仅自选股）: {settings.NEWS_SYNC_CRON}")
 
+        # ==================== 基础信息同步（股票 + 基金）====================
+        basics_sync = get_basics_info_sync_service()
+
+        # 启动时异步执行一次（不阻塞）
+        async def run_basics_sync_startup():
+            try:
+                logger.info("🔄 启动时异步同步基础信息（股票+基金）...")
+                result = await basics_sync.sync_all()
+                logger.info(f"✅ 启动时基础信息同步完成: {result.get('message', '')}")
+            except Exception as e:
+                logger.error(f"❌ 启动时基础信息同步失败: {e}", exc_info=True)
+
+        asyncio.create_task(run_basics_sync_startup())
+
+        # 每日定时同步（凌晨 3:00）
+        scheduler.add_job(
+            lambda: asyncio.create_task(basics_sync.sync_all()),
+            CronTrigger(hour=3, minute=0, timezone=settings.TIMEZONE),
+            id="basics_info_sync",
+            name="基础信息同步（股票+基金）"
+        )
+        logger.info(f"📅 基础信息同步已配置: 每日 03:00 ({settings.TIMEZONE})")
+
         scheduler.start()
 
         # 设置调度器实例到服务中，以便API可以管理任务
@@ -729,6 +753,9 @@ app.include_router(financial_data.router, tags=["financial-data"])
 app.include_router(news_data.router, tags=["news-data"])
 app.include_router(social_media.router, tags=["social-media"])
 app.include_router(internal_messages.router, tags=["internal-messages"])
+
+# 基础信息同步（股票+基金）
+app.include_router(basics_router.router, tags=["basics"])
 
 
 @app.get("/")
