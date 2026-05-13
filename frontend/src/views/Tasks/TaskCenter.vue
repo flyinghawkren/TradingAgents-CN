@@ -10,10 +10,10 @@
 
     <el-card class="tabs-card" shadow="never">
       <el-tabs v-model="activeTab" @tab-click="onTabChange">
-        <el-tab-pane label="进行中" name="running" />
-        <el-tab-pane label="已完成" name="completed" />
-        <el-tab-pane label="失败" name="failed" />
-        <el-tab-pane label="全部" name="all" />
+        <el-tab-pane :label="`进行中(${tabCounts.running})`" name="running" />
+        <el-tab-pane :label="`已完成(${tabCounts.completed})`" name="completed" />
+        <el-tab-pane :label="`失败(${tabCounts.failed})`" name="failed" />
+        <el-tab-pane :label="`全部(${tabCounts.all})`" name="all" />
       </el-tabs>
     </el-card>
 
@@ -48,22 +48,6 @@
         </el-form-item>
       </el-form>
     </el-card>
-
-    <!-- 统计卡片 -->
-    <el-row :gutter="16" style="margin-top: 12px">
-      <el-col :span="6">
-        <el-card shadow="never"><div class="stat"><div class="value">{{ stats.total }}</div><div class="label">总任务</div></div></el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="never"><div class="stat"><div class="value">{{ stats.completed }}</div><div class="label">已完成</div></div></el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="never"><div class="stat"><div class="value">{{ stats.failed }}</div><div class="label">失败</div></div></el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="never"><div class="stat"><div class="value">{{ stats.uniqueStocks }}</div><div class="label">股票数</div></div></el-card>
-      </el-col>
-    </el-row>
 
 
     <el-card class="list-card" shadow="never">
@@ -174,7 +158,15 @@ const selectedRows = ref<any[]>([])
 const filters = ref<{ dateRange: string[]; market: string; status: string; taskName: string }>({
   dateRange: [], market: '', status: '', taskName: ''
 })
-const stats = ref({ total: 0, completed: 0, failed: 0, uniqueStocks: 0 })
+
+// Tab 计数（基于当前页数据）
+const tabCounts = computed(() => {
+  const tasks = list.value
+  const running = tasks.filter((x: any) => ['processing', 'running', 'pending'].includes(x.status)).length
+  const completed = tasks.filter((x: any) => x.status === 'completed').length
+  const failed = tasks.filter((x: any) => x.status === 'failed').length
+  return { running, completed, failed, all: tasks.length }
+})
 
 
 // WebSocket 连接管理
@@ -302,11 +294,7 @@ const loadList = async () => {
       }
     })
 
-    // 统计
-    const completed = tasks.filter((x:any) => x.status === 'completed').length
-    const failed = tasks.filter((x:any) => x.status === 'failed').length
-    const uniqueStocks = new Set(tasks.map((x:any) => x.stock_code || x.stock_symbol)).size
-    stats.value = { total: tasks.length, completed, failed, uniqueStocks }
+    // 统计已移至 tabCounts computed
   } catch (e:any) {
     ElMessage.error(e?.message || '加载失败')
   } finally {
@@ -621,24 +609,6 @@ const formatTime = (t:string) => t ? formatDateTime(t) : '-'
 
   .list-card {
     margin-top: 16px;
-  }
-
-  .stat {
-    text-align: center;
-    padding: 8px 0;
-
-    .value {
-      font-size: 22px;
-      font-weight: 700;
-      color: var(--el-color-primary);
-      line-height: 1.2;
-    }
-
-    .label {
-      font-size: 12px;
-      color: var(--el-text-color-secondary);
-      margin-top: 4px;
-    }
   }
 
   .list-header {
