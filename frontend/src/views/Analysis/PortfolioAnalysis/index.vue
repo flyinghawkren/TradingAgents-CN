@@ -197,38 +197,53 @@
                 </el-form-item>
               </div>
 
-              <!-- 分析参数 -->
+              <!-- 分析深度 -->
               <div class="form-section">
-                <h4 class="section-title">⚙️ 分析参数</h4>
-                <el-form-item label="分析深度">
-                  <el-select v-model="analysisForm.depth" placeholder="选择深度" size="large" style="width: 100%">
-                    <el-option label="⚡ 1级 - 快速分析 (2-4分钟)" value="1" />
-                    <el-option label="📈 2级 - 基础分析 (4-6分钟)" value="2" />
-                    <el-option label="🎯 3级 - 标准分析 (6-10分钟，推荐)" value="3" />
-                    <el-option label="🔍 4级 - 深度分析 (10-15分钟)" value="4" />
-                    <el-option label="🏆 5级 - 全面分析 (15-25分钟)" value="5" />
-                  </el-select>
-                </el-form-item>
+                <h4 class="section-title">🎯 分析深度</h4>
+                <div class="depth-selector">
+                  <div
+                    v-for="(depth, index) in depthOptions"
+                    :key="index"
+                    class="depth-option"
+                    :class="{ active: Number(analysisForm.depth) === index + 1 }"
+                    @click="analysisForm.depth = String(index + 1)"
+                  >
+                    <div class="depth-icon">{{ depth.icon }}</div>
+                    <div class="depth-info">
+                      <div class="depth-name">{{ depth.name }}</div>
+                      <div class="depth-desc">{{ depth.description }}</div>
+                      <div class="depth-time">{{ depth.time }}</div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <!-- 分析师选择 -->
+              <!-- 分析师团队 -->
               <div class="form-section">
                 <h4 class="section-title">👥 分析师团队</h4>
-                <div class="analysts-selection">
-                  <el-checkbox-group v-model="analysisForm.analysts" class="analysts-group">
-                    <div
-                      v-for="analyst in ANALYSTS"
-                      :key="analyst.id"
-                      class="analyst-option"
-                    >
-                      <el-checkbox :label="analyst.name" class="analyst-checkbox">
-                        <div class="analyst-info">
-                          <span class="analyst-name">{{ analyst.name }}</span>
-                          <span class="analyst-desc">{{ analyst.description }}</span>
-                        </div>
-                      </el-checkbox>
+                <div class="analysts-grid">
+                  <div
+                    v-for="analyst in ANALYSTS"
+                    :key="analyst.id"
+                    class="analyst-card"
+                    :class="{ active: analysisForm.analysts.includes(analyst.name) }"
+                    @click="togglePortfolioAnalyst(analyst.name)"
+                  >
+                    <div class="analyst-avatar">
+                      <el-icon>
+                        <component :is="analyst.icon" />
+                      </el-icon>
                     </div>
-                  </el-checkbox-group>
+                    <div class="analyst-content">
+                      <div class="analyst-name">{{ analyst.name }}</div>
+                      <div class="analyst-desc">{{ analyst.description }}</div>
+                    </div>
+                    <div class="analyst-check">
+                      <el-icon v-if="analysisForm.analysts.includes(analyst.name)" class="check-icon">
+                        <Check />
+                      </el-icon>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -469,12 +484,32 @@ import { ANALYSTS, DEFAULT_ANALYSTS, convertAnalystNamesToIds } from '@/constant
 import { configApi } from '@/api/config'
 import { portfolioApi } from '@/api/portfolio'
 import { analysisApi } from '@/api/analysis'
+import { searchStockBasics } from '@/api/cache'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import ModelConfig from '@/components/ModelConfig.vue'
 import { marked } from 'marked'
 
 marked.setOptions({ breaks: true, gfm: true })
+
+// 分析深度选项
+const depthOptions = [
+  { icon: '⚡', name: '1级 - 快速分析', description: '基础数据概览，快速决策', time: '2-4分钟' },
+  { icon: '📈', name: '2级 - 基础分析', description: '常规投资决策', time: '4-6分钟' },
+  { icon: '🎯', name: '3级 - 标准分析', description: '技术+基本面，推荐', time: '6-10分钟' },
+  { icon: '🔍', name: '4级 - 深度分析', description: '多轮辩论，深度研究', time: '10-15分钟' },
+  { icon: '🏆', name: '5级 - 全面分析', description: '最全面的分析报告', time: '15-25分钟' }
+]
+
+// 切换分析师
+const togglePortfolioAnalyst = (analystName: string) => {
+  const index = analysisForm.analysts.indexOf(analystName)
+  if (index > -1) {
+    analysisForm.analysts.splice(index, 1)
+  } else {
+    analysisForm.analysts.push(analystName)
+  }
+}
 
 const router = useRouter()
 
@@ -595,25 +630,25 @@ const removeStock = (index: number) => {
   portfolioStocks.value.splice(index, 1)
 }
 
-// 根据代码自动获取名称（简单mock，后续可接真实API）
-const fetchStockName = (row: any) => {
-  if (row.stock_code && !row.stock_name) {
-    const code = row.stock_code
-    // 这里可以接入股票基础信息API
-    // 暂时简单的mock映射
-    const mockNames: Record<string, string> = {
-      '000001': '平安银行',
-      '600519': '贵州茅台',
-      '000858': '五粮液',
-      '002594': '比亚迪',
-      '300750': '宁德时代',
-      '600036': '招商银行',
-      '601318': '中国平安',
-      '600276': '恒瑞医药'
+// 根据代码自动获取名称（从本地基础信息查询）
+const fetchStockName = async (row: any) => {
+  const code = (row.stock_code || '').trim()
+  if (!code || row.stock_name) return
+
+  try {
+    const response = await searchStockBasics(code, 10)
+    const results = response.data || []
+    const match = results.find((item: any) => {
+      if (!item) return false
+      const sym = (item.symbol || '').trim()
+      const ts = (item.ts_code || '').trim()
+      return sym === code || ts === code || ts.startsWith(code + '.')
+    })
+    if (match && match.name) {
+      row.stock_name = match.name
     }
-    if (mockNames[code]) {
-      row.stock_name = mockNames[code]
-    }
+  } catch (e) {
+    console.warn('查询股票基础信息失败:', e)
   }
 }
 
@@ -1149,44 +1184,145 @@ onMounted(async () => {
         text-align: center;
       }
 
-      .analysts-selection {
-        .analysts-group {
+      .depth-selector {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+
+        .depth-option {
           display: flex;
-          flex-direction: column;
-          gap: 12px;
+          align-items: center;
+          padding: 16px;
+          border: 1px solid var(--el-border-color-lighter);
+          border-radius: 12px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          background: var(--el-bg-color);
 
-          .analyst-option {
-            .analyst-checkbox {
-              width: 100%;
+          &:hover {
+            border-color: var(--el-color-primary);
+            transform: translateY(-2px);
+            box-shadow: var(--el-box-shadow-light);
+          }
 
-              :deep(.el-checkbox__label) {
-                width: 100%;
-              }
+          &.active {
+            border-color: var(--el-color-primary);
+            background: var(--el-color-primary-light-9);
+            color: var(--el-color-primary);
+            transform: translateY(-2px);
+            box-shadow: var(--el-box-shadow-light);
+          }
 
-              :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
-                background-color: var(--el-color-primary);
-                border-color: var(--el-color-primary);
-              }
+          .depth-icon {
+            font-size: 24px;
+            margin-right: 12px;
+          }
 
-              :deep(.el-checkbox__input.is-checked + .el-checkbox__label) {
-                color: var(--el-color-primary);
-              }
+          .depth-info {
+            .depth-name {
+              font-weight: 600;
+              margin-bottom: 4px;
+            }
 
-              .analyst-info {
-                display: flex;
-                flex-direction: column;
-                gap: 4px;
+            .depth-desc {
+              font-size: 12px;
+              opacity: 0.8;
+              margin-bottom: 2px;
+            }
 
-                .analyst-name {
-                  font-weight: 500;
-                  color: var(--el-text-color-primary);
-                }
+            .depth-time {
+              font-size: 11px;
+              opacity: 0.7;
+            }
+          }
+        }
+      }
 
-                .analyst-desc {
-                  font-size: 12px;
-                  color: var(--el-text-color-secondary);
-                }
-              }
+      .analysts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+
+        .analyst-card {
+          display: flex;
+          align-items: center;
+          padding: 16px;
+          border: 1px solid var(--el-border-color-lighter);
+          border-radius: 12px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          background: var(--el-bg-color);
+
+          &:hover {
+            border-color: var(--el-color-primary);
+            transform: translateY(-2px);
+            box-shadow: var(--el-box-shadow-light);
+          }
+
+          &.active {
+            border-color: var(--el-color-primary);
+            background: var(--el-color-primary-light-9);
+            color: var(--el-color-primary);
+            transform: translateY(-2px);
+            box-shadow: var(--el-box-shadow-light);
+          }
+
+          .analyst-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: var(--el-fill-color-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 14px;
+            flex-shrink: 0;
+            font-size: 20px;
+
+            .el-icon {
+              color: var(--el-color-primary);
+            }
+          }
+
+          &.active .analyst-avatar {
+            background: var(--el-color-primary);
+            .el-icon {
+              color: #fff;
+            }
+          }
+
+          .analyst-content {
+            flex: 1;
+
+            .analyst-name {
+              font-weight: 600;
+              margin-bottom: 4px;
+              color: var(--el-text-color-primary);
+            }
+
+            .analyst-desc {
+              font-size: 12px;
+              color: var(--el-text-color-secondary);
+            }
+          }
+
+          .analyst-check {
+            margin-left: 12px;
+            flex-shrink: 0;
+
+            .check-icon {
+              font-size: 18px;
+              color: var(--el-color-primary);
+            }
+          }
+
+          &.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+
+            &:hover {
+              transform: none;
+              box-shadow: none;
             }
           }
         }

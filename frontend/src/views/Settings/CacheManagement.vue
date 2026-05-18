@@ -11,7 +11,96 @@
       </p>
     </div>
 
+    <!-- 基础信息同步 -->
     <el-row :gutter="24">
+      <el-col :span="24">
+        <el-card class="basics-sync-card" shadow="never">
+          <template #header>
+            <div class="card-header">
+              <h3>📊 基础信息同步</h3>
+              <el-button size="small" @click="refreshBasicsStatus">
+                <el-icon><Refresh /></el-icon>
+                刷新状态
+              </el-button>
+            </div>
+          </template>
+
+          <div v-loading="basicsLoading">
+            <el-row :gutter="24">
+              <!-- 状态展示 -->
+              <el-col :span="16">
+                <div class="basics-status">
+                  <el-row :gutter="16">
+                    <el-col :span="6">
+                      <div class="stat-item">
+                        <div class="stat-value">{{ basicsStatus.stock_count || 0 }}</div>
+                        <div class="stat-label">股票基础信息</div>
+                      </div>
+                    </el-col>
+                    <el-col :span="6">
+                      <div class="stat-item">
+                        <div class="stat-value">{{ basicsStatus.fund_count || 0 }}</div>
+                        <div class="stat-label">基金基础信息</div>
+                      </div>
+                    </el-col>
+                    <el-col :span="6">
+                      <div class="stat-item">
+                        <div class="stat-value">
+                          <el-tag v-if="basicsStatus.is_running" type="warning" size="small">同步中</el-tag>
+                          <el-tag v-else type="success" size="small">空闲</el-tag>
+                        </div>
+                        <div class="stat-label">同步状态</div>
+                      </div>
+                    </el-col>
+                    <el-col :span="6">
+                      <div class="stat-item">
+                        <div class="stat-value" style="font-size: 14px; color: var(--el-text-color-secondary);">
+                          {{ basicsStatus.last_sync_time ? formatDate(basicsStatus.last_sync_time) : '从未同步' }}
+                        </div>
+                        <div class="stat-label">上次同步</div>
+                      </div>
+                    </el-col>
+                  </el-row>
+
+                  <!-- 上次同步结果 -->
+                  <div v-if="basicsStatus.last_result" class="last-result" style="margin-top: 16px;">
+                    <el-alert
+                      :type="basicsStatus.last_result.success ? 'success' : 'error'"
+                      :title="basicsStatus.last_result.message || ''"
+                      :closable="false"
+                      show-icon
+                    />
+                  </div>
+                </div>
+              </el-col>
+
+              <!-- 操作按钮 -->
+              <el-col :span="8">
+                <div class="basics-actions">
+                  <h4>🔄 手动同步</h4>
+                  <p>从数据源批量获取股票和基金基础信息</p>
+                  <p class="warning-text" style="font-size: 12px; margin-top: 4px;">
+                    💡 每日凌晨 03:00 自动同步一次
+                  </p>
+                  <el-button
+                    type="primary"
+                    @click="triggerBasicsSync"
+                    :loading="basicsSyncLoading"
+                    :disabled="basicsStatus.is_running"
+                    style="margin-top: 12px; width: 100%;"
+                  >
+                    <el-icon><Refresh /></el-icon>
+                    {{ basicsStatus.is_running ? '同步进行中...' : '立即同步基础信息' }}
+                  </el-button>
+                </div>
+              </el-col>
+            </el-row>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <el-row :gutter="24" style="margin-top: 24px">
       <!-- 左侧：缓存统计 -->
       <el-col :span="12">
         <el-card class="stats-card" shadow="never">
@@ -130,95 +219,6 @@
                 清空所有缓存
               </el-button>
             </div>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
-
-    <!-- 基础信息同步 -->
-    <el-row :gutter="24" style="margin-top: 24px">
-      <el-col :span="24">
-        <el-card class="basics-sync-card" shadow="never">
-          <template #header>
-            <div class="card-header">
-              <h3>📊 基础信息同步</h3>
-              <el-button size="small" @click="refreshBasicsStatus">
-                <el-icon><Refresh /></el-icon>
-                刷新状态
-              </el-button>
-            </div>
-          </template>
-
-          <div v-loading="basicsLoading">
-            <el-row :gutter="24">
-              <!-- 状态展示 -->
-              <el-col :span="16">
-                <div class="basics-status">
-                  <el-row :gutter="16">
-                    <el-col :span="6">
-                      <div class="stat-item">
-                        <div class="stat-value">{{ basicsStatus.stock_count || 0 }}</div>
-                        <div class="stat-label">股票基础信息</div>
-                      </div>
-                    </el-col>
-                    <el-col :span="6">
-                      <div class="stat-item">
-                        <div class="stat-value">{{ basicsStatus.fund_count || 0 }}</div>
-                        <div class="stat-label">基金基础信息</div>
-                      </div>
-                    </el-col>
-                    <el-col :span="6">
-                      <div class="stat-item">
-                        <div class="stat-value">
-                          <el-tag v-if="basicsStatus.is_running" type="warning" size="small">同步中</el-tag>
-                          <el-tag v-else type="success" size="small">空闲</el-tag>
-                        </div>
-                        <div class="stat-label">同步状态</div>
-                      </div>
-                    </el-col>
-                    <el-col :span="6">
-                      <div class="stat-item">
-                        <div class="stat-value" style="font-size: 14px; color: var(--el-text-color-secondary);">
-                          {{ basicsStatus.last_sync_time ? formatDate(basicsStatus.last_sync_time) : '从未同步' }}
-                        </div>
-                        <div class="stat-label">上次同步</div>
-                      </div>
-                    </el-col>
-                  </el-row>
-
-                  <!-- 上次同步结果 -->
-                  <div v-if="basicsStatus.last_result" class="last-result" style="margin-top: 16px;">
-                    <el-alert
-                      :type="basicsStatus.last_result.success ? 'success' : 'error'"
-                      :title="basicsStatus.last_result.message || ''"
-                      :closable="false"
-                      show-icon
-                    />
-                  </div>
-                </div>
-              </el-col>
-
-              <!-- 操作按钮 -->
-              <el-col :span="8">
-                <div class="basics-actions">
-                  <h4>🔄 手动同步</h4>
-                  <p>从数据源批量获取股票和基金基础信息</p>
-                  <p class="warning-text" style="font-size: 12px; margin-top: 4px;">
-                    💡 每日凌晨 03:00 自动同步一次
-                  </p>
-                  <el-button
-                    type="primary"
-                    @click="triggerBasicsSync"
-                    :loading="basicsSyncLoading"
-                    :disabled="basicsStatus.is_running"
-                    style="margin-top: 12px; width: 100%;"
-                  >
-                    <el-icon><Refresh /></el-icon>
-                    {{ basicsStatus.is_running ? '同步进行中...' : '立即同步基础信息' }}
-                  </el-button>
-                </div>
-              </el-col>
-            </el-row>
           </div>
         </el-card>
       </el-col>

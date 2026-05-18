@@ -12,7 +12,6 @@ from dataclasses import dataclass
 from app.services.historical_data_service import get_historical_data_service
 from app.worker.tushare_sync_service import TushareSyncService
 from app.worker.akshare_sync_service import AKShareSyncService
-from app.worker.baostock_sync_service import BaoStockSyncService
 
 logger = logging.getLogger(__name__)
 
@@ -40,22 +39,18 @@ class MultiPeriodSyncService:
         self.historical_service = None
         self.tushare_service = None
         self.akshare_service = None
-        self.baostock_service = None
         
     async def initialize(self):
         """初始化服务"""
         try:
             self.historical_service = await get_historical_data_service()
             
-            # 初始化各数据源服务
+            # 初始化各数据源服务（⚠️ BaoStock 已弃用）
             self.tushare_service = TushareSyncService()
             await self.tushare_service.initialize()
             
             self.akshare_service = AKShareSyncService()
             await self.akshare_service.initialize()
-            
-            self.baostock_service = BaoStockSyncService()
-            await self.baostock_service.initialize()
             
             logger.info("✅ 多周期同步服务初始化完成")
             
@@ -78,7 +73,7 @@ class MultiPeriodSyncService:
         Args:
             symbols: 股票代码列表，None表示所有股票
             periods: 周期列表 (daily/weekly/monthly)
-            data_sources: 数据源列表 (tushare/akshare/baostock)
+            data_sources: 数据源列表 (tushare/akshare)，⚠️ BaoStock 已弃用
             start_date: 开始日期
             end_date: 结束日期
             all_history: 是否同步所有历史数据（忽略时间范围）
@@ -86,11 +81,11 @@ class MultiPeriodSyncService:
         if self.historical_service is None:
             await self.initialize()
         
-        # 默认参数
+        # 默认参数（⚠️ BaoStock 已弃用）
         if periods is None:
             periods = ["daily", "weekly", "monthly"]
         if data_sources is None:
-            data_sources = ["tushare", "akshare", "baostock"]
+            data_sources = ["tushare", "akshare"]
         if symbols is None:
             symbols = await self._get_all_symbols()
 
@@ -154,15 +149,13 @@ class MultiPeriodSyncService:
         try:
             logger.info(f"📈 开始同步{data_source}-{period}数据: {len(symbols)}只股票")
             
-            # 选择对应的服务
+            # 选择对应的服务（⚠️ BaoStock 已弃用）
             if data_source == "tushare":
                 service = self.tushare_service
             elif data_source == "akshare":
                 service = self.akshare_service
-            elif data_source == "baostock":
-                service = self.baostock_service
             else:
-                logger.error(f"❌ 不支持的数据源: {data_source}")
+                logger.error(f"❌ 不支持的数据源: {data_source}（BaoStock 已弃用）")
                 return stats
             
             # 批量处理
@@ -205,16 +198,8 @@ class MultiPeriodSyncService:
         
         for symbol in symbols:
             try:
-                # 获取历史数据
-                if data_source == "tushare":
-                    hist_data = await service.provider.get_historical_data(
-                        symbol, start_date, end_date, period
-                    )
-                elif data_source == "akshare":
-                    hist_data = await service.provider.get_historical_data(
-                        symbol, start_date, end_date, period
-                    )
-                elif data_source == "baostock":
+                # 获取历史数据（⚠️ BaoStock 已弃用）
+                if data_source in ("tushare", "akshare"):
                     hist_data = await service.provider.get_historical_data(
                         symbol, start_date, end_date, period
                     )

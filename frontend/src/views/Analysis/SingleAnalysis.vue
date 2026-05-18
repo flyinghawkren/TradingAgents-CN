@@ -42,6 +42,7 @@
                         size="large"
                         class="stock-input"
                         :class="{ 'is-error': stockCodeError }"
+                        @focus="onStockCodeFocus"
                         @blur="validateStockCodeInput"
                         @input="onStockCodeInput"
                       >
@@ -711,6 +712,7 @@ import { ANALYSTS, convertAnalystNamesToIds } from '@/constants/analysts'
 import { marked } from 'marked'
 import { recommendModels } from '@/api/modelCapabilities'
 import { validateStockCode, getStockCodeFormatHelp } from '@/utils/stockValidator'
+import { searchStockBasics } from '@/api/cache'
 import { normalizeMarketForAnalysis, getMarketByStockCode } from '@/utils/market'
 
 // 配置marked选项
@@ -811,6 +813,16 @@ const analysisForm = reactive<AnalysisForm>({
 const stockCodeError = ref<string>('')
 const stockCodeHelp = ref<string>('')
 
+// 从显示值中提取纯股票代码（如 "000001-平安银行" -> "000001"）
+const getPureStockCode = (displayValue: string): string => {
+  const trimmed = displayValue.trim()
+  const idx = trimmed.indexOf('-')
+  if (idx > 0) {
+    return trimmed.substring(0, idx)
+  }
+  return trimmed
+}
+
 // 深度选项（5个级别，基于实际测试数据更新）
 const depthOptions = [
   { icon: '⚡', name: '1级 - 快速分析', description: '基础数据概览，快速决策', time: '2-5分钟' },
@@ -833,6 +845,15 @@ const onStockCodeInput = () => {
   stockCodeHelp.value = getStockCodeFormatHelp(analysisForm.market)
 }
 
+// 输入框获得焦点时，如显示值为 "000001-平安银行"，回退到纯代码 "000001"
+const onStockCodeFocus = () => {
+  const raw = analysisForm.stockCode.trim()
+  const idx = raw.indexOf('-')
+  if (idx > 0) {
+    analysisForm.stockCode = raw.substring(0, idx)
+  }
+}
+
 // 市场类型变更时的处理
 const onMarketChange = () => {
   // 重新验证股票代码
@@ -846,13 +867,16 @@ const onMarketChange = () => {
 
 // 验证股票代码输入
 const validateStockCodeInput = () => {
-  const code = analysisForm.stockCode.trim()
+  const rawValue = analysisForm.stockCode.trim()
 
-  if (!code) {
+  if (!rawValue) {
     stockCodeError.value = ''
     stockCodeHelp.value = ''
     return
   }
+
+  // 从显示值中提取纯代码（如 "000001-平安银行" -> "000001"）
+  const code = getPureStockCode(rawValue)
 
   // 验证股票代码格式
   const validation = validateStockCode(code, analysisForm.market)
@@ -870,19 +894,50 @@ const validateStockCodeInput = () => {
       ElMessage.success(`已自动识别为${validation.market}`)
     }
 
-    // 标准化代码
+    // 标准化纯代码，但保留显示值中的名称后缀
     if (validation.normalizedCode) {
-      analysisForm.stockCode = validation.normalizedCode
+      const suffix = rawValue.includes('-') ? rawValue.substring(rawValue.indexOf('-')) : ''
+      analysisForm.stockCode = validation.normalizedCode + suffix
     }
   }
 
-  // 获取股票信息
+  // 获取股票信息（补充名称到输入框）
   fetchStockInfo()
 }
 
-// 获取股票信息
-const fetchStockInfo = () => {
-  // TODO: 实现股票信息获取
+// 获取股票信息（从本地基础信息查询，查到后拼接到输入框显示）
+const fetchStockInfo = async () => {
+  const rawValue = analysisForm.stockCode.trim()
+  const code = getPureStockCode(rawValue)
+
+  if (!code || stockCodeError.value) {
+    return
+  }
+
+  try {
+    const response = await searchStockBasics(code, 10)
+    const results = response.data || []
+    if (!results.length) {
+      return
+    }
+
+    const match = results.find((item: any) => {
+      if (!item) return false
+      const sym = (item.symbol || '').trim()
+      const ts = (item.ts_code || '').trim()
+      return sym === code || ts === code || ts.startsWith(code + '.')
+    })
+
+    if (match && match.name) {
+      // 如果输入框当前还没有名称后缀，则拼接上去
+      if (!rawValue.includes('-')) {
+        analysisForm.stockCode = `${code}-${match.name}`
+      }
+    }
+  } catch (err) {
+    // 静默失败，不影响主流程
+    console.warn('查询股票基础信息失败:', err)
+  }
 }
 
 // 切换分析师
@@ -901,11 +956,14 @@ const toggleAnalyst = (analystName: string) => {
 
 // 提交分析
 const submitAnalysis = async () => {
-  const stockCode = analysisForm.stockCode.trim()
-  if (!stockCode) {
+  const rawValue = analysisForm.stockCode.trim()
+  if (!rawValue) {
     ElMessage.warning('请输入股票代码')
     return
   }
+
+  // 从显示值中提取纯代码（如 "000001-平安银行" -> "000001"）
+  const stockCode = getPureStockCode(rawValue)
 
   // 验证股票代码格式
   const validation = validateStockCode(stockCode, analysisForm.market)

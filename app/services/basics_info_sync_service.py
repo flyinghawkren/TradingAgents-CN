@@ -85,68 +85,86 @@ class BasicsInfoSyncService:
     async def _sync_stock_basics(self) -> Dict[str, Any]:
         """同步股票基础信息"""
         result = {"count": 0, "message": ""}
+        stocks: List[Dict[str, Any]] = []
+        tushare_ok = False
+        akshare_ok = False
+
         try:
             db = get_mongo_db()
             collection = db.stock_basics
 
-            # 优先使用 Tushare，降级到 AKShare
-            stocks = []
+            # ===== 优先使用 AKShare（更稳定，无频率限制）=====
             try:
-                from tradingagents.dataflows.providers.china.tushare import get_tushare_provider
-                tushare = get_tushare_provider()
-                if tushare:
-                    df = await asyncio.to_thread(tushare.get_stock_basic)
-                    if df is not None and not df.empty:
-                        for _, row in df.iterrows():
+                import akshare as ak
+                df = await asyncio.to_thread(ak.stock_info_a_code_name)
+                if df is not None and not df.empty:
+                    for _, row in df.iterrows():
+                        code = str(row.get("code", "")).strip()
+                        name = str(row.get("name", "")).strip()
+                        if code and name:
                             stocks.append({
-                                "ts_code": row.get("ts_code", ""),
-                                "symbol": row.get("symbol", ""),
-                                "name": row.get("name", ""),
-                                "market": row.get("market", ""),
-                                "industry": row.get("industry", ""),
-                                "area": row.get("area", ""),
-                                "list_date": row.get("list_date", ""),
+                                "ts_code": code,
+                                "symbol": code,
+                                "name": name,
+                                "market": "",
+                                "industry": "",
+                                "area": "",
+                                "list_date": "",
                                 "updated_at": datetime.utcnow(),
                             })
-                        logger.info(f"📊 Tushare 股票基础信息: {len(stocks)} 条")
+                    akshare_ok = True
+                    logger.info(f"📊 AKShare stock_info_a_code_name: {len(stocks)} 条")
             except Exception as e:
-                logger.warning(f"⚠️ Tushare 股票基础信息获取失败: {e}")
+                logger.warning(f"⚠️ AKShare 股票基础信息获取失败: {e}")
 
-            # Tushare 失败时降级到 AKShare
+            # ===== AKShare 失败时降级到 Tushare =====
             if not stocks:
                 try:
-                    import akshare as ak
-                    df = await asyncio.to_thread(ak.stock_zh_a_spot_em)
-                    if df is not None and not df.empty:
-                        for _, row in df.head(5000).iterrows():
-                            code = str(row.get("代码", ""))
-                            name = str(row.get("名称", ""))
-                            if code and name:
-                                stocks.append({
-                                    "ts_code": code,
-                                    "symbol": code,
-                                    "name": name,
-                                    "market": "",
-                                    "industry": "",
-                                    "area": "",
-                                    "list_date": "",
-                                    "updated_at": datetime.utcnow(),
-                                })
-                        logger.info(f"📊 AKShare 股票基础信息: {len(stocks)} 条")
+                    from tradingagents.dataflows.providers.china.tushare import get_tushare_provider
+                    tushare = get_tushare_provider()
+                    if tushare:
+                        # 注意：get_stock_basic_info 不传 symbol 时返回 List[Dict]
+                        stock_list = await tushare.get_stock_basic_info()
+                        if stock_list and isinstance(stock_list, list):
+                            for item in stock_list:
+                                if isinstance(item, dict):
+                                    stocks.append({
+                                        "ts_code": item.get("ts_code", ""),
+                                        "symbol": item.get("symbol", ""),
+                                        "name": item.get("name", ""),
+                                        "market": item.get("market", ""),
+                                        "industry": item.get("industry", ""),
+                                        "area": item.get("area", ""),
+                                        "list_date": item.get("list_date", ""),
+                                        "updated_at": datetime.utcnow(),
+                                    })
+                            tushare_ok = True
+                            logger.info(f"📊 Tushare 股票基础信息: {len(stocks)} 条")
+                        else:
+                            logger.warning("⚠️ Tushare 返回空列表或非列表数据")
+                    else:
+                        logger.warning("⚠️ Tushare provider 不可用")
                 except Exception as e:
-                    logger.warning(f"⚠️ AKShare 股票基础信息获取失败: {e}")
+                    logger.warning(f"⚠️ Tushare 股票基础信息获取失败: {e}")
 
+            # 写入数据库
             if stocks:
-                # 清空旧数据，写入新数据
                 await collection.delete_many({})
                 await collection.insert_many(stocks)
-                # 创建索引
                 await collection.create_index("ts_code", unique=True)
                 await collection.create_index("symbol")
                 await collection.create_index("name")
+                logger.info(f"✅ 股票基础信息已写入 MongoDB: {len(stocks)} 条")
+            else:
+                logger.error("❌ 股票基础信息同步：所有数据源均失败，无数据写入")
 
             result["count"] = len(stocks)
-            result["message"] = f"股票基础信息: {len(stocks)} 条"
+            source_info = []
+            if akshare_ok:
+                source_info.append("AKShare")
+            if tushare_ok:
+                source_info.append("Tushare")
+            result["message"] = f"股票基础信息: {len(stocks)} 条（来源: {', '.join(source_info) if source_info else '无'}）"
 
         except Exception as e:
             logger.error(f"❌ 股票基础信息同步失败: {e}", exc_info=True)
@@ -157,19 +175,23 @@ class BasicsInfoSyncService:
     async def _sync_fund_basics(self) -> Dict[str, Any]:
         """同步基金基础信息"""
         result = {"count": 0, "message": ""}
+        funds: List[Dict[str, Any]] = []
+        akshare_ok = False
+        tushare_ok = False
+
         try:
             db = get_mongo_db()
             collection = db.fund_basics
 
-            funds = []
+            # ===== 优先使用 AKShare（更稳定，无频率限制）=====
             try:
                 import akshare as ak
                 df = await asyncio.to_thread(ak.fund_name_em)
                 if df is not None and not df.empty:
                     for _, row in df.iterrows():
-                        code = str(row.get("基金代码", row.get("code", "")))
-                        name = str(row.get("基金简称", row.get("name", "")))
-                        ftype = str(row.get("基金类型", row.get("类型", "")))
+                        code = str(row.get("基金代码", row.get("code", ""))).strip()
+                        name = str(row.get("基金简称", row.get("name", ""))).strip()
+                        ftype = str(row.get("基金类型", row.get("类型", ""))).strip()
                         if code and name:
                             funds.append({
                                 "ts_code": code,
@@ -177,10 +199,13 @@ class BasicsInfoSyncService:
                                 "fund_type": ftype,
                                 "updated_at": datetime.utcnow(),
                             })
-                    logger.info(f"📊 AKShare 基金基础信息: {len(funds)} 条")
+                    akshare_ok = True
+                    logger.info(f"📊 AKShare fund_name_em: {len(funds)} 条")
             except Exception as e:
                 logger.warning(f"⚠️ AKShare 基金基础信息获取失败: {e}")
-                # 降级到 Tushare
+
+            # ===== AKShare 失败时降级到 Tushare =====
+            if not funds:
                 try:
                     from tradingagents.dataflows.providers.china.tushare import get_tushare_provider
                     tushare = get_tushare_provider()
@@ -194,7 +219,12 @@ class BasicsInfoSyncService:
                                     "fund_type": row.get("fund_type", ""),
                                     "updated_at": datetime.utcnow(),
                                 })
+                            tushare_ok = True
                             logger.info(f"📊 Tushare 基金基础信息: {len(funds)} 条")
+                        else:
+                            logger.warning("⚠️ Tushare 返回空数据")
+                    else:
+                        logger.warning("⚠️ Tushare provider 不可用")
                 except Exception as e2:
                     logger.warning(f"⚠️ Tushare 基金基础信息获取失败: {e2}")
 
@@ -203,9 +233,17 @@ class BasicsInfoSyncService:
                 await collection.insert_many(funds)
                 await collection.create_index("ts_code", unique=True)
                 await collection.create_index("name")
+                logger.info(f"✅ 基金基础信息已写入 MongoDB: {len(funds)} 条")
+            else:
+                logger.error("❌ 基金基础信息同步：所有数据源均失败，无数据写入")
 
             result["count"] = len(funds)
-            result["message"] = f"基金基础信息: {len(funds)} 条"
+            source_info = []
+            if akshare_ok:
+                source_info.append("AKShare")
+            if tushare_ok:
+                source_info.append("Tushare")
+            result["message"] = f"基金基础信息: {len(funds)} 条（来源: {', '.join(source_info) if source_info else '无'}）"
 
         except Exception as e:
             logger.error(f"❌ 基金基础信息同步失败: {e}", exc_info=True)

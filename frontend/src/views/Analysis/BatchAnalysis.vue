@@ -58,8 +58,12 @@
                     closable
                     @close="removeStock(index)"
                     class="stock-tag"
+                    :type="stockCodeNames[code] ? 'success' : 'info'"
                   >
                     {{ code }}
+                    <span v-if="stockCodeNames[code]" style="margin-left: 4px; font-weight: 500;">
+                      {{ stockCodeNames[code] }}
+                    </span>
                   </el-tag>
                   <el-tag v-if="stockCodes.length > 20" type="info">
                     +{{ stockCodes.length - 20 }} 更多...
@@ -120,38 +124,53 @@
                 </el-form-item>
               </div>
 
-              <!-- 分析参数 -->
+              <!-- 分析深度 -->
               <div class="form-section">
-                <h4 class="section-title">⚙️ 分析参数</h4>
-                <el-form-item label="分析深度">
-                  <el-select v-model="batchForm.depth" placeholder="选择深度" size="large" style="width: 100%">
-                    <el-option label="⚡ 1级 - 快速分析 (2-4分钟/只)" value="1" />
-                    <el-option label="📈 2级 - 基础分析 (4-6分钟/只)" value="2" />
-                    <el-option label="🎯 3级 - 标准分析 (6-10分钟/只，推荐)" value="3" />
-                    <el-option label="🔍 4级 - 深度分析 (10-15分钟/只)" value="4" />
-                    <el-option label="🏆 5级 - 全面分析 (15-25分钟/只)" value="5" />
-                  </el-select>
-                </el-form-item>
+                <h4 class="section-title">🎯 分析深度</h4>
+                <div class="depth-selector">
+                  <div
+                    v-for="(depth, index) in depthOptions"
+                    :key="index"
+                    class="depth-option"
+                    :class="{ active: Number(batchForm.depth) === index + 1 }"
+                    @click="batchForm.depth = String(index + 1)"
+                  >
+                    <div class="depth-icon">{{ depth.icon }}</div>
+                    <div class="depth-info">
+                      <div class="depth-name">{{ depth.name }}</div>
+                      <div class="depth-desc">{{ depth.description }}</div>
+                      <div class="depth-time">{{ depth.time }}</div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <!-- 分析师选择 -->
+              <!-- 分析师团队 -->
               <div class="form-section">
                 <h4 class="section-title">👥 分析师团队</h4>
-                <div class="analysts-selection">
-                  <el-checkbox-group v-model="batchForm.analysts" class="analysts-group">
-                    <div
-                      v-for="analyst in ANALYSTS"
-                      :key="analyst.id"
-                      class="analyst-option"
-                    >
-                      <el-checkbox :label="analyst.name" class="analyst-checkbox">
-                        <div class="analyst-info">
-                          <span class="analyst-name">{{ analyst.name }}</span>
-                          <span class="analyst-desc">{{ analyst.description }}</span>
-                        </div>
-                      </el-checkbox>
+                <div class="analysts-grid">
+                  <div
+                    v-for="analyst in ANALYSTS"
+                    :key="analyst.id"
+                    class="analyst-card"
+                    :class="{ active: batchForm.analysts.includes(analyst.name) }"
+                    @click="toggleBatchAnalyst(analyst.name)"
+                  >
+                    <div class="analyst-avatar">
+                      <el-icon>
+                        <component :is="analyst.icon" />
+                      </el-icon>
                     </div>
-                  </el-checkbox-group>
+                    <div class="analyst-content">
+                      <div class="analyst-name">{{ analyst.name }}</div>
+                      <div class="analyst-desc">{{ analyst.description }}</div>
+                    </div>
+                    <div class="analyst-check">
+                      <el-icon v-if="batchForm.analysts.includes(analyst.name)" class="check-icon">
+                        <Check />
+                      </el-icon>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -248,9 +267,10 @@
           v-for="(code, index) in stockCodes"
           :key="index"
           class="stock-item"
-          :class="{ invalid: invalidCodes.includes(code) }"
+          :class="{ invalid: invalidCodes.includes(code), 'has-name': stockCodeNames[code] }"
         >
           <span class="stock-code">{{ code }}</span>
+          <span v-if="stockCodeNames[code]" class="stock-name">{{ stockCodeNames[code] }}</span>
           <el-button
             type="text"
             size="small"
@@ -280,12 +300,22 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Files, TrendCharts, Check, Close } from '@element-plus/icons-vue'
 import { ANALYSTS, DEFAULT_ANALYSTS, convertAnalystNamesToIds } from '@/constants/analysts'
+
+// 分析深度选项
+const depthOptions = [
+  { icon: '⚡', name: '1级 - 快速分析', description: '基础数据概览，快速决策', time: '2-4分钟/只' },
+  { icon: '📈', name: '2级 - 基础分析', description: '常规投资决策', time: '4-6分钟/只' },
+  { icon: '🎯', name: '3级 - 标准分析', description: '技术+基本面，推荐', time: '6-10分钟/只' },
+  { icon: '🔍', name: '4级 - 深度分析', description: '多轮辩论，深度研究', time: '10-15分钟/只' },
+  { icon: '🏆', name: '5级 - 全面分析', description: '最全面的分析报告', time: '15-25分钟/只' }
+]
 import { configApi } from '@/api/config'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import ModelConfig from '@/components/ModelConfig.vue'
 import { getMarketByStockCode } from '@/utils/market'
 import { validateStockCode } from '@/utils/stockValidator'
+import { searchStockBasics } from '@/api/cache'
 
 // 路由实例（必须在顶层调用）
 const router = useRouter()
@@ -296,6 +326,7 @@ const stockInput = ref('')
 const stockCodes = ref<string[]>([])  // 保留用于表单绑定
 const symbols = ref<string[]>([])     // 标准化后的代码列表
 const invalidCodes = ref<string[]>([])
+const stockCodeNames = ref<Record<string, string>>({}) // 代码 -> 名称映射
 
 // 模型设置
 const modelSettings = ref({
@@ -328,7 +359,7 @@ const normalizeCodeSmart = (raw: string): { symbol?: string; error?: string } =>
   return { error: v.message || '代码格式无效' }
 }
 
-const parseStockCodes = () => {
+const parseStockCodes = async () => {
   const codes = stockInput.value
     .split('\n')
     .map(code => code.trim())
@@ -346,6 +377,37 @@ const parseStockCodes = () => {
   stockCodes.value = normalized
   symbols.value = [...normalized]
   invalidCodes.value = invalid
+
+  // 批量查询本地基础信息补充名称
+  if (normalized.length > 0) {
+    stockCodeNames.value = {}
+    await fetchStockNames(normalized)
+  }
+}
+
+// 批量查询股票名称
+const fetchStockNames = async (codes: string[]) => {
+  if (codes.length === 0) return
+  try {
+    // 一次性查询所有代码（用逗号分隔或直接取第一个代码查询全部）
+    // 由于接口是 keyword 搜索，我们用第一个代码作为 keyword，limit 设大些
+    // 更好的方式是逐个查询，但为了不频繁请求，我们批量用第一个字符查询
+    const response = await searchStockBasics(codes[0], Math.max(codes.length * 5, 50))
+    const results = response.data || []
+    for (const code of codes) {
+      const match = results.find((item: any) => {
+        if (!item) return false
+        const sym = (item.symbol || '').trim()
+        const ts = (item.ts_code || '').trim()
+        return sym === code || ts === code || ts.startsWith(code + '.')
+      })
+      if (match && match.name) {
+        stockCodeNames.value[code] = match.name
+      }
+    }
+  } catch (e) {
+    console.warn('批量查询股票名称失败:', e)
+  }
 }
 
 const clearStocks = () => {
@@ -353,6 +415,7 @@ const clearStocks = () => {
   stockCodes.value = []
   symbols.value = []
   invalidCodes.value = []
+  stockCodeNames.value = {}
 }
 
 // 初始化模型设置
@@ -446,14 +509,27 @@ onMounted(async () => {
 const removeStock = (index: number) => {
   const removedCode = stockCodes.value[index]
   stockCodes.value.splice(index, 1)
-  
+
   // 更新输入框
   stockInput.value = stockCodes.value.join('\n')
-  
+
   // 从无效列表中移除
   const invalidIndex = invalidCodes.value.indexOf(removedCode)
   if (invalidIndex > -1) {
     invalidCodes.value.splice(invalidIndex, 1)
+  }
+
+  // 从名称映射中移除
+  delete stockCodeNames.value[removedCode]
+}
+
+// 切换分析师
+const toggleBatchAnalyst = (analystName: string) => {
+  const index = batchForm.analysts.indexOf(analystName)
+  if (index > -1) {
+    batchForm.analysts.splice(index, 1)
+  } else {
+    batchForm.analysts.push(analystName)
   }
 }
 
@@ -771,44 +847,145 @@ const submitBatchAnalysis = async () => {
         }
       }
 
-      .analysts-selection {
-        .analysts-group {
+      .depth-selector {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+
+        .depth-option {
           display: flex;
-          flex-direction: column;
-          gap: 10px;
+          align-items: center;
+          padding: 16px;
+          border: 1px solid var(--el-border-color-lighter);
+          border-radius: 12px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          background: var(--el-bg-color);
 
-          .analyst-option {
-            .analyst-checkbox {
-              width: 100%;
+          &:hover {
+            border-color: var(--el-color-primary);
+            transform: translateY(-2px);
+            box-shadow: var(--el-box-shadow-light);
+          }
 
-              :deep(.el-checkbox__label) {
-                width: 100%;
-              }
+          &.active {
+            border-color: var(--el-color-primary);
+            background: var(--el-color-primary-light-9);
+            color: var(--el-color-primary);
+            transform: translateY(-2px);
+            box-shadow: var(--el-box-shadow-light);
+          }
 
-              :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
-                background-color: var(--el-color-primary);
-                border-color: var(--el-color-primary);
-              }
+          .depth-icon {
+            font-size: 24px;
+            margin-right: 12px;
+          }
 
-              :deep(.el-checkbox__input.is-checked + .el-checkbox__label) {
-                color: var(--el-color-primary);
-              }
+          .depth-info {
+            .depth-name {
+              font-weight: 600;
+              margin-bottom: 4px;
+            }
 
-              .analyst-info {
-                display: flex;
-                flex-direction: column;
-                gap: 4px;
+            .depth-desc {
+              font-size: 12px;
+              opacity: 0.8;
+              margin-bottom: 2px;
+            }
 
-                .analyst-name {
-                  font-weight: 500;
-                  color: var(--el-text-color-primary);
-                }
+            .depth-time {
+              font-size: 11px;
+              opacity: 0.7;
+            }
+          }
+        }
+      }
 
-                .analyst-desc {
-                  font-size: 12px;
-                  color: var(--el-text-color-secondary);
-                }
-              }
+      .analysts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+
+        .analyst-card {
+          display: flex;
+          align-items: center;
+          padding: 16px;
+          border: 1px solid var(--el-border-color-lighter);
+          border-radius: 12px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          background: var(--el-bg-color);
+
+          &:hover {
+            border-color: var(--el-color-primary);
+            transform: translateY(-2px);
+            box-shadow: var(--el-box-shadow-light);
+          }
+
+          &.active {
+            border-color: var(--el-color-primary);
+            background: var(--el-color-primary-light-9);
+            color: var(--el-color-primary);
+            transform: translateY(-2px);
+            box-shadow: var(--el-box-shadow-light);
+          }
+
+          .analyst-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: var(--el-fill-color-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 14px;
+            flex-shrink: 0;
+            font-size: 20px;
+
+            .el-icon {
+              color: var(--el-color-primary);
+            }
+          }
+
+          &.active .analyst-avatar {
+            background: var(--el-color-primary);
+            .el-icon {
+              color: #fff;
+            }
+          }
+
+          .analyst-content {
+            flex: 1;
+
+            .analyst-name {
+              font-weight: 600;
+              margin-bottom: 4px;
+              color: var(--el-text-color-primary);
+            }
+
+            .analyst-desc {
+              font-size: 12px;
+              color: var(--el-text-color-secondary);
+            }
+          }
+
+          .analyst-check {
+            margin-left: 12px;
+            flex-shrink: 0;
+
+            .check-icon {
+              font-size: 18px;
+              color: var(--el-color-primary);
+            }
+          }
+
+          &.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+
+            &:hover {
+              transform: none;
+              box-shadow: none;
             }
           }
         }

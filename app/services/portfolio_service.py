@@ -266,5 +266,97 @@ class PortfolioService:
         return None
 
 
+    # ==================== 现金管理 ====================
+
+    def _format_cash(self, doc: Dict[str, Any]) -> Dict[str, Any]:
+        """格式化现金记录为响应格式"""
+        created_at = doc.get("created_at")
+        if isinstance(created_at, datetime):
+            created_at = created_at.isoformat()
+        updated_at = doc.get("updated_at")
+        if isinstance(updated_at, datetime):
+            updated_at = updated_at.isoformat()
+
+        return {
+            "id": str(doc.get("_id")),
+            "currency": doc.get("currency", "CNY"),
+            "amount": doc.get("amount", 0.0),
+            "notes": doc.get("notes", ""),
+            "created_at": created_at,
+            "updated_at": updated_at,
+        }
+
+    async def get_user_cash(self, user_id: str) -> List[Dict[str, Any]]:
+        """获取用户现金列表"""
+        db = await self._get_db()
+        collection = db.portfolio_cash
+        cursor = collection.find({"user_id": user_id}).sort("created_at", -1)
+        docs = await cursor.to_list(length=None)
+        return [self._format_cash(doc) for doc in docs]
+
+    async def add_cash(
+        self,
+        user_id: str,
+        currency: str,
+        amount: float,
+        notes: str = ""
+    ) -> Dict[str, Any]:
+        """添加现金记录"""
+        db = await self._get_db()
+        collection = db.portfolio_cash
+
+        now = datetime.utcnow()
+        doc = {
+            "user_id": user_id,
+            "currency": currency,
+            "amount": amount,
+            "notes": notes,
+            "created_at": now,
+            "updated_at": now,
+        }
+
+        result = await collection.insert_one(doc)
+        doc["_id"] = result.inserted_id
+        return self._format_cash(doc)
+
+    async def update_cash(
+        self,
+        user_id: str,
+        cash_id: str,
+        currency: Optional[str] = None,
+        amount: Optional[float] = None,
+        notes: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """更新现金记录"""
+        db = await self._get_db()
+        collection = db.portfolio_cash
+
+        update_fields = {"updated_at": datetime.utcnow()}
+        if currency is not None:
+            update_fields["currency"] = currency
+        if amount is not None:
+            update_fields["amount"] = amount
+        if notes is not None:
+            update_fields["notes"] = notes
+
+        result = await collection.find_one_and_update(
+            {"_id": ObjectId(cash_id), "user_id": user_id},
+            {"$set": update_fields},
+            return_document=True
+        )
+        if result:
+            return self._format_cash(result)
+        return None
+
+    async def remove_cash(self, user_id: str, cash_id: str) -> bool:
+        """删除现金记录"""
+        db = await self._get_db()
+        collection = db.portfolio_cash
+        result = await collection.delete_one(
+            {"_id": ObjectId(cash_id), "user_id": user_id}
+        )
+        return result.deleted_count > 0
+
+
 # 单例
 portfolio_service = PortfolioService()

@@ -59,7 +59,8 @@
           <el-table-column prop="fund_type" label="类型" width="120" />
           <el-table-column prop="market" label="市场" width="90">
             <template #default="{ row }">
-              <el-tag size="small" :type="row.market === 'E' ? 'success' : 'info'">
+              <el-tag v-if="row._from_local" size="small" type="warning">本地</el-tag>
+              <el-tag v-else size="small" :type="row.market === 'E' ? 'success' : 'info'">
                 {{ row.market === 'E' ? '场内' : '场外' }}
               </el-tag>
             </template>
@@ -351,6 +352,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search, TrendCharts, Loading, Timer, Calendar, User, Collection, Money, InfoFilled, Warning, CircleClose } from '@element-plus/icons-vue'
 import { analysisApi } from '@/api/analysis'
+import { searchFundBasics } from '@/api/cache'
 
 const router = useRouter()
 
@@ -465,9 +467,10 @@ const stopProgress = () => {
   showTimeoutHint.value = false
 }
 
-// 搜索基金
+// 搜索基金（优先本地基础信息快速预览，再调后端补全）
 const searchFunds = async () => {
-  if (!searchKeyword.value.trim()) {
+  const keyword = searchKeyword.value.trim()
+  if (!keyword) {
     ElMessage.warning('请输入基金代码或名称')
     return
   }
@@ -479,20 +482,48 @@ const searchFunds = async () => {
   fundDetail.value = null
   detailLoaded.value = false
 
+  // 第一步：先查询本地基础信息做快速预览
+  let localResults: any[] = []
   try {
-    const response = await analysisApi.searchFunds(searchKeyword.value.trim())
+    const localResponse = await searchFundBasics(keyword, 50)
+    localResults = (localResponse.data || []).map((item: any) => ({
+      ts_code: item.ts_code,
+      name: item.name,
+      fund_type: item.fund_type || '-',
+      market: '-',
+      _from_local: true
+    }))
+    if (localResults.length > 0) {
+      searchResults.value = localResults
+      ElMessage.success(`本地找到 ${localResults.length} 只基金，正在从数据源补全...`)
+    }
+  } catch (e) {
+    console.warn('本地基金基础信息查询失败:', e)
+  }
+
+  // 第二步：调用后端 AKShare API 获取完整数据
+  try {
+    const response = await analysisApi.searchFunds(keyword)
     if (response?.success && response.data) {
-      searchResults.value = response.data
-      if (searchResults.value.length === 0) {
+      const apiResults = response.data
+      if (apiResults.length === 0 && localResults.length === 0) {
         ElMessage.info('未找到相关基金')
-      } else {
-        ElMessage.success(`找到 ${searchResults.value.length} 只基金`)
+      } else if (apiResults.length > 0) {
+        // 用 API 结果替换本地结果（更完整）
+        searchResults.value = apiResults
+        ElMessage.success(`从数据源找到 ${apiResults.length} 只基金`)
       }
     } else {
-      ElMessage.warning(response?.message || '搜索失败')
+      if (localResults.length === 0) {
+        ElMessage.warning(response?.message || '搜索失败')
+      }
     }
   } catch (error: any) {
-    ElMessage.error(error.message || '搜索失败')
+    if (localResults.length === 0) {
+      ElMessage.error(error.message || '搜索失败')
+    } else {
+      ElMessage.warning('数据源查询失败，当前展示本地缓存结果')
+    }
   } finally {
     searching.value = false
   }

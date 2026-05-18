@@ -102,6 +102,38 @@ export interface UpdateFundHoldingRequest {
   notes?: string
 }
 
+// ==================== 现金管理 ====================
+
+export interface CashItem {
+  id: string
+  currency: string
+  amount: number
+  notes: string
+  created_at?: string
+  updated_at?: string
+}
+
+export interface AddCashRequest {
+  currency: string
+  amount: number
+  notes?: string
+}
+
+export const cashApi = {
+  list(): Promise<{ success: boolean; data: CashItem[]; message?: string }> {
+    return ApiClient.get('/api/portfolio/cash/')
+  },
+  add(request: AddCashRequest): Promise<{ success: boolean; data: CashItem; message?: string }> {
+    return ApiClient.post('/api/portfolio/cash/', request)
+  },
+  update(cashId: string, request: Partial<AddCashRequest>): Promise<{ success: boolean; data: CashItem; message?: string }> {
+    return ApiClient.put(`/api/portfolio/cash/${cashId}`, request)
+  },
+  remove(cashId: string): Promise<{ success: boolean; data: { id: string }; message?: string }> {
+    return ApiClient.delete(`/api/portfolio/cash/${cashId}`)
+  }
+}
+
 export const fundPortfolioApi = {
   /**
    * 获取基金持仓列表

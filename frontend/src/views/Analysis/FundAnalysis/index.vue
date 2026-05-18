@@ -459,6 +459,7 @@ import {
 } from '@element-plus/icons-vue'
 import { analysisApi } from '@/api/analysis'
 import { configApi } from '@/api/config'
+import { searchFundBasics } from '@/api/cache'
 import { marked } from 'marked'
 
 marked.setOptions({ breaks: true, gfm: true })
@@ -516,14 +517,37 @@ const clearState = () => {
 // ==================== 基金信息（从URL参数获取，优先于缓存） ====================
 const selectedFund = ref<any>(null)
 
-const initFundFromQuery = () => {
+const initFundFromQuery = async () => {
   const tsCode = route.query.ts_code as string
   const name = route.query.name as string
-  if (tsCode && name) {
+  if (tsCode) {
+    let fundName = name
+    let fundType = route.query.fund_type as string || undefined
+
+    // 如果缺少名称，尝试从本地基础信息查询
+    if (!fundName) {
+      try {
+        const response = await searchFundBasics(tsCode, 10)
+        const results = response.data || []
+        const match = results.find((item: any) => {
+          if (!item) return false
+          return (item.ts_code || '').trim() === tsCode
+        })
+        if (match) {
+          fundName = match.name
+          if (!fundType && match.fund_type) {
+            fundType = match.fund_type
+          }
+        }
+      } catch (e) {
+        console.warn('从本地基础信息查询基金名称失败:', e)
+      }
+    }
+
     selectedFund.value = {
       ts_code: tsCode,
-      name: name,
-      fund_type: route.query.fund_type as string || undefined,
+      name: fundName || tsCode,
+      fund_type: fundType,
       market: route.query.market as string || undefined,
       management: route.query.management as string || undefined
     }
@@ -874,8 +898,8 @@ const initializeModelSettings = async () => {
 }
 
 // 页面加载
-onMounted(() => {
-  const hasQuery = initFundFromQuery()
+onMounted(async () => {
+  const hasQuery = await initFundFromQuery()
   const cached = restoreState()
 
   // 恢复基金选择和分析配置

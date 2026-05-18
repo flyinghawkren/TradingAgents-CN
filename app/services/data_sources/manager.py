@@ -9,7 +9,6 @@ import pandas as pd
 from .base import DataSourceAdapter
 from .tushare_adapter import TushareAdapter
 from .akshare_adapter import AKShareAdapter
-from .baostock_adapter import BaoStockAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +25,6 @@ class DataSourceManager:
         self.adapters: List[DataSourceAdapter] = [
             TushareAdapter(),
             AKShareAdapter(),
-            BaoStockAdapter(),
         ]
 
         # 从数据库加载优先级配置

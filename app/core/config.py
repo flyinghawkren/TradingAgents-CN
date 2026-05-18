@@ -280,18 +280,20 @@ class Settings(BaseSettings):
     MARKET_ANALYST_LOOKBACK_DAYS: int = Field(default=60, ge=5, le=365, description="市场分析回溯天数（用于技术分析）")
 
     # ==================== BaoStock统一数据同步配置 ====================
+    # ⚠️ BaoStock 已弃用：其 socket 库存在 recv() 空数据忙等死循环 bug，会导致 CPU 100%
+    # 推荐仅使用 Tushare + AKShare 作为数据源
 
     # BaoStock统一数据同步总开关
-    BAOSTOCK_UNIFIED_ENABLED: bool = Field(default=True, description="启用BaoStock统一数据同步")
+    BAOSTOCK_UNIFIED_ENABLED: bool = Field(default=False, description="启用BaoStock统一数据同步（已弃用，默认关闭）")
 
     # BaoStock数据同步任务配置
-    BAOSTOCK_BASIC_INFO_SYNC_ENABLED: bool = Field(default=True, description="启用基础信息同步")
+    BAOSTOCK_BASIC_INFO_SYNC_ENABLED: bool = Field(default=False, description="启用基础信息同步（已弃用）")
     BAOSTOCK_BASIC_INFO_SYNC_CRON: str = Field(default="0 4 * * *", description="基础信息同步CRON表达式")  # 每日凌晨4点
-    BAOSTOCK_DAILY_QUOTES_SYNC_ENABLED: bool = Field(default=True, description="启用日K线同步（注意：BaoStock不支持实时行情）")
+    BAOSTOCK_DAILY_QUOTES_SYNC_ENABLED: bool = Field(default=False, description="启用日K线同步（已弃用，BaoStock不支持实时行情）")
     BAOSTOCK_DAILY_QUOTES_SYNC_CRON: str = Field(default="0 16 * * 1-5", description="日K线同步CRON表达式")  # 工作日收盘后16:00
-    BAOSTOCK_HISTORICAL_SYNC_ENABLED: bool = Field(default=True, description="启用历史数据同步")
+    BAOSTOCK_HISTORICAL_SYNC_ENABLED: bool = Field(default=False, description="启用历史数据同步（已弃用）")
     BAOSTOCK_HISTORICAL_SYNC_CRON: str = Field(default="0 18 * * 1-5", description="历史数据同步CRON表达式")  # 工作日18点
-    BAOSTOCK_STATUS_CHECK_ENABLED: bool = Field(default=True, description="启用状态检查")
+    BAOSTOCK_STATUS_CHECK_ENABLED: bool = Field(default=False, description="启用状态检查（已弃用）")
     BAOSTOCK_STATUS_CHECK_CRON: str = Field(default="45 * * * *", description="状态检查CRON表达式")  # 每小时45分
 
     # BaoStock数据初始化配置

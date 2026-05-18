@@ -334,3 +334,115 @@ async def get_fund_holding(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"获取基金持仓失败: {str(e)}"
         )
+
+
+# ==================== 现金管理 ====================
+
+class AddCashRequest(BaseModel):
+    """添加现金请求"""
+    currency: str = "CNY"
+    amount: float
+    notes: str = ""
+
+
+class UpdateCashRequest(BaseModel):
+    """更新现金请求"""
+    currency: Optional[str] = None
+    amount: Optional[float] = None
+    notes: Optional[str] = None
+
+
+@router.get("/cash/", response_model=dict)
+async def get_cash(
+    current_user: dict = Depends(get_current_user)
+):
+    """获取用户现金列表"""
+    try:
+        cash_list = await portfolio_service.get_user_cash(current_user["id"])
+        return ok(cash_list)
+    except Exception as e:
+        logger.error(f"获取现金列表失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取现金列表失败: {str(e)}"
+        )
+
+
+@router.post("/cash/", response_model=dict)
+async def add_cash(
+    request: AddCashRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """添加现金记录"""
+    try:
+        cash = await portfolio_service.add_cash(
+            user_id=current_user["id"],
+            currency=request.currency,
+            amount=request.amount,
+            notes=request.notes
+        )
+        return ok(cash, "添加现金成功")
+    except Exception as e:
+        logger.error(f"添加现金失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"添加现金失败: {str(e)}"
+        )
+
+
+@router.put("/cash/{cash_id}", response_model=dict)
+async def update_cash(
+    cash_id: str,
+    request: UpdateCashRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """更新现金记录"""
+    try:
+        cash = await portfolio_service.update_cash(
+            user_id=current_user["id"],
+            cash_id=cash_id,
+            currency=request.currency,
+            amount=request.amount,
+            notes=request.notes
+        )
+        if cash:
+            return ok(cash, "更新现金成功")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="现金记录不存在"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"更新现金失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"更新现金失败: {str(e)}"
+        )
+
+
+@router.delete("/cash/{cash_id}", response_model=dict)
+async def remove_cash(
+    cash_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """删除现金记录"""
+    try:
+        success = await portfolio_service.remove_cash(
+            user_id=current_user["id"],
+            cash_id=cash_id
+        )
+        if success:
+            return ok({"id": cash_id}, "删除现金成功")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="现金记录不存在"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"删除现金失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"删除现金失败: {str(e)}"
+        )

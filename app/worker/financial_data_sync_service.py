@@ -13,7 +13,6 @@ from app.core.database import get_mongo_db
 from app.services.financial_data_service import get_financial_data_service
 from tradingagents.dataflows.providers.china.tushare import get_tushare_provider
 from tradingagents.dataflows.providers.china.akshare import get_akshare_provider
-from tradingagents.dataflows.providers.china.baostock import get_baostock_provider
 
 logger = logging.getLogger(__name__)
 
@@ -59,11 +58,10 @@ class FinancialDataSyncService:
             self.db = get_mongo_db()
             self.financial_service = await get_financial_data_service()
             
-            # 初始化数据源提供者
+            # 初始化数据源提供者（⚠️ BaoStock 已弃用）
             self.providers = {
                 "tushare": get_tushare_provider(),
-                "akshare": get_akshare_provider(),
-                "baostock": get_baostock_provider()
+                "akshare": get_akshare_provider()
             }
             
             logger.info("✅ 财务数据同步服务初始化成功")
@@ -85,7 +83,7 @@ class FinancialDataSyncService:
         
         Args:
             symbols: 股票代码列表，None表示同步所有股票
-            data_sources: 数据源列表 ["tushare", "akshare", "baostock"]
+            data_sources: 数据源列表 ["tushare", "akshare"]，⚠️ BaoStock 已弃用
             report_types: 报告类型列表 ["quarterly", "annual"]
             batch_size: 批处理大小
             delay_seconds: API调用延迟
@@ -96,9 +94,9 @@ class FinancialDataSyncService:
         if self.db is None:
             await self.initialize()
         
-        # 默认参数
+        # 默认参数（⚠️ BaoStock 已弃用）
         if data_sources is None:
-            data_sources = ["tushare", "akshare", "baostock"]
+            data_sources = ["tushare", "akshare"]
         if report_types is None:
             report_types = ["quarterly", "annual"]  # 同时同步季报和年报
         

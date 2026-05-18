@@ -138,3 +138,47 @@ export function triggerBasicsSync() {
   })
 }
 
+/**
+ * 股票基础信息项
+ */
+export interface StockBasicItem {
+  ts_code: string
+  symbol: string
+  name: string
+  area?: string
+  industry?: string
+  market?: string
+  list_date?: string
+}
+
+/**
+ * 基金基础信息项
+ */
+export interface FundBasicItem {
+  ts_code: string
+  name: string
+  fund_type?: string
+}
+
+/**
+ * 搜索股票基础信息
+ */
+export function searchStockBasics(keyword: string, limit: number = 20) {
+  return request<StockBasicItem[]>({
+    url: '/api/basics/stocks',
+    method: 'get',
+    params: { keyword, limit }
+  })
+}
+
+/**
+ * 搜索基金基础信息
+ */
+export function searchFundBasics(keyword: string, limit: number = 20) {
+  return request<FundBasicItem[]>({
+    url: '/api/basics/funds',
+    method: 'get',
+    params: { keyword, limit }
+  })
+}
+

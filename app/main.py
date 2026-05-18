@@ -28,7 +28,7 @@ from pathlib import Path
 from app.core.config import settings
 from app.core.database import init_db, close_db
 from app.core.logging_config import setup_logging
-from app.routers import auth_db as auth, analysis, screening, queue, sse, health, favorites, config, reports, database, operation_logs, tags, tushare_init, akshare_init, baostock_init, historical_data, multi_period_sync, financial_data, news_data, social_media, internal_messages, usage_statistics, model_capabilities, cache, logs, portfolio
+from app.routers import auth_db as auth, analysis, screening, queue, sse, health, favorites, config, reports, database, operation_logs, tags, tushare_init, akshare_init, baostock_init, historical_data, multi_period_sync, financial_data, news_data, social_media, internal_messages, usage_statistics, model_capabilities, cache, logs, portfolio, user_settings
 from app.routers import sync as sync_router, multi_source_sync
 from app.routers import stocks as stocks_router
 from app.routers import stock_data as stock_data_router
@@ -55,12 +55,8 @@ from app.worker.akshare_sync_service import (
     run_akshare_financial_sync,
     run_akshare_status_check
 )
-from app.worker.baostock_sync_service import (
-    run_baostock_basic_info_sync,
-    run_baostock_daily_quotes_sync,
-    run_baostock_historical_sync,
-    run_baostock_status_check
-)
+# ⚠️ BaoStock 已弃用：其 socket 库存在 recv() 空数据忙等死循环 bug
+# from app.worker.baostock_sync_service import ...
 # 港股和美股改为按需获取+缓存模式，不再需要定时同步任务
 # from app.worker.hk_sync_service import ...
 # from app.worker.us_sync_service import ...
@@ -281,17 +277,17 @@ async def lifespan(app: FastAPI):
         multi_source_service = MultiSourceBasicsSyncService()
 
         # 根据 TUSHARE_ENABLED 配置决定优先数据源
-        # 如果 Tushare 被禁用，系统会自动使用其他可用数据源（AKShare/BaoStock）
+        # ⚠️ BaoStock 已弃用（存在 socket 死循环 bug），仅使用 Tushare + AKShare
         preferred_sources = None  # None 表示使用默认优先级顺序
 
         if settings.TUSHARE_ENABLED:
-            # Tushare 启用时，优先使用 Tushare
-            preferred_sources = ["tushare", "akshare", "baostock"]
-            logger.info(f"📊 股票基础信息同步优先数据源: Tushare > AKShare > BaoStock")
+            # Tushare 启用时，优先使用 Tushare，降级到 AKShare
+            preferred_sources = ["tushare", "akshare"]
+            logger.info(f"📊 股票基础信息同步优先数据源: Tushare > AKShare")
         else:
-            # Tushare 禁用时，使用 AKShare 和 BaoStock
-            preferred_sources = ["akshare", "baostock"]
-            logger.info(f"📊 股票基础信息同步优先数据源: AKShare > BaoStock (Tushare已禁用)")
+            # Tushare 禁用时，仅使用 AKShare
+            preferred_sources = ["akshare"]
+            logger.info(f"📊 股票基础信息同步优先数据源: AKShare (Tushare已禁用)")
 
         # 立即在启动后尝试一次（不阻塞）
         async def run_sync_with_sources():
@@ -472,60 +468,9 @@ async def lifespan(app: FastAPI):
         else:
             logger.info(f"🔍 AKShare状态检查已配置: {settings.AKSHARE_STATUS_CHECK_CRON}")
 
-        # BaoStock统一数据同步任务配置
-        logger.info("🔄 配置BaoStock统一数据同步任务...")
-
-        # 基础信息同步任务
-        scheduler.add_job(
-            run_baostock_basic_info_sync,
-            CronTrigger.from_crontab(settings.BAOSTOCK_BASIC_INFO_SYNC_CRON, timezone=settings.TIMEZONE),
-            id="baostock_basic_info_sync",
-            name="股票基础信息同步（BaoStock）"
-        )
-        if not (settings.BAOSTOCK_UNIFIED_ENABLED and settings.BAOSTOCK_BASIC_INFO_SYNC_ENABLED):
-            scheduler.pause_job("baostock_basic_info_sync")
-            logger.info(f"⏸️ BaoStock基础信息同步已添加但暂停: {settings.BAOSTOCK_BASIC_INFO_SYNC_CRON}")
-        else:
-            logger.info(f"📋 BaoStock基础信息同步已配置: {settings.BAOSTOCK_BASIC_INFO_SYNC_CRON}")
-
-        # 日K线同步任务（注意：BaoStock不支持实时行情）
-        scheduler.add_job(
-            run_baostock_daily_quotes_sync,
-            CronTrigger.from_crontab(settings.BAOSTOCK_DAILY_QUOTES_SYNC_CRON, timezone=settings.TIMEZONE),
-            id="baostock_daily_quotes_sync",
-            name="日K线数据同步（BaoStock）"
-        )
-        if not (settings.BAOSTOCK_UNIFIED_ENABLED and settings.BAOSTOCK_DAILY_QUOTES_SYNC_ENABLED):
-            scheduler.pause_job("baostock_daily_quotes_sync")
-            logger.info(f"⏸️ BaoStock日K线同步已添加但暂停: {settings.BAOSTOCK_DAILY_QUOTES_SYNC_CRON}")
-        else:
-            logger.info(f"📈 BaoStock日K线同步已配置: {settings.BAOSTOCK_DAILY_QUOTES_SYNC_CRON} (注意：BaoStock不支持实时行情)")
-
-        # 历史数据同步任务
-        scheduler.add_job(
-            run_baostock_historical_sync,
-            CronTrigger.from_crontab(settings.BAOSTOCK_HISTORICAL_SYNC_CRON, timezone=settings.TIMEZONE),
-            id="baostock_historical_sync",
-            name="历史数据同步（BaoStock）"
-        )
-        if not (settings.BAOSTOCK_UNIFIED_ENABLED and settings.BAOSTOCK_HISTORICAL_SYNC_ENABLED):
-            scheduler.pause_job("baostock_historical_sync")
-            logger.info(f"⏸️ BaoStock历史数据同步已添加但暂停: {settings.BAOSTOCK_HISTORICAL_SYNC_CRON}")
-        else:
-            logger.info(f"📊 BaoStock历史数据同步已配置: {settings.BAOSTOCK_HISTORICAL_SYNC_CRON}")
-
-        # 状态检查任务
-        scheduler.add_job(
-            run_baostock_status_check,
-            CronTrigger.from_crontab(settings.BAOSTOCK_STATUS_CHECK_CRON, timezone=settings.TIMEZONE),
-            id="baostock_status_check",
-            name="数据源状态检查（BaoStock）"
-        )
-        if not (settings.BAOSTOCK_UNIFIED_ENABLED and settings.BAOSTOCK_STATUS_CHECK_ENABLED):
-            scheduler.pause_job("baostock_status_check")
-            logger.info(f"⏸️ BaoStock状态检查已添加但暂停: {settings.BAOSTOCK_STATUS_CHECK_CRON}")
-        else:
-            logger.info(f"🔍 BaoStock状态检查已配置: {settings.BAOSTOCK_STATUS_CHECK_CRON}")
+        # ⚠️ BaoStock 已弃用：其 socket 库存在 recv() 空数据忙等死循环 bug，会导致 CPU 100%
+        # 相关调度任务已移除，请使用 Tushare + AKShare 作为数据源
+        logger.info("⏸️ BaoStock 数据源已弃用，跳过调度配置")
 
         # 新闻数据同步任务配置（使用AKShare同步所有股票新闻）
         logger.info("🔄 配置新闻数据同步任务...")
@@ -756,6 +701,9 @@ app.include_router(internal_messages.router, tags=["internal-messages"])
 
 # 基础信息同步（股票+基金）
 app.include_router(basics_router.router, tags=["basics"])
+
+# 用户偏好设置
+app.include_router(user_settings.router, prefix="/api", tags=["user-settings"])
 
 
 @app.get("/")

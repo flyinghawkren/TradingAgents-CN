@@ -25,18 +25,55 @@
           <div class="stat-label">持仓基金</div>
         </div>
         <div class="stat-item">
-          <div class="stat-value">2</div>
-          <div class="stat-label">投资渠道</div>
+          <div class="stat-value">{{ cashList.length }}</div>
+          <div class="stat-label">现金账户</div>
         </div>
+      </div>
+    </div>
+
+    <!-- 投资偏好栏 -->
+    <div class="preference-bar">
+      <div class="preference-bar-content">
+        <div class="preference-label">
+          <el-icon><Opportunity /></el-icon>
+          <span>投资偏好</span>
+        </div>
+        <el-select
+          v-model="investmentPreference"
+          placeholder="选择您的投资风险偏好"
+          clearable
+          @change="onPreferenceChange"
+          class="preference-select"
+        >
+          <el-option label="保守型" value="保守型" />
+          <el-option label="谨慎型" value="谨慎型" />
+          <el-option label="稳健型" value="稳健型" />
+          <el-option label="进取型" value="进取型" />
+          <el-option label="激进型" value="激进型" />
+        </el-select>
+        <span v-if="investmentPreference" class="preference-tip">
+          {{ getPreferenceTip(investmentPreference) }}
+        </span>
       </div>
     </div>
 
     <!-- 投资板块网格 -->
     <div class="investment-grid">
       <!-- 股票板块 — 全宽 -->
-      <div class="investment-block stock-block">
+      <div
+        class="investment-block stock-block"
+        draggable="true"
+        @dragstart="onDragStart('stock')"
+        @dragover.prevent="onDragOver('stock')"
+        @drop.prevent="onDrop('stock')"
+        @dragend="onDragEnd"
+        :class="{ 'is-dragging': draggingBlock === 'stock', 'is-drag-over': dragOverBlock === 'stock' }"
+      >
         <div class="block-header">
           <div class="block-title-group">
+            <div class="drag-handle" title="拖动排序">
+              <el-icon><Rank /></el-icon>
+            </div>
             <div class="block-icon stock-icon">
               <el-icon><TrendCharts /></el-icon>
             </div>
@@ -126,9 +163,20 @@
       </div>
 
       <!-- 基金板块 — 全宽 -->
-      <div class="investment-block">
+      <div
+        class="investment-block fund-block"
+        draggable="true"
+        @dragstart="onDragStart('fund')"
+        @dragover.prevent="onDragOver('fund')"
+        @drop.prevent="onDrop('fund')"
+        @dragend="onDragEnd"
+        :class="{ 'is-dragging': draggingBlock === 'fund', 'is-drag-over': dragOverBlock === 'fund' }"
+      >
         <div class="block-header">
           <div class="block-title-group">
+            <div class="drag-handle" title="拖动排序">
+              <el-icon><Rank /></el-icon>
+            </div>
             <div class="block-icon fund-icon">
               <el-icon><Money /></el-icon>
             </div>
@@ -220,6 +268,75 @@
           </div>
         </div>
       </div>
+
+      <!-- 现金板块 — 全宽 -->
+      <div
+        class="investment-block cash-block"
+        draggable="true"
+        @dragstart="onDragStart('cash')"
+        @dragover.prevent="onDragOver('cash')"
+        @drop.prevent="onDrop('cash')"
+        @dragend="onDragEnd"
+        :class="{ 'is-dragging': draggingBlock === 'cash', 'is-drag-over': dragOverBlock === 'cash' }"
+      >
+        <div class="block-header">
+          <div class="block-title-group">
+            <div class="drag-handle" title="拖动排序">
+              <el-icon><Rank /></el-icon>
+            </div>
+            <div class="block-icon cash-icon">
+              <el-icon><Coin /></el-icon>
+            </div>
+            <div class="block-title-info">
+              <h2 class="block-title">现金</h2>
+              <span class="block-subtitle">{{ cashList.length }} 个账户，{{ formatWan(totalCashCny) }}万元</span>
+            </div>
+          </div>
+          <div class="block-actions">
+            <el-button type="primary" size="small" @click="addCashDialogVisible = true">
+              <el-icon><Plus /></el-icon>
+              添加
+            </el-button>
+          </div>
+        </div>
+        <div class="block-body">
+          <el-table
+            :data="cashList"
+            v-loading="cashLoading"
+            size="small"
+            class="modern-table"
+          >
+            <el-table-column label="币种" width="150">
+              <template #default="{ row }">
+                <el-tag size="small" :type="row.currency === 'CNY' ? 'success' : row.currency === 'USD' ? 'warning' : 'info'">
+                  {{ getCurrencyInfo(row.currency).symbol }} {{ row.currency }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="amount" label="金额" width="160" align="right">
+              <template #default="{ row }">
+                <span style="font-weight: 600; font-family: 'Monaco', 'Menlo', monospace;">
+                  {{ getCurrencyInfo(row.currency).symbol }}{{ formatPrice(row.amount) }}
+                </span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="notes" label="备注" min-width="200" show-overflow-tooltip />
+            <el-table-column label="操作" width="120" fixed="right">
+              <template #default="{ row }">
+                <el-button link type="primary" size="small" @click="editCash(row)">编辑</el-button>
+                <el-button link type="danger" size="small" @click="removeCash(row)">移除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <div v-if="!cashLoading && cashList.length === 0" class="empty-state">
+            <el-empty description="暂无现金记录" :image-size="80">
+              <el-button type="primary" size="small" @click="addCashDialogVisible = true">
+                添加第一笔现金
+              </el-button>
+            </el-empty>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- 添加持仓股票对话框 -->
@@ -234,6 +351,10 @@
         </el-form-item>
         <el-form-item label="股票代码" prop="stock_code">
           <el-input v-model="addForm.stock_code" placeholder="输入股票代码" @blur="fetchStockInfo" />
+          <div style="font-size: 12px; color: #909399; margin-top: 4px;">
+            <template v-if="addForm.market === 'A股'">输入代码后失焦，将自动填充股票名称</template>
+            <template v-else>{{ addForm.market }}不支持自动获取名称，请手动输入</template>
+          </div>
         </el-form-item>
         <el-form-item label="股票名称" prop="stock_name">
           <el-input v-model="addForm.stock_name" placeholder="股票名称" />
@@ -286,21 +407,13 @@
     <el-dialog v-model="addFundDialogVisible" title="添加基金持仓" width="500px">
       <el-form :model="addFundForm" :rules="addFundRules" ref="addFundFormRef" label-width="100px">
         <el-form-item label="基金代码" prop="fund_code">
-          <el-input v-model="addFundForm.fund_code" placeholder="输入基金代码，如 000001" />
+          <el-input v-model="addFundForm.fund_code" placeholder="输入基金代码，如 000001" @blur="fetchFundInfo" />
+          <div style="font-size: 12px; color: #909399; margin-top: 4px;">
+            输入基金代码后失焦，将自动填充基金名称
+          </div>
         </el-form-item>
         <el-form-item label="基金名称" prop="fund_name">
           <el-input v-model="addFundForm.fund_name" placeholder="基金名称" />
-        </el-form-item>
-        <el-form-item label="基金类型" prop="fund_type">
-          <el-select v-model="addFundForm.fund_type" style="width: 100%;">
-            <el-option label="混合型" value="混合型" />
-            <el-option label="股票型" value="股票型" />
-            <el-option label="债券型" value="债券型" />
-            <el-option label="指数型" value="指数型" />
-            <el-option label="QDII" value="QDII" />
-            <el-option label="FOF" value="FOF" />
-            <el-option label="货币型" value="货币型" />
-          </el-select>
         </el-form-item>
         <el-form-item label="持有份额" prop="quantity">
           <el-input-number v-model="addFundForm.quantity" :min="0" :precision="2" controls-position="right" style="width: 100%;" />
@@ -345,6 +458,48 @@
         <el-button type="primary" @click="handleEditFundHolding" :loading="editFundLoading">保存</el-button>
       </template>
     </el-dialog>
+
+    <!-- 添加现金对话框 -->
+    <el-dialog v-model="addCashDialogVisible" title="添加现金" width="450px">
+      <el-form :model="addCashForm" label-width="80px">
+        <el-form-item label="币种">
+          <el-select v-model="addCashForm.currency" style="width: 100%;">
+            <el-option v-for="c in currencyOptions" :key="c.value" :label="c.label" :value="c.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="金额">
+          <el-input-number v-model="addCashForm.amount" :min="0" :precision="2" controls-position="right" style="width: 100%;" />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="addCashForm.notes" type="textarea" :rows="2" placeholder="可选：添加备注信息" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="addCashDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleAddCash" :loading="addCashLoading">添加</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 编辑现金对话框 -->
+    <el-dialog v-model="editCashDialogVisible" title="编辑现金" width="450px">
+      <el-form :model="editCashForm" label-width="80px">
+        <el-form-item label="币种">
+          <el-select v-model="editCashForm.currency" style="width: 100%;">
+            <el-option v-for="c in currencyOptions" :key="c.value" :label="c.label" :value="c.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="金额">
+          <el-input-number v-model="editCashForm.amount" :min="0" :precision="2" controls-position="right" style="width: 100%;" />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="editCashForm.notes" type="textarea" :rows="2" placeholder="可选：添加备注信息" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="editCashDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleEditCash" :loading="editCashLoading">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -357,12 +512,190 @@ import {
   Refresh,
   Plus,
   TrendCharts,
-  Money
+  Money,
+  Rank,
+  Coin,
+  Opportunity
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { portfolioApi, fundPortfolioApi, type PortfolioHolding, type FundHolding } from '@/api/portfolio'
+import { portfolioApi, fundPortfolioApi, cashApi, type PortfolioHolding, type FundHolding, type CashItem } from '@/api/portfolio'
+import { searchStockBasics, searchFundBasics } from '@/api/cache'
+import { getUserSettings, saveUserSettings } from '@/api/userSettings'
 
 const router = useRouter()
+
+// ==================== 区块拖拽排序 ====================
+const BLOCK_ORDER_KEY = 'portfolio_block_order'
+
+const VALID_BLOCKS = ['stock', 'fund', 'cash']
+
+// 从 localStorage 恢复顺序（用于页面切换时快速展示，避免白屏）
+const restoreBlockOrderFromLocal = (): string[] => {
+  try {
+    const saved = localStorage.getItem(BLOCK_ORDER_KEY)
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      if (Array.isArray(parsed) && parsed.length >= 2 &&
+          parsed.includes('stock') && parsed.includes('fund') &&
+          parsed.every(item => VALID_BLOCKS.includes(item))) {
+        return parsed
+      }
+    }
+  } catch (e) {
+    console.warn('从本地恢复区块顺序失败:', e)
+  }
+  return ['stock', 'fund', 'cash']
+}
+
+const blockOrder = ref<string[]>(restoreBlockOrderFromLocal())
+const draggingBlock = ref<string | null>(null)
+const dragOverBlock = ref<string | null>(null)
+
+const stockOrder = computed(() => blockOrder.value.indexOf('stock'))
+const fundOrder = computed(() => blockOrder.value.indexOf('fund'))
+const cashOrder = computed(() => blockOrder.value.indexOf('cash'))
+
+// 保存顺序到本地 + 后端
+const saveBlockOrder = async () => {
+  // 1. 先保存到 localStorage（即时响应）
+  try {
+    localStorage.setItem(BLOCK_ORDER_KEY, JSON.stringify(blockOrder.value))
+  } catch (e) {
+    console.warn('保存区块顺序到本地失败:', e)
+  }
+
+  // 2. 异步保存到后端
+  try {
+    await saveUserSettings({ portfolio_block_order: blockOrder.value })
+    console.log('✅ 区块顺序已同步到后端')
+  } catch (e: any) {
+    console.warn('同步区块顺序到后端失败:', e)
+    ElMessage.warning('排序已本地保存，但同步到服务器失败')
+  }
+}
+
+// 从后端获取配置并覆盖本地（强制刷新 / 首次加载时调用）
+const fetchBlockOrderFromServer = async () => {
+  try {
+    const response = await getUserSettings()
+    const data = response.data || {}
+    const serverOrder = data.portfolio_block_order
+    if (
+      Array.isArray(serverOrder) &&
+      serverOrder.length >= 2 &&
+      serverOrder.includes('stock') &&
+      serverOrder.includes('fund') &&
+      serverOrder.every(item => VALID_BLOCKS.includes(item))
+    ) {
+      blockOrder.value = serverOrder
+      localStorage.setItem(BLOCK_ORDER_KEY, JSON.stringify(serverOrder))
+      console.log('✅ 已从后端同步区块顺序:', serverOrder)
+    }
+  } catch (e: any) {
+    console.warn('从后端获取区块顺序失败:', e)
+  }
+}
+
+const onDragStart = (blockKey: string) => {
+  draggingBlock.value = blockKey
+}
+
+const onDragOver = (blockKey: string) => {
+  dragOverBlock.value = blockKey
+}
+
+const onDrop = (targetKey: string) => {
+  if (!draggingBlock.value || draggingBlock.value === targetKey) {
+    draggingBlock.value = null
+    dragOverBlock.value = null
+    return
+  }
+  // 交换位置
+  const fromIndex = blockOrder.value.indexOf(draggingBlock.value)
+  const toIndex = blockOrder.value.indexOf(targetKey)
+  if (fromIndex !== -1 && toIndex !== -1) {
+    const newOrder = [...blockOrder.value]
+    newOrder.splice(fromIndex, 1)
+    newOrder.splice(toIndex, 0, draggingBlock.value)
+    blockOrder.value = newOrder
+    // 持久化（本地 + 后端异步）
+    saveBlockOrder()
+  }
+  draggingBlock.value = null
+  dragOverBlock.value = null
+}
+
+const onDragEnd = () => {
+  draggingBlock.value = null
+  dragOverBlock.value = null
+}
+
+// ==================== 投资偏好 ====================
+const PREFERENCE_KEY = 'investment_preference'
+const investmentPreference = ref('稳健型')
+
+const loadPreference = () => {
+  // 先读 localStorage（快速展示）
+  try {
+    const saved = localStorage.getItem(PREFERENCE_KEY)
+    if (saved && ['保守型', '谨慎型', '稳健型', '进取型', '激进型'].includes(saved)) {
+      investmentPreference.value = saved
+    }
+  } catch (e) {
+    console.warn('读取本地偏好失败:', e)
+  }
+  // 无本地记录时，将默认值同步到后端
+  if (!localStorage.getItem(PREFERENCE_KEY)) {
+    savePreferenceToServer()
+  }
+  // 从后端获取最新偏好
+  fetchPreferenceFromServer()
+}
+
+const fetchPreferenceFromServer = async () => {
+  try {
+    const response = await getUserSettings()
+    const data = response.data || {}
+    const pref = data.investment_preference
+    if (pref && ['保守型', '谨慎型', '稳健型', '进取型', '激进型'].includes(pref)) {
+      investmentPreference.value = pref
+      localStorage.setItem(PREFERENCE_KEY, pref)
+    }
+  } catch (e) {
+    console.warn('从后端获取投资偏好失败:', e)
+  }
+}
+
+const savePreferenceToServer = async () => {
+  try {
+    await saveUserSettings({ investment_preference: investmentPreference.value })
+    localStorage.setItem(PREFERENCE_KEY, investmentPreference.value)
+  } catch (e) {
+    console.warn('保存投资偏好到后端失败:', e)
+    ElMessage.warning('偏好已本地保存，但同步到服务器失败')
+  }
+}
+
+const onPreferenceChange = () => {
+  if (!investmentPreference.value) {
+    localStorage.removeItem(PREFERENCE_KEY)
+  }
+  savePreferenceToServer()
+  if (investmentPreference.value) {
+    ElMessage.success(`投资偏好已设为「${investmentPreference.value}」`)
+  }
+}
+
+const getPreferenceTip = (pref: string): string => {
+  const tips: Record<string, string> = {
+    '保守型': '低风险偏好，优先保障本金安全',
+    '谨慎型': '较低风险偏好，可接受小幅波动',
+    '稳健型': '中等风险偏好，追求稳健增值',
+    '进取型': '较高风险偏好，可接受较大波动',
+    '激进型': '高风险偏好，追求高收益回报'
+  }
+  return tips[pref] || ''
+}
 
 // ==================== 股票持仓 ====================
 const loading = ref(false)
@@ -450,7 +783,6 @@ const addFundForm = ref({
 const addFundRules = {
   fund_code: [{ required: true, message: '请输入基金代码', trigger: 'blur' }],
   fund_name: [{ required: true, message: '请输入基金名称', trigger: 'blur' }],
-  fund_type: [{ required: true, message: '请选择基金类型', trigger: 'change' }],
   quantity: [{ required: true, message: '请输入持有份额', trigger: 'blur' }],
   avg_nav: [{ required: true, message: '请输入买入净值', trigger: 'blur' }],
   buy_date: [{ required: true, message: '请选择买进时间', trigger: 'change' }]
@@ -494,7 +826,7 @@ const fundTotalValue = computed(() => {
 
 // 总资产
 const totalAssets = computed(() => {
-  return stockTotalValue.value + fundTotalValue.value
+  return stockTotalValue.value + fundTotalValue.value + totalCashCny.value
 })
 
 // ==================== 股票 CRUD ====================
@@ -535,8 +867,45 @@ const showAddDialog = () => {
 }
 
 const fetchStockInfo = async () => {
-  if (addForm.value.stock_code && !addForm.value.stock_name) {
-    console.log('股票代码变更:', addForm.value.stock_code)
+  const code = addForm.value.stock_code.trim()
+  if (!code || addForm.value.stock_name) return
+
+  try {
+    const response = await searchStockBasics(code, 10)
+    const results = response.data || []
+    const match = results.find((item: any) => {
+      if (!item) return false
+      const sym = (item.symbol || '').trim()
+      const ts = (item.ts_code || '').trim()
+      return sym === code || ts === code || ts.startsWith(code + '.')
+    })
+    if (match && match.name) {
+      addForm.value.stock_name = match.name
+    }
+  } catch (e) {
+    console.warn('查询股票基础信息失败:', e)
+  }
+}
+
+const fetchFundInfo = async () => {
+  const code = addFundForm.value.fund_code.trim()
+  if (!code || addFundForm.value.fund_name) return
+
+  try {
+    const response = await searchFundBasics(code, 10)
+    const results = response.data || []
+    const match = results.find((item: any) => {
+      if (!item) return false
+      return (item.ts_code || '').trim() === code
+    })
+    if (match && match.name) {
+      addFundForm.value.fund_name = match.name
+      if (match.fund_type && !addFundForm.value.fund_type) {
+        addFundForm.value.fund_type = match.fund_type
+      }
+    }
+  } catch (e) {
+    console.warn('查询基金基础信息失败:', e)
   }
 }
 
@@ -672,7 +1041,7 @@ const showAddFundDialog = () => {
   addFundForm.value = {
     fund_code: '',
     fund_name: '',
-    fund_type: '混合型',
+    fund_type: '',
     quantity: 100,
     avg_nav: undefined,
     buy_date: '',
@@ -690,7 +1059,7 @@ const handleAddFundHolding = async () => {
     const res = await fundPortfolioApi.add({
       fund_code: addFundForm.value.fund_code,
       fund_name: addFundForm.value.fund_name,
-      fund_type: addFundForm.value.fund_type,
+      fund_type: addFundForm.value.fund_type || '混合型',
       quantity: addFundForm.value.quantity,
       avg_nav: addFundForm.value.avg_nav || 0,
       buy_date: addFundForm.value.buy_date,
@@ -785,6 +1154,137 @@ const viewFundDetail = (row: FundHolding) => {
   router.push(`/analysis/fund?ts_code=${row.fund_code}&name=${encodeURIComponent(row.fund_name)}`)
 }
 
+// ==================== 现金管理 ====================
+const cashList = ref<CashItem[]>([])
+const cashLoading = ref(false)
+
+const currencyOptions = [
+  { label: '人民币 (CNY)', value: 'CNY', symbol: '¥', rate: 1 },
+  { label: '美元 (USD)', value: 'USD', symbol: '$', rate: 7.2 },
+  { label: '港币 (HKD)', value: 'HKD', symbol: 'HK$', rate: 0.92 }
+]
+
+const getCurrencyInfo = (currency: string) => {
+  return currencyOptions.find(c => c.value === currency) || currencyOptions[0]
+}
+
+const totalCashCny = computed(() => {
+  return cashList.value.reduce((sum, c) => {
+    const info = getCurrencyInfo(c.currency)
+    return sum + c.amount * info.rate
+  }, 0)
+})
+
+const loadCash = async () => {
+  cashLoading.value = true
+  try {
+    const res = await cashApi.list()
+    cashList.value = res.data || []
+  } catch (error: any) {
+    console.error('加载现金失败:', error)
+  } finally {
+    cashLoading.value = false
+  }
+}
+
+// 添加现金对话框
+const addCashDialogVisible = ref(false)
+const addCashLoading = ref(false)
+const addCashForm = ref({
+  currency: 'CNY',
+  amount: undefined as number | undefined,
+  notes: ''
+})
+
+const handleAddCash = async () => {
+  if (addCashForm.value.amount == null || addCashForm.value.amount <= 0) {
+    ElMessage.warning('请输入资金数额')
+    return
+  }
+  addCashLoading.value = true
+  try {
+    const res = await cashApi.add({
+      currency: addCashForm.value.currency,
+      amount: addCashForm.value.amount,
+      notes: addCashForm.value.notes
+    })
+    if (res.success) {
+      ElMessage.success('添加现金成功')
+      addCashDialogVisible.value = false
+      await loadCash()
+    } else {
+      ElMessage.error(res.message || '添加现金失败')
+    }
+  } catch (error: any) {
+    ElMessage.error(error?.response?.data?.detail || '添加现金失败')
+  } finally {
+    addCashLoading.value = false
+  }
+}
+
+// 编辑现金对话框
+const editCashDialogVisible = ref(false)
+const editCashLoading = ref(false)
+const editCashForm = ref({
+  id: '',
+  currency: 'CNY',
+  amount: undefined as number | undefined,
+  notes: ''
+})
+
+const editCash = (row: CashItem) => {
+  editCashForm.value = {
+    id: row.id,
+    currency: row.currency,
+    amount: row.amount,
+    notes: row.notes
+  }
+  editCashDialogVisible.value = true
+}
+
+const handleEditCash = async () => {
+  editCashLoading.value = true
+  try {
+    const res = await cashApi.update(editCashForm.value.id, {
+      currency: editCashForm.value.currency,
+      amount: editCashForm.value.amount,
+      notes: editCashForm.value.notes
+    })
+    if (res.success) {
+      ElMessage.success('更新现金成功')
+      editCashDialogVisible.value = false
+      await loadCash()
+    } else {
+      ElMessage.error(res.message || '更新现金失败')
+    }
+  } catch (error: any) {
+    ElMessage.error(error?.response?.data?.detail || '更新现金失败')
+  } finally {
+    editCashLoading.value = false
+  }
+}
+
+const removeCash = async (row: CashItem) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要移除 ${row.currency} ${row.amount} 的现金记录吗？`,
+      '确认移除',
+      { type: 'warning' }
+    )
+    const res = await cashApi.remove(row.id)
+    if (res.success) {
+      ElMessage.success('删除现金成功')
+      await loadCash()
+    } else {
+      ElMessage.error(res.message || '删除现金失败')
+    }
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      ElMessage.error(error?.response?.data?.detail || '删除现金失败')
+    }
+  }
+}
+
 // ==================== 格式化 ====================
 
 const formatPrice = (price: number) => {
@@ -816,6 +1316,10 @@ const formatWan = (value: number) => {
 onMounted(() => {
   loadHoldings()
   loadFundHoldings()
+  loadCash()
+  loadPreference()
+  // 从后端获取最新配置并覆盖本地缓存（强制刷新时生效）
+  fetchBlockOrderFromServer()
 })
 </script>
 
@@ -894,6 +1398,73 @@ onMounted(() => {
           margin-top: 4px;
         }
       }
+
+    }
+  }
+
+  .preference-bar {
+    margin-bottom: 20px;
+    padding: 14px 24px;
+    background: linear-gradient(135deg, #fdf6ec 0%, #fef0e6 50%, #fff5e6 100%);
+    border: 1px solid #f5d9b3;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+
+    .preference-bar-content {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      width: 100%;
+
+      .preference-label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 15px;
+        font-weight: 700;
+        color: #d48806;
+        white-space: nowrap;
+
+        .el-icon {
+          font-size: 20px;
+        }
+      }
+
+      .preference-select {
+        width: 160px;
+
+        :deep(.el-select__wrapper) {
+          background: #fff;
+          border-color: #f5d9b3;
+          height: 34px;
+          min-height: 34px;
+          font-size: 14px;
+          font-weight: 600;
+
+          &.is-hovering,
+          &:hover {
+            border-color: #d48806;
+          }
+        }
+
+        :deep(.el-select__placeholder) {
+          font-size: 13px;
+          color: #b3863c;
+        }
+
+        :deep(.el-select__selected-item) {
+          color: #d48806;
+        }
+      }
+
+      .preference-tip {
+        font-size: 12px;
+        color: #b3863c;
+        flex: 1;
+        min-width: 180px;
+      }
     }
   }
 
@@ -901,6 +1472,18 @@ onMounted(() => {
     display: flex;
     flex-direction: column;
     gap: 20px;
+
+    .stock-block {
+      order: v-bind(stockOrder);
+    }
+
+    .fund-block {
+      order: v-bind(fundOrder);
+    }
+
+    .cash-block {
+      order: v-bind(cashOrder);
+    }
 
     .investment-row {
       display: grid;
@@ -921,6 +1504,49 @@ onMounted(() => {
 
       &:hover {
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+      }
+
+      &.is-dragging {
+        opacity: 0.6;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+        cursor: grabbing;
+      }
+
+      &.is-drag-over {
+        position: relative;
+
+        &::before {
+          content: '';
+          position: absolute;
+          top: -10px;
+          left: 0;
+          right: 0;
+          height: 3px;
+          background: var(--el-color-primary);
+          border-radius: 2px;
+          z-index: 1;
+        }
+      }
+
+      .drag-handle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        cursor: grab;
+        color: var(--el-text-color-placeholder);
+        transition: all 0.2s ease;
+
+        &:hover {
+          background: var(--el-fill-color-darker);
+          color: var(--el-text-color-secondary);
+        }
+
+        &:active {
+          cursor: grabbing;
+        }
       }
 
       &.stock-block {
@@ -955,6 +1581,11 @@ onMounted(() => {
 
             &.fund-icon {
               background: linear-gradient(135deg, #e6a23c 0%, #f89898 100%);
+              color: #fff;
+            }
+
+            &.cash-icon {
+              background: linear-gradient(135deg, #67c23a 0%, #409eff 100%);
               color: #fff;
             }
           }
