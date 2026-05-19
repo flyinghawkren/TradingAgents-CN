@@ -52,6 +52,11 @@
       <template #title>我的投资</template>
     </el-menu-item>
 
+    <el-menu-item index="/smart-investment">
+      <el-icon><MagicStick /></el-icon>
+      <template #title>智能投资</template>
+    </el-menu-item>
+
     <el-menu-item index="/paper">
       <el-icon><CreditCard /></el-icon>
       <template #title>模拟交易</template>

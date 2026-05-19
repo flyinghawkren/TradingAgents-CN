@@ -157,6 +157,28 @@ const routes: RouteRecordRaw[] = [
     ]
   },
   {
+    path: '/smart-investment',
+    name: 'SmartInvestment',
+    component: () => import('@/layouts/BasicLayout.vue'),
+    meta: {
+      title: '智能投资',
+      icon: 'MagicStick',
+      requiresAuth: true,
+      transition: 'slide-up'
+    },
+    children: [
+      {
+        path: '',
+        name: 'SmartInvestmentHome',
+        component: () => import('@/views/SmartInvestment/index.vue'),
+        meta: {
+          title: '智能投资',
+          requiresAuth: true
+        }
+      }
+    ]
+  },
+  {
     path: '/learning',
     name: 'Learning',
     component: () => import('@/layouts/BasicLayout.vue'),
