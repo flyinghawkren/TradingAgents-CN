@@ -260,7 +260,7 @@ class AgentService:
             backend_url = provider_info["backend_url"]
             api_key = provider_info["api_key"]
 
-            from app.services.analysis_service import normalize_provider_key
+            from tradingagents.llm_clients.provider_keys import normalize_provider_key
             provider_key = normalize_provider_key(provider)
             llm_client = create_llm_client(
                 provider=provider_key,
