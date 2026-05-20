@@ -65,6 +65,7 @@
 import { ref, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { MagicStick, User, Loading, Promotion } from '@element-plus/icons-vue'
+import { ApiClient } from '@/api/request'
 
 interface ChatMessage {
   role: 'user' | 'assistant'
@@ -98,25 +99,19 @@ const sendMessage = async () => {
   await scrollToBottom()
 
   try {
-    const response = await fetch('/api/agent/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message: text,
-        context: {
-          user_id: 'current',
-          source: 'smart_investment'
-        }
+    const response = await ApiClient.post('/api/agent/chat', { message: text })
+
+    if (response?.success && response.data?.reply) {
+      messages.value.push({
+        role: 'assistant',
+        content: response.data.reply
       })
-    })
-
-    if (!response.ok) throw new Error('请求失败')
-
-    const data = await response.json()
-    messages.value.push({
-      role: 'assistant',
-      content: data.reply || '抱歉，暂时无法回答这个问题。'
-    })
+    } else {
+      messages.value.push({
+        role: 'assistant',
+        content: response.data?.reply || '抱歉，暂时无法回答这个问题。'
+      })
+    }
   } catch (e: any) {
     messages.value.push({
       role: 'assistant',
