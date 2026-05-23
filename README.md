@@ -13,18 +13,18 @@
 当前项目Fork自开源项目📦 GitHub 仓库：https://github.com/hsliuping/TradingAgents-CN，基于该项目进行功能增强，仅用于开源探索，请勿用于任何商业用途。
 
 ## 使用指南
-1）安装Docker Desktop
-2）复制项目代码至本地并进入项目目录：
+1. 安装Docker Desktop
+2. 复制项目代码至本地并进入项目目录：
    git clone https://github.com/flyinghawkren/TradingAgents-CN.git
    cd TradingAgents-CN
-3）配置大模型及主要数据源API Key：
+3. 配置大模型及主要数据源API Key：
    cp .env.docker .env
    vi .env
    修改 DEEPSEEK_ENABLED=true，并输入 DEEPSEEK_API_KEY；
    修改 TUSHARE_ENABLED=true，并输入 TUSHARE_TOKEN
-3）进入项目目录编译打包：docker-compose -f docker-compose.hub.nginx.yml build
-4）启动容器：docker-compose -f docker-compose.hub.nginx.yml up -d
-5）访问服务：http://127.0.0.1/
+4. 进入项目目录编译打包：docker-compose -f docker-compose.hub.nginx.yml build
+5. 启动容器：docker-compose -f docker-compose.hub.nginx.yml up -d
+6. 访问服务：http://127.0.0.1/
 
 ## 功能开发及演化
 可使用OpenCode打开项目目录，调整优化功能
