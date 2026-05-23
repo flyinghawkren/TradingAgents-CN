@@ -446,3 +446,105 @@ async def remove_cash(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"删除现金失败: {str(e)}"
         )
+
+
+# ==================== 实物资产管理 ====================
+
+class AddAssetRequest(BaseModel):
+    """添加实物资产请求"""
+    name: str
+    quantity: float = 1.0
+    unit: str = "件"
+    estimated_value: float = 0.0
+    notes: str = ""
+
+
+class UpdateAssetRequest(BaseModel):
+    """更新实物资产请求"""
+    name: Optional[str] = None
+    quantity: Optional[float] = None
+    unit: Optional[str] = None
+    estimated_value: Optional[float] = None
+    notes: Optional[str] = None
+
+
+@router.get("/assets/", response_model=dict)
+async def get_assets(
+    current_user: dict = Depends(get_current_user)
+):
+    """获取用户实物资产列表"""
+    try:
+        assets = await portfolio_service.get_user_assets(current_user["id"])
+        return ok(assets)
+    except Exception as e:
+        logger.error(f"获取实物资产列表失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"获取实物资产列表失败: {str(e)}")
+
+
+@router.post("/assets/", response_model=dict)
+async def add_asset(
+    request: AddAssetRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """添加实物资产记录"""
+    try:
+        asset = await portfolio_service.add_asset(
+            user_id=current_user["id"],
+            name=request.name,
+            quantity=request.quantity,
+            unit=request.unit,
+            estimated_value=request.estimated_value,
+            notes=request.notes
+        )
+        return ok(asset, "添加实物资产成功")
+    except Exception as e:
+        logger.error(f"添加实物资产失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"添加实物资产失败: {str(e)}")
+
+
+@router.put("/assets/{asset_id}", response_model=dict)
+async def update_asset(
+    asset_id: str,
+    request: UpdateAssetRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """更新实物资产记录"""
+    try:
+        asset = await portfolio_service.update_asset(
+            user_id=current_user["id"],
+            asset_id=asset_id,
+            name=request.name,
+            quantity=request.quantity,
+            unit=request.unit,
+            estimated_value=request.estimated_value,
+            notes=request.notes
+        )
+        if asset:
+            return ok(asset, "更新实物资产成功")
+        raise HTTPException(status_code=404, detail="实物资产记录不存在")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"更新实物资产失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"更新实物资产失败: {str(e)}")
+
+
+@router.delete("/assets/{asset_id}", response_model=dict)
+async def remove_asset(
+    asset_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """删除实物资产记录"""
+    try:
+        success = await portfolio_service.remove_asset(
+            user_id=current_user["id"],
+            asset_id=asset_id
+        )
+        if success:
+            return ok({"id": asset_id}, "删除实物资产成功")
+        raise HTTPException(status_code=404, detail="实物资产记录不存在")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"删除实物资产失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"删除实物资产失败: {str(e)}")

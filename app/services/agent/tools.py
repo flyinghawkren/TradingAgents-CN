@@ -60,7 +60,12 @@ class ToolRegistry:
         tool = self.get(name)
         if not tool or not tool.handler:
             raise ValueError(f"未知工具: {name}")
-        return tool.handler(user_id=user_id, **kwargs)
+
+        # 只传递工具定义中声明的参数，忽略 LLM 额外生成的参数
+        allowed = {p.name for p in tool.parameters}
+        filtered = {k: v for k, v in kwargs.items() if k in allowed}
+        logger.debug(f"执行工具 {name}: 原始参数={kwargs}, 过滤后={filtered}")
+        return tool.handler(user_id=user_id, **filtered)
 
 
 # 全局注册中心

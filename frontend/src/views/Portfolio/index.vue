@@ -28,6 +28,10 @@
           <div class="stat-value">{{ cashList.length }}</div>
           <div class="stat-label">现金账户</div>
         </div>
+        <div class="stat-item">
+          <div class="stat-value">{{ assetList.length }}</div>
+          <div class="stat-label">实物资产</div>
+        </div>
       </div>
     </div>
 
@@ -337,6 +341,78 @@
           </div>
         </div>
       </div>
+
+      <!-- 实物资产板块 — 全宽 -->
+      <div
+        class="investment-block asset-block"
+        draggable="true"
+        @dragstart="onDragStart('asset')"
+        @dragover.prevent="onDragOver('asset')"
+        @drop.prevent="onDrop('asset')"
+        @dragend="onDragEnd"
+        :class="{ 'is-dragging': draggingBlock === 'asset', 'is-drag-over': dragOverBlock === 'asset' }"
+      >
+        <div class="block-header">
+          <div class="block-title-group">
+            <div class="drag-handle" title="拖动排序">
+              <el-icon><Rank /></el-icon>
+            </div>
+            <div class="block-icon asset-icon">
+              <el-icon><Coin /></el-icon>
+            </div>
+            <div class="block-title-info">
+              <h2 class="block-title">实物资产</h2>
+              <span class="block-subtitle">{{ assetList.length }} 项，估值 {{ formatWan(totalAssetValue) }}万元</span>
+            </div>
+          </div>
+          <div class="block-actions">
+            <el-button type="primary" size="small" @click="addAssetDialogVisible = true">
+              <el-icon><Plus /></el-icon>
+              添加
+            </el-button>
+          </div>
+        </div>
+        <div class="block-body">
+          <el-table
+            :data="assetList"
+            v-loading="assetLoading"
+            size="small"
+            class="modern-table"
+          >
+            <el-table-column prop="name" label="名称" width="130">
+              <template #default="{ row }">
+                <el-tag size="small" effect="plain" type="warning">{{ row.name }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="数量" width="150" align="right">
+              <template #default="{ row }">
+                <span style="font-weight: 600; font-family: Monaco, Menlo, monospace;">
+                  {{ row.quantity }} {{ row.unit }}
+                </span>
+              </template>
+            </el-table-column>
+            <el-table-column label="估值" width="160" align="right">
+              <template #default="{ row }">
+                <span style="font-weight: 600;">¥{{ formatPrice(row.estimated_value) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="notes" label="备注" min-width="200" show-overflow-tooltip />
+            <el-table-column label="操作" width="120" fixed="right">
+              <template #default="{ row }">
+                <el-button link type="primary" size="small" @click="editAsset(row)">编辑</el-button>
+                <el-button link type="danger" size="small" @click="removeAsset(row)">移除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <div v-if="!assetLoading && assetList.length === 0" class="empty-state">
+            <el-empty description="暂无实物资产" :image-size="80">
+              <el-button type="primary" size="small" @click="addAssetDialogVisible = true">
+                添加第一项实物资产
+              </el-button>
+            </el-empty>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- 添加持仓股票对话框 -->
@@ -500,6 +576,68 @@
         <el-button type="primary" @click="handleEditCash" :loading="editCashLoading">保存</el-button>
       </template>
     </el-dialog>
+
+    <!-- 添加实物资产对话框 -->
+    <el-dialog v-model="addAssetDialogVisible" title="添加实物资产" width="450px">
+      <el-form :model="addAssetForm" label-width="80px">
+        <el-form-item label="名称">
+          <el-input v-model="addAssetForm.name" placeholder="如：黄金、白银" />
+        </el-form-item>
+        <el-form-item label="数量">
+          <el-input-number v-model="addAssetForm.quantity" :min="0" :precision="3" controls-position="right" style="width: 100%;" />
+        </el-form-item>
+        <el-form-item label="单位">
+          <el-select v-model="addAssetForm.unit" style="width: 100%;">
+            <el-option label="克 (g)" value="克" />
+            <el-option label="盎司 (oz)" value="盎司" />
+            <el-option label="千克 (kg)" value="千克" />
+            <el-option label="件" value="件" />
+            <el-option label="吨" value="吨" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="估值 (¥)">
+          <el-input-number v-model="addAssetForm.estimated_value" :min="0" :precision="2" controls-position="right" style="width: 100%;" />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="addAssetForm.notes" type="textarea" :rows="2" placeholder="可选" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="addAssetDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleAddAsset" :loading="addAssetLoading">添加</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 编辑实物资产对话框 -->
+    <el-dialog v-model="editAssetDialogVisible" title="编辑实物资产" width="450px">
+      <el-form :model="editAssetForm" label-width="80px">
+        <el-form-item label="名称">
+          <el-input v-model="editAssetForm.name" />
+        </el-form-item>
+        <el-form-item label="数量">
+          <el-input-number v-model="editAssetForm.quantity" :min="0" :precision="3" controls-position="right" style="width: 100%;" />
+        </el-form-item>
+        <el-form-item label="单位">
+          <el-select v-model="editAssetForm.unit" style="width: 100%;">
+            <el-option label="克 (g)" value="克" />
+            <el-option label="盎司 (oz)" value="盎司" />
+            <el-option label="千克 (kg)" value="千克" />
+            <el-option label="件" value="件" />
+            <el-option label="吨" value="吨" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="估值 (¥)">
+          <el-input-number v-model="editAssetForm.estimated_value" :min="0" :precision="2" controls-position="right" style="width: 100%;" />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="editAssetForm.notes" type="textarea" :rows="2" placeholder="可选" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="editAssetDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleEditAsset" :loading="editAssetLoading">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -518,7 +656,7 @@ import {
   Opportunity
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { portfolioApi, fundPortfolioApi, cashApi, type PortfolioHolding, type FundHolding, type CashItem } from '@/api/portfolio'
+import { portfolioApi, fundPortfolioApi, cashApi, assetApi, type PortfolioHolding, type FundHolding, type CashItem, type AssetItem } from '@/api/portfolio'
 import { searchStockBasics, searchFundBasics } from '@/api/cache'
 import { getUserSettings, saveUserSettings } from '@/api/userSettings'
 
@@ -527,7 +665,7 @@ const router = useRouter()
 // ==================== 区块拖拽排序 ====================
 const BLOCK_ORDER_KEY = 'portfolio_block_order'
 
-const VALID_BLOCKS = ['stock', 'fund', 'cash']
+const VALID_BLOCKS = ['stock', 'fund', 'cash', 'asset']
 
 // 从 localStorage 恢复顺序（用于页面切换时快速展示，避免白屏）
 const restoreBlockOrderFromLocal = (): string[] => {
@@ -554,6 +692,7 @@ const dragOverBlock = ref<string | null>(null)
 const stockOrder = computed(() => blockOrder.value.indexOf('stock'))
 const fundOrder = computed(() => blockOrder.value.indexOf('fund'))
 const cashOrder = computed(() => blockOrder.value.indexOf('cash'))
+const assetOrder = computed(() => blockOrder.value.indexOf('asset'))
 
 // 保存顺序到本地 + 后端
 const saveBlockOrder = async () => {
@@ -826,7 +965,7 @@ const fundTotalValue = computed(() => {
 
 // 总资产
 const totalAssets = computed(() => {
-  return stockTotalValue.value + fundTotalValue.value + totalCashCny.value
+  return stockTotalValue.value + fundTotalValue.value + totalCashCny.value + totalAssetValue.value
 })
 
 // ==================== 股票 CRUD ====================
@@ -1264,23 +1403,124 @@ const handleEditCash = async () => {
   }
 }
 
-const removeCash = async (row: CashItem) => {
+// ==================== 实物资产管理 ====================
+const assetList = ref<AssetItem[]>([])
+const assetLoading = ref(false)
+
+const totalAssetValue = computed(() => {
+  return assetList.value.reduce((sum, a) => sum + (a.estimated_value || 0), 0)
+})
+
+const loadAssets = async () => {
+  assetLoading.value = true
+  try {
+    const res = await assetApi.list()
+    assetList.value = res.data || []
+  } catch (error: any) {
+    console.error('加载实物资产失败:', error)
+  } finally {
+    assetLoading.value = false
+  }
+}
+
+// 添加对话框
+const addAssetDialogVisible = ref(false)
+const addAssetLoading = ref(false)
+const addAssetForm = ref({
+  name: '',
+  quantity: 1,
+  unit: '克',
+  estimated_value: 0,
+  notes: ''
+})
+
+const handleAddAsset = async () => {
+  if (!addAssetForm.value.name) {
+    ElMessage.warning('请输入资产名称')
+    return
+  }
+  addAssetLoading.value = true
+  try {
+    const res = await assetApi.add(addAssetForm.value)
+    if (res.success) {
+      ElMessage.success('添加实物资产成功')
+      addAssetDialogVisible.value = false
+      await loadAssets()
+    } else {
+      ElMessage.error(res.message || '添加失败')
+    }
+  } catch (error: any) {
+    ElMessage.error(error?.response?.data?.detail || '添加失败')
+  } finally {
+    addAssetLoading.value = false
+  }
+}
+
+// 编辑对话框
+const editAssetDialogVisible = ref(false)
+const editAssetLoading = ref(false)
+const editAssetForm = ref({
+  id: '',
+  name: '',
+  quantity: 1,
+  unit: '克',
+  estimated_value: 0,
+  notes: ''
+})
+
+const editAsset = (row: AssetItem) => {
+  editAssetForm.value = {
+    id: row.id,
+    name: row.name,
+    quantity: row.quantity,
+    unit: row.unit,
+    estimated_value: row.estimated_value,
+    notes: row.notes
+  }
+  editAssetDialogVisible.value = true
+}
+
+const handleEditAsset = async () => {
+  editAssetLoading.value = true
+  try {
+    const res = await assetApi.update(editAssetForm.value.id, {
+      name: editAssetForm.value.name,
+      quantity: editAssetForm.value.quantity,
+      unit: editAssetForm.value.unit,
+      estimated_value: editAssetForm.value.estimated_value,
+      notes: editAssetForm.value.notes
+    })
+    if (res.success) {
+      ElMessage.success('更新成功')
+      editAssetDialogVisible.value = false
+      await loadAssets()
+    } else {
+      ElMessage.error(res.message || '更新失败')
+    }
+  } catch (error: any) {
+    ElMessage.error(error?.response?.data?.detail || '更新失败')
+  } finally {
+    editAssetLoading.value = false
+  }
+}
+
+const removeAsset = async (row: AssetItem) => {
   try {
     await ElMessageBox.confirm(
-      `确定要移除 ${row.currency} ${row.amount} 的现金记录吗？`,
+      `确定要移除 ${row.name}（${row.quantity} ${row.unit}）的记录吗？`,
       '确认移除',
       { type: 'warning' }
     )
-    const res = await cashApi.remove(row.id)
+    const res = await assetApi.remove(row.id)
     if (res.success) {
-      ElMessage.success('删除现金成功')
-      await loadCash()
+      ElMessage.success('删除实物资产成功')
+      await loadAssets()
     } else {
-      ElMessage.error(res.message || '删除现金失败')
+      ElMessage.error(res.message || '删除失败')
     }
   } catch (error: any) {
     if (error !== 'cancel') {
-      ElMessage.error(error?.response?.data?.detail || '删除现金失败')
+      ElMessage.error(error?.response?.data?.detail || '删除失败')
     }
   }
 }
@@ -1317,6 +1557,7 @@ onMounted(() => {
   loadHoldings()
   loadFundHoldings()
   loadCash()
+  loadAssets()
   loadPreference()
   // 从后端获取最新配置并覆盖本地缓存（强制刷新时生效）
   fetchBlockOrderFromServer()
@@ -1485,6 +1726,10 @@ onMounted(() => {
       order: v-bind(cashOrder);
     }
 
+    .asset-block {
+      order: v-bind(assetOrder);
+    }
+
     .investment-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -1586,6 +1831,11 @@ onMounted(() => {
 
             &.cash-icon {
               background: linear-gradient(135deg, #67c23a 0%, #409eff 100%);
+              color: #fff;
+            }
+
+            &.asset-icon {
+              background: linear-gradient(135deg, #e6a23c 0%, #f56c6c 100%);
               color: #fff;
             }
           }

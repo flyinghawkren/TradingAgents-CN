@@ -358,5 +358,105 @@ class PortfolioService:
         return result.deleted_count > 0
 
 
+    # ==================== 实物资产管理 ====================
+
+    def _format_asset(self, doc: Dict[str, Any]) -> Dict[str, Any]:
+        """格式化实物资产记录为响应格式"""
+        created_at = doc.get("created_at")
+        if isinstance(created_at, datetime):
+            created_at = created_at.isoformat()
+        updated_at = doc.get("updated_at")
+        if isinstance(updated_at, datetime):
+            updated_at = updated_at.isoformat()
+
+        return {
+            "id": str(doc.get("_id")),
+            "name": doc.get("name", ""),
+            "quantity": doc.get("quantity", 0.0),
+            "unit": doc.get("unit", "件"),
+            "estimated_value": doc.get("estimated_value", 0.0),
+            "notes": doc.get("notes", ""),
+            "created_at": created_at,
+            "updated_at": updated_at,
+        }
+
+    async def get_user_assets(self, user_id: str) -> List[Dict[str, Any]]:
+        """获取用户实物资产列表"""
+        db = await self._get_db()
+        collection = db.portfolio_assets
+        cursor = collection.find({"user_id": user_id}).sort("created_at", -1)
+        docs = await cursor.to_list(length=None)
+        return [self._format_asset(doc) for doc in docs]
+
+    async def add_asset(
+        self,
+        user_id: str,
+        name: str,
+        quantity: float,
+        unit: str = "件",
+        estimated_value: float = 0.0,
+        notes: str = ""
+    ) -> Dict[str, Any]:
+        """添加实物资产记录"""
+        db = await self._get_db()
+        collection = db.portfolio_assets
+        now = datetime.utcnow()
+        doc = {
+            "user_id": user_id,
+            "name": name,
+            "quantity": quantity,
+            "unit": unit,
+            "estimated_value": estimated_value,
+            "notes": notes,
+            "created_at": now,
+            "updated_at": now,
+        }
+        result = await collection.insert_one(doc)
+        doc["_id"] = result.inserted_id
+        return self._format_asset(doc)
+
+    async def update_asset(
+        self,
+        user_id: str,
+        asset_id: str,
+        name: Optional[str] = None,
+        quantity: Optional[float] = None,
+        unit: Optional[str] = None,
+        estimated_value: Optional[float] = None,
+        notes: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """更新实物资产记录"""
+        db = await self._get_db()
+        collection = db.portfolio_assets
+        update_fields = {"updated_at": datetime.utcnow()}
+        if name is not None:
+            update_fields["name"] = name
+        if quantity is not None:
+            update_fields["quantity"] = quantity
+        if unit is not None:
+            update_fields["unit"] = unit
+        if estimated_value is not None:
+            update_fields["estimated_value"] = estimated_value
+        if notes is not None:
+            update_fields["notes"] = notes
+        result = await collection.find_one_and_update(
+            {"_id": ObjectId(asset_id), "user_id": user_id},
+            {"$set": update_fields},
+            return_document=True
+        )
+        if result:
+            return self._format_asset(result)
+        return None
+
+    async def remove_asset(self, user_id: str, asset_id: str) -> bool:
+        """删除实物资产记录"""
+        db = await self._get_db()
+        collection = db.portfolio_assets
+        result = await collection.delete_one(
+            {"_id": ObjectId(asset_id), "user_id": user_id}
+        )
+        return result.deleted_count > 0
+
+
 # 单例
 portfolio_service = PortfolioService()

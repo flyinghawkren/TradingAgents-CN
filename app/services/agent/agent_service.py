@@ -98,6 +98,26 @@ class AgentService:
             handler=self._handle_investment_advice,
         ))
 
+        # ----- 个股分析 -----
+        registry.register(Tool(
+            name="search_stock",
+            description="通过股票名称或代码从本地数据库搜索股票（返回代码、名称等信息）",
+            parameters=[
+                ToolParameter(name="keyword", type="string", description="搜索关键词（股票名称或代码）", required=True),
+            ],
+            handler=self._handle_search_stock,
+        ))
+
+        registry.register(Tool(
+            name="trigger_stock_analysis",
+            description="触发单只股票的 AI 分析（异步任务，返回 task_id 和股票信息）。可只传名称自动查代码，或直接传代码。",
+            parameters=[
+                ToolParameter(name="stock_code", type="string", description="股票代码，如 000063。如果只有名称不传代码，会自动从数据库查找", required=False),
+                ToolParameter(name="stock_name", type="string", description="股票名称，如 中兴通讯", required=False),
+            ],
+            handler=self._handle_trigger_stock_analysis,
+        ))
+
     # ==================== Tool Handlers ====================
 
     async def _handle_portfolio_overview(self, user_id: str) -> Dict[str, Any]:
@@ -212,6 +232,70 @@ class AgentService:
             logger.error(f"获取报告详情失败: {e}")
             return {"error": str(e)}
 
+    async def _handle_search_stock(self, user_id: str, keyword: str) -> List[Dict[str, Any]]:
+        """从本地 stock_basics 搜索股票"""
+        try:
+            from app.services.basics_info_sync_service import get_basics_info_sync_service
+            service = get_basics_info_sync_service()
+            results = await service.get_stock_basics(keyword=keyword, limit=10)
+            return [
+                {"ts_code": r.get("ts_code", ""), "symbol": r.get("symbol", ""), "name": r.get("name", "")}
+                for r in results if r.get("name")
+            ]
+        except Exception as e:
+            logger.error(f"搜索股票失败: {e}")
+            return []
+
+    async def _handle_trigger_stock_analysis(self, user_id: str, stock_code: str = "", stock_name: str = "") -> Dict[str, Any]:
+        """触发单股 AI 分析（支持只传名称自动查代码）"""
+        try:
+            # 如果只有名称没有代码，自动查询
+            if not stock_code and stock_name:
+                from app.services.basics_info_sync_service import get_basics_info_sync_service
+                service = get_basics_info_sync_service()
+                results = await service.get_stock_basics(keyword=stock_name, limit=5)
+                for r in results:
+                    name = (r.get("name") or "").strip()
+                    if stock_name in name:
+                        stock_code = r.get("symbol") or r.get("ts_code", "")
+                        if "." in stock_code:
+                            stock_code = stock_code.split(".")[0]
+                        break
+                if not stock_code and results:
+                    r = results[0]
+                    stock_code = r.get("symbol") or r.get("ts_code", "")
+                    if "." in stock_code:
+                        stock_code = stock_code.split(".")[0]
+
+            if not stock_code:
+                return {"error": "无法确定股票代码，请提供股票代码或更准确的名称", "status": "failed"}
+
+            from app.services.analysis_service import get_analysis_service
+            from app.models.analysis import SingleAnalysisRequest, AnalysisParameters
+
+            params = AnalysisParameters(
+                market_type="A股",
+                research_depth="标准",
+                selected_analysts=[0, 1, 2],
+            )
+            request = SingleAnalysisRequest(
+                symbol=stock_code,
+                stock_code=stock_code,
+                parameters=params,
+            )
+            service = get_analysis_service()
+            result = await service.submit_single_analysis(user_id=user_id, request=request)
+            return {
+                "task_id": result.get("task_id", ""),
+                "stock_code": stock_code,
+                "stock_name": stock_name or stock_code,
+                "status": "分析任务已提交，正在后台执行",
+                "message": f"个股分析任务已提交，任务ID: {result.get('task_id', '')}。可在任务中心查看进度。"
+            }
+        except Exception as e:
+            logger.error(f"触发个股分析失败: {e}")
+            return {"error": f"触发分析失败: {str(e)}", "status": "failed"}
+
     async def _handle_investment_advice(self, user_id: str) -> str:
         """生成投资建议（调用 LLM）"""
         try:
@@ -245,46 +329,135 @@ class AgentService:
 
     # ==================== LLM 调用 ====================
 
-    async def _call_llm(self, prompt: str, system_prompt: str = "") -> str:
-        """调用大模型"""
+    async def _get_available_models(self) -> list:
+        """获取可用模型列表，优先 unified_config，失败后降级到 MongoDB"""
+        import os
+        from tradingagents.llm_clients.provider_keys import env_key_for_provider
+        from app.core.unified_config import unified_config
+
+        _placeholder_keys = {
+            "", "your-api-key", "your_deepseek_api_key_here", "your_dashscope_api_key_here",
+            "your_openai_api_key_here", "your_google_api_key_here", "your_qianfan_api_key_here",
+            "your_anthropic_api_key_here", "your_openrouter_api_key_here", "your_aihubmix_api_key_here",
+            "your_zhipu_api_key_here", "your_siliconflow_api_key_here", "your_oneapi_api_key_here",
+            "your-custom-openai-api-key",
+        }
+
+        def _has_valid_key(cfg) -> bool:
+            if not getattr(cfg, 'enabled', True):
+                return False
+            env_var = env_key_for_provider(cfg.provider)
+            if not env_var:
+                return False
+            key_val = os.getenv(env_var, "")
+            return key_val.strip() not in _placeholder_keys
+
+        # 尝试 unified_config（读取 models.json）
         try:
-            from tradingagents.llm_clients import create_llm_client
-            from langchain_core.messages import SystemMessage, HumanMessage
-            from app.services.model_capability_service import get_model_capability_service
-            from app.services.simple_analysis_service import get_provider_and_url_by_model_sync
-
-            capability_service = get_model_capability_service()
-            _, deep_model = capability_service.recommend_models_for_depth("标准")
-            provider_info = get_provider_and_url_by_model_sync(deep_model)
-            provider = provider_info["provider"]
-            backend_url = provider_info["backend_url"]
-            api_key = provider_info["api_key"]
-
-            from tradingagents.llm_clients.provider_keys import normalize_provider_key
-            provider_key = normalize_provider_key(provider)
-            llm_client = create_llm_client(
-                provider=provider_key,
-                model=deep_model,
-                base_url=backend_url,
-                api_key=api_key,
-                temperature=0.7,
-                max_tokens=4000,
-            )
-
-            llm = llm_client.get_llm()
-            messages = []
-            if system_prompt:
-                messages.append(SystemMessage(content=system_prompt))
-            messages.append(HumanMessage(content=prompt))
-
-            import asyncio
-            response = await asyncio.to_thread(llm.invoke, messages)
-            return response.content if hasattr(response, "content") else str(response)
-
-        except ImportError as e:
-            return f"无法加载 LLM 客户端，请确认已安装依赖。错误: {e}"
+            configs = unified_config.get_llm_configs()
+            available = [c for c in configs if _has_valid_key(cfg=c)]
+            if available:
+                return available
         except Exception as e:
-            return f"调用大模型时出错: {e}"
+            logger.warning(f"unified_config 获取模型失败: {e}")
+
+        # 降级：直接从 MongoDB system_configs 读取
+        try:
+            from app.core.database import get_mongo_db
+            from tradingagents.llm_clients.provider_keys import env_key_for_provider
+            from app.core.unified_config import LLMConfig
+
+            db = get_mongo_db()
+            doc = await db.system_configs.find_one({}, sort=[('_id', -1)])
+            if doc and "llm_configs" in doc:
+                configs = []
+                for m in doc["llm_configs"]:
+                    provider = m.get("provider", "")
+                    model_name = m.get("model_name", "")
+                    enabled = m.get("enabled", False)
+                    api_base = m.get("api_base", "")
+                    max_tokens = m.get("max_tokens", 4000)
+                    temperature = m.get("temperature", 0.7)
+
+                    cfg = LLMConfig(
+                        provider=provider,
+                        model_name=model_name,
+                        api_key="",
+                        api_base=api_base,
+                        max_tokens=max_tokens,
+                        temperature=temperature,
+                        enabled=enabled,
+                    )
+                    configs.append(cfg)
+
+                available = [c for c in configs if _has_valid_key(cfg=c)]
+                if available:
+                    logger.info(f"从 MongoDB 获取 {len(available)} 个可用模型")
+                    return available
+        except Exception as e:
+            logger.warning(f"MongoDB 读取模型配置失败: {e}")
+
+        # 全部失败，返回带所有 enabled 模型信息的错误消息
+        enabled_list = []
+        try:
+            for c in configs if 'configs' in dir() else []:
+                if c.enabled:
+                    enabled_list.append(f"{c.model_name}({env_key_for_provider(c.provider)})")
+        except Exception:
+            pass
+
+        raise RuntimeError(
+            "暂无可用 AI 模型。启用的模型中均未发现有效的 API Key。\n"
+            + (f"已启用: {', '.join(enabled_list)}" if enabled_list else "请前往设置配置 AI 模型。")
+            + "\n\n请确保对应环境变量（如 DEEPSEEK_API_KEY）已在 .env 或容器环境中正确配置。"
+        )
+
+    async def _call_llm(self, prompt: str, system_prompt: str = "") -> str:
+        """调用大模型——自动选择第一个启用且配置了 API Key 的模型"""
+        import os
+        from tradingagents.llm_clients import create_llm_client
+        from langchain_core.messages import SystemMessage, HumanMessage
+        from tradingagents.llm_clients.provider_keys import normalize_provider_key, env_key_for_provider
+
+        try:
+            available = await self._get_available_models()
+        except RuntimeError as e:
+            return str(e)
+        except Exception as e:
+            logger.error(f"获取可用模型失败: {e}")
+            return f"获取可用模型失败: {e}"
+
+        last_error = ""
+        for cfg in available:
+            try:
+                env_var = env_key_for_provider(cfg.provider)
+                api_key = os.getenv(env_var, "")
+
+                provider_key = normalize_provider_key(cfg.provider)
+                llm_client = create_llm_client(
+                    provider=provider_key,
+                    model=cfg.model_name,
+                    base_url=cfg.api_base,
+                    api_key=api_key,
+                    temperature=0.7,
+                    max_tokens=4000,
+                )
+                llm = llm_client.get_llm()
+                messages = []
+                if system_prompt:
+                    messages.append(SystemMessage(content=system_prompt))
+                messages.append(HumanMessage(content=prompt))
+
+                import asyncio
+                response = await asyncio.to_thread(llm.invoke, messages)
+                return response.content if hasattr(response, "content") else str(response)
+
+            except Exception as e:
+                last_error = str(e)
+                logger.warning(f"模型 {cfg.model_name} 调用失败: {e}，尝试下一个...")
+                continue
+
+        return f"所有可用模型调用均失败。最后错误: {last_error}"
 
     # ==================== 主入口 ====================
 

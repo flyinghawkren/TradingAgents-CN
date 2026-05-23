@@ -69,8 +69,8 @@
         </div>
       </main>
 
-      <!-- 页脚 -->
-      <footer class="footer">
+      <!-- 页脚（仅关于页面展示） -->
+      <footer v-if="route.path.startsWith('/about')" class="footer">
         <AppFooter />
       </footer>
     </div>

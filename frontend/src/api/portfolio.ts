@@ -134,6 +134,34 @@ export const cashApi = {
   }
 }
 
+// ==================== 实物资产管理 ====================
+
+export interface AssetItem {
+  id: string
+  name: string
+  quantity: number
+  unit: string
+  estimated_value: number
+  notes: string
+  created_at?: string
+  updated_at?: string
+}
+
+export const assetApi = {
+  list(): Promise<{ success: boolean; data: AssetItem[]; message?: string }> {
+    return ApiClient.get('/api/portfolio/assets/')
+  },
+  add(request: { name: string; quantity?: number; unit?: string; estimated_value?: number; notes?: string }): Promise<{ success: boolean; data: AssetItem; message?: string }> {
+    return ApiClient.post('/api/portfolio/assets/', request)
+  },
+  update(assetId: string, request: Partial<{ name: string; quantity: number; unit: string; estimated_value: number; notes: string }>): Promise<{ success: boolean; data: AssetItem; message?: string }> {
+    return ApiClient.put(`/api/portfolio/assets/${assetId}`, request)
+  },
+  remove(assetId: string): Promise<{ success: boolean; data: { id: string }; message?: string }> {
+    return ApiClient.delete(`/api/portfolio/assets/${assetId}`)
+  }
+}
+
 export const fundPortfolioApi = {
   /**
    * 获取基金持仓列表
