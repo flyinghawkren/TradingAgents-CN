@@ -24,7 +24,9 @@
    修改 TUSHARE_ENABLED=true，并输入 TUSHARE_TOKEN
 4. 进入项目目录编译打包：docker-compose -f docker-compose.hub.nginx.yml build
 5. 启动容器：docker-compose -f docker-compose.hub.nginx.yml up -d
-6. 访问服务：http://127.0.0.1/
+6. 初始化用户，默认用户名/密码：admin/admin123
+   docker exec -it tradingagents-backend python scripts/import_config_and_create_user.py
+7. 访问服务：http://127.0.0.1/
 
 ## 功能开发及演化
 可使用OpenCode打开项目目录，调整优化功能
