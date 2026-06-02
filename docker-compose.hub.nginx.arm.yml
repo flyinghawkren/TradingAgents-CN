@@ -5,7 +5,11 @@ version: '3.8'
 #
 # 使用方法：
 # 1. 复制.env.example为.env并配置环境变量
-# 2. 运行: docker-compose -f docker-compose.hub.nginx.yml up -d
+# 2. 根据 CPU 架构选择运行命令：
+#    - ARM 处理器（如 Apple Silicon、ARM 服务器）：
+#      docker-compose -f docker-compose.hub.nginx.arm.yml up -d
+#    - 非 ARM 处理器（x86_64）：
+#      docker-compose -f docker-compose.hub.nginx.yml up -d
 # 3. 访问: http://your-server (前端和后端API都通过80端口访问)
 #
 # 优势：
@@ -64,6 +68,12 @@ services:
 
   # FastAPI后端服务
   backend:
+    # 支持本地构建或从Docker Hub拉取
+    # 本地构建: docker-compose -f docker-compose.hub.nginx.arm.yml build backend
+    # 拉取镜像: docker-compose -f docker-compose.hub.nginx.arm.yml pull backend
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
     image: hsliup/tradingagents-backend:v1.0.1
     platform: linux/arm64  # 显式指定 ARM64 平台
     container_name: tradingagents-backend
@@ -115,6 +125,9 @@ services:
       OPENAI_ENABLED: "${OPENAI_ENABLED:-false}"
       GOOGLE_API_KEY: "${GOOGLE_API_KEY}"
       GOOGLE_ENABLED: "${GOOGLE_ENABLED:-false}"
+      BAIDU_API_KEY: "${BAIDU_API_KEY}"
+      BAIDU_SECRET_KEY: "${BAIDU_SECRET_KEY}"
+      BAIDU_ENABLED: "${BAIDU_ENABLED:-false}"
       OPENROUTER_API_KEY: "${OPENROUTER_API_KEY}"
       OPENROUTER_ENABLED: "${OPENROUTER_ENABLED:-false}"
       AIHUBMIX_API_KEY: "${AIHUBMIX_API_KEY}"
@@ -123,7 +136,7 @@ services:
       TUSHARE_TOKEN: "${TUSHARE_TOKEN}"
       TUSHARE_ENABLED: "${TUSHARE_ENABLED:-false}"
       AKSHARE_ENABLED: "${AKSHARE_ENABLED:-true}"
-      BAOSTOCK_ENABLED: "${BAOSTOCK_ENABLED:-true}"
+      BAOSTOCK_ENABLED: "${BAOSTOCK_ENABLED:-false}"
       FINNHUB_API_KEY: "${FINNHUB_API_KEY}"
       FINNHUB_ENABLED: "${FINNHUB_ENABLED:-false}"
     depends_on:
@@ -142,6 +155,10 @@ services:
 
   # Vue 3前端服务
   frontend:
+    # 支持本地构建或从Docker Hub拉取
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
     image: hsliup/tradingagents-frontend:v1.0.1
     platform: linux/arm64  # 显式指定 ARM64 平台
     container_name: tradingagents-frontend
