@@ -17,6 +17,7 @@ export interface AppState {
   // 布局状态
   sidebarCollapsed: boolean
   sidebarWidth: number
+  smartInvestmentPanelOpen: boolean
 
   // 当前路由信息
   currentRoute: RouteLocationNormalized | null
@@ -59,6 +60,7 @@ export const useAppStore = defineStore('app', {
 
     sidebarCollapsed: useStorage('sidebar-collapsed', false).value || false,
     sidebarWidth: useStorage('sidebar-width', 240).value || 240,
+    smartInvestmentPanelOpen: false,
 
     currentRoute: null,
 
@@ -165,6 +167,11 @@ export const useAppStore = defineStore('app', {
       this.sidebarWidth = Math.max(200, Math.min(400, width))
       // 同步到 localStorage
       localStorage.setItem('sidebar-width', String(this.sidebarWidth))
+    },
+
+    // 切换智能投资面板
+    toggleSmartInvestmentPanel() {
+      this.smartInvestmentPanelOpen = !this.smartInvestmentPanelOpen
     },
     
     // 设置当前路由

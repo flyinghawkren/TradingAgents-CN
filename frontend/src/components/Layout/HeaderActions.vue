@@ -1,5 +1,12 @@
 <template>
   <div class="header-actions">
+    <!-- 智能投资 -->
+    <el-tooltip :content="appStore.smartInvestmentPanelOpen ? '关闭智能投资' : '智能投资'" placement="bottom">
+      <el-button type="text" @click="appStore.toggleSmartInvestmentPanel()" class="action-btn" :class="{ 'is-active': appStore.smartInvestmentPanelOpen }">
+        <el-icon><MagicStick /></el-icon>
+      </el-button>
+    </el-tooltip>
+
     <!-- 主题切换 -->
     <el-tooltip content="切换主题" placement="bottom">
       <el-button type="text" @click="toggleTheme" class="action-btn">
@@ -71,7 +78,8 @@ import {
   Moon,
   FullScreen,
   Bell,
-  QuestionFilled
+  QuestionFilled,
+  MagicStick
 } from '@element-plus/icons-vue'
 
 const appStore = useAppStore()
@@ -150,6 +158,11 @@ function showHelp() {
     justify-content: center;
 
     .el-icon { font-size: 18px; }
+
+    &.is-active {
+      background-color: var(--el-color-primary-light-9);
+      color: var(--el-color-primary);
+    }
   }
 }
 

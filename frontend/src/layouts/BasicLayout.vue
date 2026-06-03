@@ -32,7 +32,7 @@
     ></div>
 
     <!-- 主内容区 -->
-    <div class="main-container" :style="{ marginLeft: appStore.actualSidebarWidth + 'px' }" @click="handleMainClick">
+    <div class="layout-wrapper" :style="{ marginLeft: appStore.actualSidebarWidth + 'px' }">
       <!-- 顶部导航栏 -->
       <header class="header">
         <div class="header-left">
@@ -43,36 +43,47 @@
           >
             <el-icon><Expand v-if="appStore.sidebarCollapsed" /><Fold v-else /></el-icon>
           </el-button>
-          
+
           <Breadcrumb />
         </div>
-        
+
         <div class="header-right">
           <HeaderActions />
         </div>
       </header>
 
-      <!-- 页面内容 -->
-      <main class="main-content">
-        <div class="content-wrapper">
-          <router-view v-slot="{ Component, route }">
-            <transition
-              :name="route.meta.transition || 'fade'"
-              mode="out-in"
-              appear
-            >
-              <keep-alive :include="keepAliveComponents">
-                <component :is="Component" :key="route.fullPath" />
-              </keep-alive>
-            </transition>
-          </router-view>
-        </div>
-      </main>
+      <div class="layout-body">
+        <div class="main-container" :class="{ 'panel-open': appStore.smartInvestmentPanelOpen }" @click="handleMainClick">
+          <!-- 页面内容 -->
+          <main class="main-content">
+            <div class="content-wrapper">
+              <router-view v-slot="{ Component, route }">
+                <transition
+                  :name="route.meta.transition || 'fade'"
+                  mode="out-in"
+                  appear
+                >
+                  <keep-alive :include="keepAliveComponents">
+                    <component :is="Component" :key="route.fullPath" />
+                  </keep-alive>
+                </transition>
+              </router-view>
+            </div>
+          </main>
 
-      <!-- 页脚（仅关于页面展示） -->
-      <footer v-if="route.path.startsWith('/about')" class="footer">
-        <AppFooter />
-      </footer>
+          <!-- 页脚（仅关于页面展示） -->
+          <footer v-if="route.path.startsWith('/about')" class="footer">
+            <AppFooter />
+          </footer>
+        </div>
+
+        <!-- 智能投资面板 -->
+        <transition name="panel-slide">
+          <div v-if="appStore.smartInvestmentPanelOpen" class="smart-panel">
+            <SmartInvestment />
+          </div>
+        </transition>
+      </div>
     </div>
 
     <!-- 回到顶部 -->
@@ -88,6 +99,7 @@ import UserProfile from '@/components/Layout/UserProfile.vue'
 import Breadcrumb from '@/components/Layout/Breadcrumb.vue'
 import HeaderActions from '@/components/Layout/HeaderActions.vue'
 import AppFooter from '@/components/Layout/AppFooter.vue'
+import SmartInvestment from '@/views/SmartInvestment/index.vue'
 import { Expand, Fold } from '@element-plus/icons-vue'
 
 const appStore = useAppStore()
@@ -194,11 +206,44 @@ watch(() => route.fullPath, () => {
   }
 }
 
-.main-container {
-  min-height: 100vh;
+.layout-wrapper {
   display: flex;
   flex-direction: column;
+  min-height: 100vh;
   transition: margin-left 0.3s ease;
+}
+
+.layout-body {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+}
+
+.main-container {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  transition: flex 0.35s ease;
+
+  &.panel-open {
+    flex: 0 0 66.67%;
+  }
+}
+
+.smart-panel {
+  flex: 0 0 33.33%;
+  min-width: 380px;
+  height: calc(100vh - 60px);
+  position: sticky;
+  top: 60px;
+  background-color: var(--el-bg-color-page);
+  overflow: hidden;
+  padding: 16px;
+
+  :deep(.smart-investment) {
+    height: 100%;
+  }
 }
 
 .header {
@@ -237,7 +282,6 @@ watch(() => route.fullPath, () => {
 .main-content {
   flex: 1;
   padding: 24px;
-  min-height: calc(100vh - 60px - 60px); // 减去header和footer高度
 
   .content-wrapper {
     max-width: 1400px;
@@ -258,14 +302,32 @@ watch(() => route.fullPath, () => {
 @media (max-width: 768px) {
   .sidebar {
     transform: translateX(-100%);
-    
+
     &:not(.collapsed) {
       transform: translateX(0);
     }
   }
 
-  .main-container {
+  .layout-wrapper {
     margin-left: 0 !important;
+  }
+
+  .main-container {
+    &.panel-open {
+      flex: 0 0 100%;
+    }
+  }
+
+  .smart-panel {
+    position: fixed;
+    top: 60px;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1100;
+    flex: none;
+    min-width: unset;
+    height: auto;
   }
 
   .main-content {
@@ -301,5 +363,19 @@ watch(() => route.fullPath, () => {
 .slide-left-leave-to {
   transform: translateX(-30px);
   opacity: 0;
+}
+
+// 智能投资面板滑入滑出动画
+.panel-slide-enter-active,
+.panel-slide-leave-active {
+  transition: all 0.35s ease;
+}
+
+.panel-slide-enter-from,
+.panel-slide-leave-to {
+  flex: 0 0 0 !important;
+  min-width: 0 !important;
+  opacity: 0;
+  overflow: hidden;
 }
 </style>
