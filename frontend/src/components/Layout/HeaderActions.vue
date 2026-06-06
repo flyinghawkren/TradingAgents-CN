@@ -1,11 +1,15 @@
 <template>
   <div class="header-actions">
     <!-- 智能投资 -->
-    <el-tooltip :content="appStore.smartInvestmentPanelOpen ? '关闭智能投资' : '智能投资'" placement="bottom">
-      <el-button type="text" @click="appStore.toggleSmartInvestmentPanel()" class="action-btn" :class="{ 'is-active': appStore.smartInvestmentPanelOpen }">
-        <el-icon><MagicStick /></el-icon>
-      </el-button>
-    </el-tooltip>
+    <el-button
+      size="small"
+      :type="appStore.smartInvestmentPanelOpen ? 'primary' : 'default'"
+      @click="appStore.toggleSmartInvestmentPanel()"
+      class="smart-investment-btn"
+    >
+      <el-icon><MagicStick /></el-icon>
+      <span>智能投资</span>
+    </el-button>
 
     <!-- 主题切换 -->
     <el-tooltip content="切换主题" placement="bottom">
@@ -148,6 +152,14 @@ function showHelp() {
   display: flex;
   align-items: center;
   gap: 8px;
+
+  .smart-investment-btn {
+    margin-right: 8px;
+
+    .el-icon {
+      margin-right: 4px;
+    }
+  }
 
   .action-btn {
     width: 36px;
